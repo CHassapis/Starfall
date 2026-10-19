@@ -1,0 +1,9 @@
+name: Trigger probe (temporary)
+on: [push]
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "push event reached Actions for ${{ github.ref }}"
