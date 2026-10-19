@@ -1,0 +1,64 @@
+name: Trigger probe 3 (temporary copy)
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - dev
+      - aurora-server
+      - ci/trigger-probe
+  pull_request:
+    branches:
+      - main
+      - dev
+      - aurora-server
+      - ci/trigger-probe
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  DOTNET_VERSION: "10.0.x"
+  NODE_VERSION: "22.19.x"
+
+jobs:
+  build-solution:
+    name: Build & Test Solution
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v7
+
+      - name: Install .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Install Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: src/frontend/package-lock.json
+
+      - name: Restore Solution
+        run: dotnet restore
+
+      - name: Build Solution
+        run: dotnet build --configuration Release --no-restore
+
+      - name: Install Frontend Dependencies
+        working-directory: src/frontend
+        run: npm ci
+
+      - name: Build Frontend
+        working-directory: src/frontend
+        run: npm run build
+
+      - name: Run Frontend Unit Tests
+        working-directory: src/frontend
+        run: npm test -w apps/builder-app
+
+      - name: Run Unit Tests
+        run: dotnet test --configuration Release --no-build
