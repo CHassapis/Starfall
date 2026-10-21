@@ -101,7 +101,7 @@ function FilesTab() {
         <ul className="list-inside list-disc break-words">{warnings.map((warning) => <li key={warning}>{warning}</li>)}</ul>
       </div>}
       {isLoading && <Spinner className="mx-auto my-8 size-6" />}
-      {data?.files.length === 0 && <p className="text-muted-foreground">No homebrew yet.</p>}
+      {data?.files.length === 0 && <p className="celestial-empty text-muted-foreground">No homebrew yet.</p>}
 
       <div className="grid gap-4 md:grid-cols-2">
         {data?.files.map((f) => (

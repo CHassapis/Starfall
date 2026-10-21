@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="160" viewBox="0 0 256 160" fill="none"><defs>
+<linearGradient id="metal" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="256" y2="160"><stop offset="0" stop-color="#856D4A"/><stop offset=".32" stop-color="#CBAA76"/><stop offset=".56" stop-color="#F0E4C9"/><stop offset="1" stop-color="#CBAA76"/></linearGradient>
+<linearGradient id="blue" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="256" y2="160"><stop offset="0" stop-color="#739DC0"/><stop offset=".58" stop-color="#9AB4CA"/><stop offset="1" stop-color="#856D4A"/></linearGradient>
+<radialGradient id="star"><stop offset="0" stop-color="#F0E4C9" stop-opacity="1"/><stop offset=".38" stop-color="#D6DCEB" stop-opacity=".8"/><stop offset="1" stop-color="#739DC0" stop-opacity="0"/></radialGradient>
+</defs><path d="M21 145 Q67 129 100 100 Q133 62 211 51" stroke="url(#metal)" stroke-width="1.7" opacity=".78"/>
+    <path d="M73 123 Q66 98 51 93 M98 101 Q126 117 153 111 M140 70 Q141 42 164 27" stroke="url(#metal)" stroke-width=".95" opacity=".7"/>
+    <g transform="translate(53,93) rotate(-75) scale(0.86)">
+    <path d="M0 0 Q 10 -15 29 -14 Q 21 2 0 0 Z" fill="url(#blue)" opacity=".85" stroke="url(#metal)" stroke-width="1.05"/>
+    <path d="M1 -1 Q 14 -5 25 -12" stroke="url(#metal)" stroke-width=".85" opacity=".66"/>
+    </g><g transform="translate(111,111) rotate(165) scale(0.83)">
+    <path d="M0 0 Q 10 -15 29 -14 Q 21 2 0 0 Z" fill="url(#blue)" opacity=".85" stroke="url(#metal)" stroke-width="1.05"/>
+    <path d="M1 -1 Q 14 -5 25 -12" stroke="url(#metal)" stroke-width=".85" opacity=".66"/>
+    </g><g transform="translate(164,28) rotate(102) scale(0.92)">
+    <path d="M0 0 Q 10 -15 29 -14 Q 21 2 0 0 Z" fill="url(#blue)" opacity=".85" stroke="url(#metal)" stroke-width="1.05"/>
+    <path d="M1 -1 Q 14 -5 25 -12" stroke="url(#metal)" stroke-width=".85" opacity=".66"/>
+    </g><g transform="translate(184,57) rotate(-32) scale(0.72)">
+    <path d="M0 0 Q 10 -15 29 -14 Q 21 2 0 0 Z" fill="url(#blue)" opacity=".85" stroke="url(#metal)" stroke-width="1.05"/>
+    <path d="M1 -1 Q 14 -5 25 -12" stroke="url(#metal)" stroke-width=".85" opacity=".66"/>
+    </g><circle cx="222" cy="50" r="5" fill="url(#metal)" opacity=".76"/><circle cx="221" cy="49" r="1.1" fill="url(#blue)"/><polygon points="200.00,25.00 200.71,29.29 205.00,30.00 200.71,30.71 200.00,35.00 199.29,30.71 195.00,30.00 199.29,29.29" fill="url(#metal)" opacity="0.8" /></svg>

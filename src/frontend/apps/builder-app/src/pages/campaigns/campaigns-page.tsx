@@ -30,7 +30,7 @@ export function CampaignsPage() {
       </p>
       {isLoading && <Spinner className="mx-auto size-5" />}
       {data && data.campaigns.length === 0 && (
-        <p className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
+        <p className="celestial-empty justify-center rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
           No campaigns yet. Start one with “New campaign”.
         </p>
       )}

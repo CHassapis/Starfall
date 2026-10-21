@@ -103,7 +103,7 @@ export function InteractiveSheetPage() {
   const sections = ["Abilities", "Skills", "Attacks", "Spellcasting", "Inventory", "Features", "Resources"];
   return (
     <div className="character-sheet mx-auto max-w-7xl space-y-5 px-3 py-6 sm:px-6 3xl:max-w-[110rem]">
-      <header className="surface flex flex-wrap items-center gap-4 p-4 sm:p-6">
+      <header data-ornament="corner" className="surface flex flex-wrap items-center gap-4 p-4 sm:p-6">
         {data.portraitUrl && <img src={data.portraitUrl} alt="" className="size-20 rounded-xl object-cover" />}
         <div className="min-w-0 flex-1 basis-48">
           <p className="text-sm text-muted-foreground">Character sheet · {data.edition} rules</p>

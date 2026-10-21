@@ -176,7 +176,7 @@ export function HomebrewSpells({ startNew }: { startNew?: boolean }) {
         onNew={() => setEditing({ ...NEW_SPELL })}
       />
       {isLoading && <Spinner className="mx-auto my-8 size-6" />}
-      {!isLoading && spells.length === 0 && <p className="text-sm text-muted-foreground">No homebrew spells yet.</p>}
+      {!isLoading && spells.length === 0 && <p className="celestial-empty text-sm text-muted-foreground">No homebrew spells yet.</p>}
       <div className="grid gap-3 md:grid-cols-2">
         {spells.map((s) => (
           <article key={s.id} className="rounded-lg border bg-background/60 p-3">
@@ -288,7 +288,7 @@ export function HomebrewSubclasses({ startNew }: { startNew?: boolean }) {
         onNew={() => setEditing(fresh())}
       />
       {isLoading && <Spinner className="mx-auto my-8 size-6" />}
-      {!isLoading && subclasses.length === 0 && <p className="text-sm text-muted-foreground">No homebrew subclasses yet.</p>}
+      {!isLoading && subclasses.length === 0 && <p className="celestial-empty text-sm text-muted-foreground">No homebrew subclasses yet.</p>}
       <div className="grid gap-3 md:grid-cols-2">
         {subclasses.map((s) => (
           <article key={s.id} className="rounded-lg border bg-background/60 p-3">
@@ -395,7 +395,7 @@ export function HomebrewClasses({ startNew }: { startNew?: boolean }) {
         onNew={() => setEditing({ ...NEW_CLASS })}
       />
       {isLoading && <Spinner className="mx-auto my-8 size-6" />}
-      {!isLoading && classes.length === 0 && <p className="text-sm text-muted-foreground">No homebrew classes yet.</p>}
+      {!isLoading && classes.length === 0 && <p className="celestial-empty text-sm text-muted-foreground">No homebrew classes yet.</p>}
       <div className="grid gap-3 md:grid-cols-2">
         {classes.map((c) => (
           <article key={c.id} className="rounded-lg border bg-background/60 p-3">

@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" fill="none"><defs>
+<linearGradient id="metal" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="64" y2="64"><stop offset="0" stop-color="#776349"/><stop offset=".32" stop-color="#967A5D"/><stop offset=".56" stop-color="#D7B98C"/><stop offset="1" stop-color="#967A5D"/></linearGradient>
+<linearGradient id="blue" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="64" y2="64"><stop offset="0" stop-color="#708A9E"/><stop offset=".58" stop-color="#597187"/><stop offset="1" stop-color="#776349"/></linearGradient>
+<radialGradient id="star"><stop offset="0" stop-color="#D7B98C" stop-opacity="1"/><stop offset=".38" stop-color="#F6E5C5" stop-opacity=".8"/><stop offset="1" stop-color="#708A9E" stop-opacity="0"/></radialGradient>
+</defs><circle cx="32" cy="32" r="21" stroke="url(#metal)" stroke-width="1.1" stroke-dasharray="35 12" opacity=".67"/>
+    <circle cx="32" cy="32" r="13" stroke="url(#blue)" stroke-width=".9" opacity=".62"/><polygon points="32.00,16.00 33.41,30.59 48.00,32.00 33.41,33.41 32.00,48.00 30.59,33.41 16.00,32.00 30.59,30.59" fill="url(#metal)" opacity="1" /><path d="M 32 1 L 34.04 4 L 32 7 L 29.96 4 Z" stroke="url(#metal)" stroke-width="1.3" fill="none"/><path d="M 32 57 L 34.04 60 L 32 63 L 29.96 60 Z" stroke="url(#metal)" stroke-width="1.3" fill="none"/></svg>

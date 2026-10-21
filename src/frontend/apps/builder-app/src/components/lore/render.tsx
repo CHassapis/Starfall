@@ -169,7 +169,7 @@ function Tag({ node }: { node: TagNode }) {
 
 function Heading({ depth, id, children }: { depth: number; id?: string; children: ReactNode }) {
   const anchor = id ? `e-${id}` : undefined;
-  if (depth <= 0) return <h2 id={anchor} className="mt-6 scroll-mt-20 border-b pb-1 font-heading text-2xl tracking-wide first:mt-0">{children}</h2>;
+  if (depth <= 0) return <h2 id={anchor} className="mt-6 scroll-mt-20 font-heading text-2xl tracking-wide first:mt-0">{children}</h2>;
   if (depth === 1) return <h3 id={anchor} className="mt-5 scroll-mt-20 font-heading text-xl tracking-wide first:mt-0">{children}</h3>;
   return <h4 id={anchor} className="mt-4 scroll-mt-20 font-heading text-lg first:mt-0">{children}</h4>;
 }

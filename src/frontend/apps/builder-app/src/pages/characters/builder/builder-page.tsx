@@ -484,8 +484,8 @@ function SectionCard({ section, choices, children }: { section: string; choices:
 
   return (
     <section className="rounded-lg border bg-background/60">
-      <div className="flex items-center gap-2 border-b px-4 py-3">
-        <Icon className="size-5 text-muted-foreground" />
+      <div className="ornament-section-head flex items-center gap-2 border-b px-4 py-3">
+        <Icon className="size-5" />
         <h2 className="font-heading text-lg tracking-wide">{section}</h2>
         {open > 0 ? (
           <Badge variant="secondary" className="ms-auto">

@@ -22,6 +22,7 @@
   --ornament-marker: url("/ornaments/midnight/section-marker.svg"); --ornament-underline: url("/ornaments/midnight/nav-active-underline.svg");
   --ornament-edge-h: url("/ornaments/midnight/edge-horizontal.svg"); --ornament-edge-v: url("/ornaments/midnight/edge-vertical.svg");
   --ornament-emblem: url("/ornaments/midnight/home-d20-icon.svg");
+  --ornament-accent-mark: url("/ornaments/midnight/celestial-accent.svg"); --ornament-sprig: url("/ornaments/midnight/botanical-sprig-optional.svg");
 }
 /* Porcelain: muted bronze, slate-blue details */
 :root, :root[data-theme="porcelain"] {
@@ -36,6 +37,7 @@
   --ornament-marker: url("/ornaments/porcelain/section-marker.svg"); --ornament-underline: url("/ornaments/porcelain/nav-active-underline.svg");
   --ornament-edge-h: url("/ornaments/porcelain/edge-horizontal.svg"); --ornament-edge-v: url("/ornaments/porcelain/edge-vertical.svg");
   --ornament-emblem: url("/ornaments/porcelain/home-d20-icon.svg");
+  --ornament-accent-mark: url("/ornaments/porcelain/celestial-accent.svg"); --ornament-sprig: url("/ornaments/porcelain/botanical-sprig-optional.svg");
 }
 /* Slate: brushed silver, pale blue */
 :root[data-theme="slate"] {
@@ -47,6 +49,7 @@
   --ornament-marker: url("/ornaments/slate/section-marker.svg"); --ornament-underline: url("/ornaments/slate/nav-active-underline.svg");
   --ornament-edge-h: url("/ornaments/slate/edge-horizontal.svg"); --ornament-edge-v: url("/ornaments/slate/edge-vertical.svg");
   --ornament-emblem: url("/ornaments/slate/home-d20-icon.svg");
+  --ornament-accent-mark: url("/ornaments/slate/celestial-accent.svg"); --ornament-sprig: url("/ornaments/slate/botanical-sprig-optional.svg");
 }
 :root {
   --ornament-line: color-mix(in srgb, var(--ornament) 60%, transparent);
@@ -134,10 +137,13 @@
   [data-slot="button"][class*="border"]:hover { border-color: var(--ornament-line); }
   .app-header { border-image: linear-gradient(90deg, transparent, var(--ornament-line) 20%, var(--ornament-line) 80%, transparent) 1; }
   .nav-active { background-image: var(--ornament-underline); background-repeat: no-repeat; background-position: center bottom; background-size: 100% auto; }
-  /* page and section titles: a fine rule fading out under them (a background, so it fits truncated and flex titles) */
+  /* page and section titles (every page, the Lore entries and book chapters): the supplied section marker (180 × 38,
+     its rule through the middle) at the start of a fine rule fading out under them. Backgrounds, so they fit truncated
+     and flex titles and never take clicks */
   h1.font-heading, h2.font-heading.text-2xl {
-    background-image: linear-gradient(90deg, var(--ornament-line), transparent 70%);
-    background-size: 100% 1px; background-position: left bottom; background-repeat: no-repeat; padding-bottom: 0.35rem;
+    background-image: var(--ornament-marker), linear-gradient(90deg, var(--ornament-line), transparent 70%);
+    background-size: auto 1.15rem, 100% 1px; background-position: left bottom, left 0 bottom 0.575rem; background-repeat: no-repeat;
+    padding-bottom: 1.25rem;
   }
 
   /* ---- restrained: small corners on dialogs and opted-in cards ---- */
@@ -151,6 +157,29 @@
   [data-slot="dialog-content"]::after, [data-slot="alert-dialog-content"]::after, [data-ornament]::after { bottom: 5px; right: 5px; transform: scale(-1); }
   [data-ornament] { position: relative; }
   [data-ornament="decorative"]::before, [data-ornament="decorative"]::after { width: 34px; height: 34px; }
+  /* one accent only (the top-left corner), for panels that sit in a row or a list */
+  [data-ornament="corner"]::after { content: none; }
+  /* empty states: the panel corners and the celestial accent over the message */
+  [data-slot="empty"] { position: relative; border-color: var(--ornament-faint); }
+  [data-slot="empty"]::before, [data-slot="empty"]::after {
+    content: ""; position: absolute; width: 26px; height: 26px; pointer-events: none;
+    background: var(--ornament-panel-corner) no-repeat center / contain; opacity: 0.85;
+  }
+  [data-slot="empty"]::before { top: 5px; left: 5px; }
+  [data-slot="empty"]::after { bottom: 5px; right: 5px; transform: scale(-1); }
+  [data-slot="empty-media"][data-variant="icon"] { color: var(--ornament); background: color-mix(in srgb, var(--ornament) 10%, transparent); }
+  /* a quiet "nothing here yet" line: the small celestial accent before it */
+  .celestial-empty { display: flex; align-items: center; gap: 0.6rem; }
+  .celestial-empty::before { content: ""; flex: none; width: 1.6rem; aspect-ratio: 1; background: var(--ornament-accent-mark) no-repeat center / contain; pointer-events: none; }
+
+  /* a builder or campaign section's heading row: the rule under it fades out in the ornament colour, its icon in metal */
+  .ornament-section-head { border-bottom: 1px solid; border-image: linear-gradient(90deg, var(--ornament-line), var(--ornament-faint) 45%, var(--border)) 1; }
+  .ornament-section-head > svg:first-child { color: var(--ornament); }
+  /* the campaign overview's one botanical sprig, in the header's free lower-right corner beside the party (not on phones) */
+  .ornament-sprig { position: absolute; bottom: -0.25rem; right: 0; width: 11rem; aspect-ratio: 256 / 160; pointer-events: none; opacity: 0.55; background: var(--ornament-sprig) no-repeat center / contain; }
+  @media (max-width: 1023.98px) { .ornament-sprig { display: none; } }
+  /* the book reader's page: a fine inner rule, like a printed page's frame */
+  .lore-page { border-color: var(--ornament-faint); outline: 1px solid color-mix(in srgb, var(--ornament) 22%, transparent); outline-offset: -5px; }
 
   /* ---- decorative: frames, corners, dividers, the home page ---- */
   .ornament-frame { position: relative; border: 1px solid var(--ornament-faint); border-radius: 1.1rem; }
@@ -199,5 +228,8 @@
 }
 @media print {
   .starfall-shell, .starfall-shell[data-width="wide"] { display: block; width: auto; min-height: 0; margin: 0; border: 0; border-radius: 0; }
-  .starfall-shell::before, .shell-ornament, [data-ornament]::before, [data-ornament]::after, .ornament-corner, .celestial-divider { display: none !important; }
+  .starfall-shell::before, .shell-ornament, [data-ornament]::before, [data-ornament]::after, .ornament-corner, .celestial-divider,
+  [data-slot="empty"]::before, [data-slot="empty"]::after, .celestial-empty::before, .ornament-sprig { display: none !important; }
+  .lore-page { outline: none; }
+  h1.font-heading, h2.font-heading.text-2xl { background-image: none; padding-bottom: 0; }
 }
