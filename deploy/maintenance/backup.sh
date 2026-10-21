@@ -27,6 +27,7 @@ done
 label=$(printf '%s' "$label" | tr -c 'A-Za-z0-9._-' '-')
 
 require_install
+use_compose_for_data_mount
 step "Checking the install"
 require_db_running
 db_exists || die "the database '$DB_NAME' does not exist yet." "Start the whole site once (docker compose up -d) so it is created."

@@ -1,8 +1,9 @@
 # shellcheck shell=bash disable=SC2034
 # Shared helpers for the Starfall maintenance scripts (backup, verify, restore, update, rollback).
 # Sourced, not run. Works on the install in deploy/ (docker-compose.yml + .env next to it), whatever its compose
-# project name. Secrets are never printed or put on a command line: SQL runs inside the database container with
-# the password that container already has.
+# project name. The backup can also select a Compose project that mounts this install's database folder.
+# Secrets are never printed or put on a command line: SQL runs inside the database container with the password that
+# container already has.
 
 set -Eeuo pipefail
 umask 077
@@ -38,7 +39,65 @@ die()  { printf '\nSTOPPED: %s\n' "$1" >&2; [ -n "${2:-}" ] && printf '%s\n' "$2
 
 need() { command -v "$1" >/dev/null 2>&1 || die "this needs '$1', which is not installed." "Install it and run this again."; }
 
-dc() { docker compose "$@"; }
+STARLIGHTS_COMPOSE_ARGS=()
+STARLIGHTS_COMPOSE_PROJECT_DIR=""
+
+dc() {
+  if [ "${#STARLIGHTS_COMPOSE_ARGS[@]}" -gt 0 ]; then
+    docker compose --project-directory "$STARLIGHTS_COMPOSE_PROJECT_DIR" "${STARLIGHTS_COMPOSE_ARGS[@]}" "$@"
+  else
+    docker compose "$@"
+  fi
+}
+
+# The homelab Compose file can live outside deploy/, while still mounting this install's data/mssql.
+# Select it only when the default Compose project cannot see the DB and exactly one container mounts that folder.
+use_compose_for_data_mount() {
+  local expected="$DATA_DIR/mssql" ids id source same files project_dir project matches=0
+  local -a selected_args=() file_list=()
+
+  [ -n "$(dc ps -aq starlights-db 2>/dev/null)" ] && return 0
+  ids=$(docker ps -aq --filter label=com.docker.compose.service=starlights-db)
+  [ -n "$ids" ] || return 0
+
+  while IFS= read -r id; do
+    [ -n "$id" ] || continue
+    source=$(docker inspect --format '{{range .Mounts}}{{if eq .Destination "/var/opt/mssql"}}{{.Source}}{{end}}{{end}}' "$id")
+    [ -n "$source" ] || continue
+    same=$(python3 - "$source" "$expected" <<'PY'
+import os, sys
+try:
+    print("yes" if os.path.samefile(sys.argv[1], sys.argv[2]) else "no")
+except OSError:
+    print("no")
+PY
+)
+    [ "$same" = yes ] || continue
+
+    files=$(docker inspect --format '{{index .Config.Labels "com.docker.compose.project.config_files"}}' "$id")
+    project_dir=$(docker inspect --format '{{index .Config.Labels "com.docker.compose.project.working_dir"}}' "$id")
+    project=$(docker inspect --format '{{index .Config.Labels "com.docker.compose.project"}}' "$id")
+    [ -n "$files" ] && [ -n "$project_dir" ] && [ -n "$project" ] \
+      || die "the database container is mounted to this install, but its Compose details are missing." "Check the container's Compose labels."
+    [ -d "$project_dir" ] || die "the database container's Compose directory does not exist: $project_dir"
+    [ -f "${files%%,*}" ] || die "the database container's Compose file does not exist: ${files%%,*}"
+
+    selected_args=(-p "$project")
+    IFS=',' read -r -a file_list <<< "$files"
+    for file in "${file_list[@]}"; do
+      [ -f "$file" ] || die "a Compose file used by the database container does not exist: $file"
+      selected_args+=(-f "$file")
+    done
+    STARLIGHTS_COMPOSE_PROJECT_DIR="$project_dir"
+    STARLIGHTS_COMPOSE_ARGS=("${selected_args[@]}")
+    matches=$((matches + 1))
+  done <<< "$ids"
+
+  [ "$matches" -le 1 ] || die "more than one database container uses this install's data folder." "Stop the duplicate container or select the intended Compose project before backing up."
+  if [ "$matches" -eq 1 ]; then
+    say "Using the Compose project attached to this install's database."
+  fi
+}
 
 # the compose project name (what `docker compose ls` shows): containers are <project>-<service>-1
 project_name() {
