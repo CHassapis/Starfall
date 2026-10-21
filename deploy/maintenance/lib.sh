@@ -1,9 +1,9 @@
 # shellcheck shell=bash disable=SC2034
 # Shared helpers for the Starfall maintenance scripts (backup, verify, restore, update, rollback).
 # Sourced, not run. Works on the install in deploy/ (docker-compose.yml + .env next to it), whatever its compose
-# project name. The backup can also select a Compose project that mounts this install's database folder.
-# Secrets are never printed or put on a command line: SQL runs inside the database container with the password that
-# container already has.
+# project name. backup.sh also works when another Compose file (e.g. a homelab's) runs this install's database from
+# deploy/data/mssql. Secrets are never printed or put on a command line: SQL runs inside the database container with
+# the password that container already has.
 
 set -Eeuo pipefail
 umask 077
@@ -39,64 +39,62 @@ die()  { printf '\nSTOPPED: %s\n' "$1" >&2; [ -n "${2:-}" ] && printf '%s\n' "$2
 
 need() { command -v "$1" >/dev/null 2>&1 || die "this needs '$1', which is not installed." "Install it and run this again."; }
 
-STARLIGHTS_COMPOSE_ARGS=()
-STARLIGHTS_COMPOSE_PROJECT_DIR=""
+# the Compose project the scripts work on: deploy/'s own, unless use_compose_for_data_mount picked another one
+COMPOSE_ARGS=()
+dc() { docker compose "${COMPOSE_ARGS[@]}" "$@"; }
+# the same, as a command to show in a message
+dc_shown() { printf 'docker compose'; [ "${#COMPOSE_ARGS[@]}" -eq 0 ] || printf ' %q' "${COMPOSE_ARGS[@]}"; }
 
-dc() {
-  if [ "${#STARLIGHTS_COMPOSE_ARGS[@]}" -gt 0 ]; then
-    docker compose --project-directory "$STARLIGHTS_COMPOSE_PROJECT_DIR" "${STARLIGHTS_COMPOSE_ARGS[@]}" "$@"
-  else
-    docker compose "$@"
-  fi
+# the database containers whose files are this install's data/mssql, one id per line, except those of the Compose
+# project named in $1
+data_mount_containers() {
+  local id project source
+  for id in $(docker ps -aq --filter label=com.docker.compose.service=starlights-db); do
+    IFS='|' read -r project source < <(docker inspect --format '{{index .Config.Labels "com.docker.compose.project"}}|{{range .Mounts}}{{if eq .Destination "/var/opt/mssql"}}{{.Source}}{{end}}{{end}}' "$id" 2>/dev/null) || continue
+    if [ -n "${1:-}" ] && [ "$project" = "$1" ]; then continue; fi
+    if [ -n "$source" ] && [ "$source" -ef "$DATA_DIR/mssql" ]; then echo "$id"; fi
+  done
 }
 
-# The homelab Compose file can live outside deploy/, while still mounting this install's data/mssql.
-# Select it only when the default Compose project cannot see the DB and exactly one container mounts that folder.
+# the given containers' Compose projects as "name (compose files)", on one line
+compose_projects_of() {
+  # shellcheck disable=SC2068
+  docker inspect --format '{{with index .Config.Labels "com.docker.compose.project"}}Compose project {{.}}{{else}}container {{$.Name}}, not started by Compose{{end}}{{with index .Config.Labels "com.docker.compose.project.config_files"}} ({{.}}){{end}}' $@ | sort -u | paste -sd ';' -
+}
+
+# A homelab can run this install from its own Compose file outside deploy/, still mounting deploy/data. When deploy/'s
+# own project has no database container and exactly one other one uses data/mssql, work on that one's project.
+# Only backup.sh does: restore, update and rollback replace and rebuild things, so they stay with deploy/'s project
+# (and require_db_running stops them).
 use_compose_for_data_mount() {
-  local expected="$DATA_DIR/mssql" ids id source same files project_dir project matches=0
-  local -a selected_args=() file_list=()
-
-  [ -n "$(dc ps -aq starlights-db 2>/dev/null)" ] && return 0
-  ids=$(docker ps -aq --filter label=com.docker.compose.service=starlights-db)
+  local ids project files dir file dest src folder
+  local -a list=()
+  [ -z "$(dc ps -aq starlights-db 2>/dev/null)" ] || return 0
+  ids=$(data_mount_containers)
   [ -n "$ids" ] || return 0
-
-  while IFS= read -r id; do
-    [ -n "$id" ] || continue
-    source=$(docker inspect --format '{{range .Mounts}}{{if eq .Destination "/var/opt/mssql"}}{{.Source}}{{end}}{{end}}' "$id")
-    [ -n "$source" ] || continue
-    same=$(python3 - "$source" "$expected" <<'PY'
-import os, sys
-try:
-    print("yes" if os.path.samefile(sys.argv[1], sys.argv[2]) else "no")
-except OSError:
-    print("no")
-PY
-)
-    [ "$same" = yes ] || continue
-
-    files=$(docker inspect --format '{{index .Config.Labels "com.docker.compose.project.config_files"}}' "$id")
-    project_dir=$(docker inspect --format '{{index .Config.Labels "com.docker.compose.project.working_dir"}}' "$id")
-    project=$(docker inspect --format '{{index .Config.Labels "com.docker.compose.project"}}' "$id")
-    [ -n "$files" ] && [ -n "$project_dir" ] && [ -n "$project" ] \
-      || die "the database container is mounted to this install, but its Compose details are missing." "Check the container's Compose labels."
-    [ -d "$project_dir" ] || die "the database container's Compose directory does not exist: $project_dir"
-    [ -f "${files%%,*}" ] || die "the database container's Compose file does not exist: ${files%%,*}"
-
-    selected_args=(-p "$project")
-    IFS=',' read -r -a file_list <<< "$files"
-    for file in "${file_list[@]}"; do
-      [ -f "$file" ] || die "a Compose file used by the database container does not exist: $file"
-      selected_args+=(-f "$file")
-    done
-    STARLIGHTS_COMPOSE_PROJECT_DIR="$project_dir"
-    STARLIGHTS_COMPOSE_ARGS=("${selected_args[@]}")
-    matches=$((matches + 1))
-  done <<< "$ids"
-
-  [ "$matches" -le 1 ] || die "more than one database container uses this install's data folder." "Stop the duplicate container or select the intended Compose project before backing up."
-  if [ "$matches" -eq 1 ]; then
-    say "Using the Compose project attached to this install's database."
-  fi
+  # shellcheck disable=SC2086
+  [ "$(wc -l <<<"$ids")" -eq 1 ] || die "more than one database container uses this install's data folder ($DATA_DIR/mssql):
+$(docker inspect --format '  {{.Name}} (Compose project {{index .Config.Labels "com.docker.compose.project"}}, {{.State.Status}})' $ids)" \
+    "Two SQL Servers on one data folder damage it. Remove the one that should not be there, then back up."
+  IFS='|' read -r project files dir < <(docker inspect --format '{{index .Config.Labels "com.docker.compose.project"}}|{{index .Config.Labels "com.docker.compose.project.config_files"}}|{{index .Config.Labels "com.docker.compose.project.working_dir"}}' "$ids")
+  [ -n "$project" ] && [ -n "$files" ] && [ -n "$dir" ] \
+    || die "the database container $(docker inspect --format '{{.Name}}' "$ids") uses this install's data folder, but does not say which Compose file started it." \
+      "Back up with the tools of whatever started it, or run the database from deploy/ instead."
+  [ -d "$dir" ] || die "the Compose folder that runs this install's database does not exist (any more): $dir"
+  COMPOSE_ARGS=(--project-directory "$dir" -p "$project")
+  IFS=',' read -r -a list <<<"$files"
+  for file in "${list[@]}"; do
+    [ -f "$file" ] || die "a Compose file that runs this install's database does not exist (any more): $file"
+    COMPOSE_ARGS+=(-f "$file")
+  done
+  # the files part of the backup is read from deploy/data, so that project must keep portraits, homebrew and art there
+  # shellcheck disable=SC2046
+  while IFS='|' read -r dest src; do
+    case "$dest" in /data/portraits) folder=portraits ;; /data/homebrew) folder=homebrew ;; /srv/art) folder=art ;; *) continue ;; esac
+    [ "$src" -ef "$DATA_DIR/$folder" ] || die "the Compose project '$project' keeps $folder in $src, not in $DATA_DIR/$folder." \
+      "This backup reads $folder from $DATA_DIR and would miss them. Back up with the tools of whatever runs '$project'."
+  done < <(docker inspect --format '{{range .Mounts}}{{.Destination}}|{{.Source}}{{"\n"}}{{end}}' $(docker ps -aq --filter "label=com.docker.compose.project=$project"))
+  say "The database runs in the Compose project '$project' ($files); using that."
 }
 
 # the compose project name (what `docker compose ls` shows): containers are <project>-<service>-1
@@ -144,11 +142,24 @@ for r in rows[:1]:
 }
 
 require_db_running() {
-  local state; state=$(service_state starlights-db)
+  local state ids hint; state=$(service_state starlights-db)
+  # deploy/'s own database is missing or stopped, but another Compose project runs one on this install's data folder:
+  # starting deploy/'s would put a second SQL Server on the same files
+  if [ "${#COMPOSE_ARGS[@]}" -eq 0 ] && [[ "$state" != running* ]]; then
+    ids=$(data_mount_containers "$(project_name || true)")
+    if [ -n "$ids" ]; then
+      hint="Do not start deploy/'s own database next to it: two SQL Servers on one data folder damage it."
+      [ -z "$state" ] || hint="$hint If that project is the one in use, remove deploy/'s stopped one: $(dc_shown) rm starlights-db"
+      [ "$(basename "$0")" = backup.sh ] || hint="$hint
+$(basename "$0") only works on an install run from deploy/ (backup.sh works with either)."
+      # shellcheck disable=SC2086
+      die "a database container that deploy/ did not start uses this install's data folder ($DATA_DIR/mssql): $(compose_projects_of $ids)." "$hint"
+    fi
+  fi
   case "$state" in
     "running healthy"*) ;;
-    running*) die "the database container is running but not healthy yet ($state)." "Wait a minute and try again, or look at: docker compose logs starlights-db" ;;
-    *) die "the database container is not running (state: ${state:-none})." "Start it with: docker compose up -d starlights-db   (then try again)" ;;
+    running*) die "the database container is running but not healthy yet ($state)." "Wait a minute and try again, or look at: $(dc_shown) logs starlights-db" ;;
+    *) die "the database container is not running (state: ${state:-none})." "Start it with: $(dc_shown) up -d starlights-db   (then try again)" ;;
   esac
 }
 
