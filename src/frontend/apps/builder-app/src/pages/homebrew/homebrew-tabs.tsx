@@ -57,7 +57,7 @@ export function HomebrewItems({ startNew }: { startNew?: boolean } = {}) {
         )}
       </div>
       {isLoading && <Spinner className="mx-auto my-8 size-6" />}
-      {!isLoading && items.length === 0 && <p className="text-sm text-muted-foreground">No homebrew items yet.</p>}
+      {!isLoading && items.length === 0 && <p className="celestial-empty text-sm text-muted-foreground">No homebrew items yet.</p>}
       {books.map((book) => (
         <section key={book} className="space-y-2">
           <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{book}</h2>
@@ -222,7 +222,7 @@ export function HomebrewMonsters({ startNew }: { startNew?: boolean } = {}) {
         )}
       </div>
       {isLoading && <Spinner className="mx-auto my-8 size-6" />}
-      {!isLoading && monsters.length === 0 && <p className="text-sm text-muted-foreground">No homebrew monsters yet.</p>}
+      {!isLoading && monsters.length === 0 && <p className="celestial-empty text-sm text-muted-foreground">No homebrew monsters yet.</p>}
       <div className="grid gap-3 md:grid-cols-2">
         {monsters.map((m) => (
           <article key={m.id} id={`monster-${m.id}`} className="scroll-mt-24 rounded-lg border bg-background/60 p-3 target:ring-2 target:ring-primary">

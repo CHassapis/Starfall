@@ -229,7 +229,7 @@ function Reader({ meta }: { meta: LoreMeta }) {
             </div>
           </div>
           {pager}
-          <article className="@container max-w-3xl rounded-lg border print:max-w-none print:border-0 print:p-0 bg-background/60 p-4 text-[0.97rem] sm:p-8">
+          <article className="lore-page @container max-w-3xl rounded-lg border print:max-w-none print:border-0 print:p-0 bg-background/60 p-4 text-[0.97rem] sm:p-8">
             {content.isLoading ? (
               <Spinner className="mx-auto my-8 size-6" />
             ) : content.error ? (

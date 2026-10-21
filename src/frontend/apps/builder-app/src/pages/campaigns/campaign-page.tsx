@@ -63,7 +63,8 @@ export function CampaignPage() {
         <ArrowLeftIcon className="size-4" /> Campaigns
       </Link>
 
-      <header className="space-y-4">
+      <header className="relative space-y-4">
+        {!view.campaign.coverUrl && <span aria-hidden className="ornament-sprig" />}
         {view.campaign.coverUrl && <img src={view.campaign.coverUrl} alt="" className="max-h-56 w-full rounded-lg border object-cover" />}
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
           <div className="min-w-0 flex-1">
@@ -374,7 +375,7 @@ function Sessions({ view, canEdit, onEdit }: TabProps) {
         <p className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">No sessions match. Try another title or phrase, or clear the search.</p>
       )}
       {shown.map((s) => (
-        <article key={s.id} className="min-w-0 rounded-lg border bg-card p-3 sm:p-4" aria-labelledby={`${prefix}-${s.id}-heading`}>
+        <article key={s.id} data-ornament="corner" className="min-w-0 rounded-lg border border-[var(--ornament-faint)] bg-card p-3 sm:p-4" aria-labelledby={`${prefix}-${s.id}-heading`}>
           <div className="flex items-start gap-2">
             <h3 className="min-w-0 flex-1 font-heading text-lg">
               <button

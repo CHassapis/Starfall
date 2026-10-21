@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { BookOpenIcon, ChevronRightIcon, SwordsIcon, UsersIcon } from "lucide-react";
 import { HourlyBackdrop } from "@/components/hourly-backdrop";
 import { BATTLE_BACKGROUND, HOMEBREW_TILE, LORE_BACKGROUND } from "@/lib/art";
-import { OrnamentalCorner } from "@/components/ornaments";
+import { CelestialDivider, OrnamentalCorner } from "@/components/ornaments";
 
 function LandingTile({
   title,
@@ -132,7 +132,7 @@ export function LandingPage2() {
       <HourlyBackdrop />
       {/* the brand block (the supplied D20 emblem over the live wordmark) beside the introduction */}
       <header className="mb-6 grid items-center gap-5 sm:grid-cols-[15rem_1fr] sm:gap-8 lg:mb-7">
-        <h1 className="starfall-brand mx-auto w-full max-w-[15rem]">
+        <h1 data-ornament className="starfall-brand mx-auto w-full max-w-[15rem]">
           <span aria-hidden className="starfall-emblem" />
           <span className="starfall-wordmark">Starfall</span>
         </h1>
@@ -160,9 +160,10 @@ export function LandingPage2() {
         </div>
       </div>
 
-      <section aria-label="What Starfall does" className="mt-4 grid gap-4 sm:grid-cols-3">
+      <CelestialDivider className="my-2.5" />
+      <section aria-label="What Starfall does" className="grid gap-4 sm:grid-cols-3">
         {SUPPORT.map(({ title, icon: Icon, text }) => (
-          <div key={title} className="flex items-start gap-3 rounded-[0.7rem] border border-[var(--ornament-faint)] bg-card/50 px-4 py-4 lg:gap-4 lg:px-5">
+          <div key={title} data-ornament="corner" className="flex items-start gap-3 rounded-[0.7rem] border border-[var(--ornament-faint)] bg-card/50 px-4 py-4 lg:gap-4 lg:px-5">
             <Icon aria-hidden strokeWidth={1.4} className="mt-0.5 size-7 shrink-0 text-[var(--ornament)] lg:size-9" />
             <div>
               <h2 className="text-xs font-semibold uppercase tracking-[0.2em] text-foreground">{title}</h2>
