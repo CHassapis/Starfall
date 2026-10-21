@@ -40,6 +40,11 @@ on the same disk as the server does not survive that disk dying.
 
 Back up when nobody is editing homebrew: the database and the homebrew files are saved a few seconds apart.
 
+If another Compose file runs the site (a homelab's own, outside `deploy/`) and keeps its data in this `deploy/data`,
+`backup.sh` finds that Compose project and backs it up, as long as `deploy/` has no database container of its own.
+Restore, update and rollback only work on a site run from `deploy/`: with another project they stop and say so,
+rather than start a second SQL Server on the same data folder.
+
 ### Checking a backup
 
 ```bash
