@@ -1,235 +1,184 @@
 # Starfall
 
-**v0.11.1** ([release](https://github.com/CHassapis/Starfall/releases/tag/v0.11.1) ·
-[release notes](docs/releases/v0.11.1.md) · [final completion report](docs/ai/MK2_FINAL_COMPLETION_REPORT.md); earlier:
-[v0.11.0](docs/releases/v0.11.0.md), [v0.10.0 public beta](docs/releases/v0.10.0.md)). Development is in
-maintenance mode: bug fixes and live-play reliability only.
+**Your table's companion for Dungeons & Dragons 5e**: characters, campaigns, battles, rules lookup and homebrew, in the
+browser, on a computer you own. Free and open source (MIT), with no accounts, subscriptions or tracking, and no AI.
 
-> **About this fork (branch `aurora-server`).** Starfall is a self-hosted fork of Project Starlights by C Hassapis, packaged to
-> run in Docker for a D&D group. Credit for the original Project Starlights and Aurora Builder goes to their creator, **Bas Driessen**
-> ([swdriessen/starlights](https://github.com/swdriessen/starlights), [aurorabuilder.com](https://www.aurorabuilder.com)).
-> The content comes from [Aurora Legacy](https://github.com/AuroraLegacy/elements) and the Compendium's data from
-> [5etools](https://github.com/5etools-mirror-3/5etools-src). Unofficial fan project, not affiliated with or endorsed by
-> Wizards of the Coast; no book content is part of this repository. The original README follows the fork's sections.
+Latest release: **v0.11.1** ([release](https://github.com/CHassapis/Starfall/releases/tag/v0.11.1) ·
+[release notes](docs/releases/v0.11.1.md); earlier: [v0.11.0](docs/releases/v0.11.0.md),
+[v0.10.0 public beta](docs/releases/v0.10.0.md)).
+
+**Contents:** [What it is](#what-starfall-is) · [Screenshots](#screenshots) · [Requirements](#requirements) ·
+[Quick install](#quick-install) · [First run](#first-run) · [iPhone and iPad](#install-on-iphone-and-ipad) ·
+[Android](#install-on-android-and-computers) · [HTTPS](#https) · [Updating](#updating) ·
+[Backups](#backups-and-restoring) · [Troubleshooting](#troubleshooting) · [Developers](#developer-documentation) ·
+[Licence and credits](#licence-and-attribution)
+
+## What Starfall is
+
+Starfall is a self-hosted fork of **Project Starlights** by **Bas Driessen**, the creator of
+[Aurora Builder](https://www.aurorabuilder.com) ([swdriessen/starlights](https://github.com/swdriessen/starlights)),
+packaged by C Hassapis to run in Docker for a D&D group. One computer at home runs it; everyone at the table uses it
+from a browser on their phone, tablet or laptop, and can put it on their home screen like an app. It brings in its own
+rules content from [Aurora Legacy](https://github.com/AuroraLegacy/elements) and
+[5etools](https://github.com/5etools-mirror-3/5etools-src): no book content is part of this repository.
+
+- **Character builder**: 2014 and 2024 rules (or both), multiclassing, a step-by-step wizard for new players, every
+  Aurora Legacy book; each option says what it needs. Bring in players' Aurora `.dnd5e` characters.
+- **Character sheets like Aurora's**, on screen and as PDF, built in; an interactive play sheet shares hit points,
+  conditions, rests, equipment and spells with Battle. Custom attacks, portraits, and character files you can move
+  between Starfall servers ([character portability](docs/character-portability.md)).
+- **Battle Action Simulator**: everything a character can do this turn, with real numbers: attacks, spells and
+  slots, magic items with charges, familiars, conditions.
+- **Campaigns** with a locked DM side: sessions, NPCs, places, quests, maps, handouts, a party fund and stash, magic
+  items handed out, and **encounters run as fights** (initiative, hidden monster hit points, the party's live state,
+  2014 and 2024 difficulty). Players see only what the DM reveals.
+- **Compendium of Lore**: books, spells, items and creatures, searchable and linkable from campaigns.
+- **Homebrew**: magic items, monsters, spells, subclasses and classes from forms, or Aurora element files; off until a
+  player or DM switches it on.
+- **Made for the table**: Porcelain, Slate and Midnight themes, phone to 4K layouts, Imperial or Metric units for
+  display, and an install option for phones and computers.
+
+The full guide for players and DMs (exporting a campaign, homebrew files, settings, how content is connected) is
+**[docs/using-starfall.md](docs/using-starfall.md)**.
+
+## Screenshots
 
 <p align="center">
-  <img src="assets/images/screenshots/home-desktop.jpg" alt="The Starfall home page on a desktop" width="65%">
+  <img src="assets/images/screenshots/home-desktop.jpg" alt="The Starfall home page on a desktop, Midnight theme" width="66%">
   &nbsp;
-  <img src="assets/images/screenshots/home-phone.jpg" alt="The Starfall home page on a phone" width="28%">
+  <img src="assets/images/screenshots/home-phone.jpg" alt="The Starfall home page on a phone" width="26%">
 </p>
-<p align="center"><sub>The home page on a desktop and on a phone (Midnight theme), as a new install shows it.</sub></p>
+<p align="center">
+  <img src="assets/images/screenshots/sheet-desktop.jpg" alt="A character's play sheet, Porcelain theme" width="66%">
+  &nbsp;
+  <img src="assets/images/screenshots/install-phone.jpg" alt="Install Starfall on an iPhone: the steps in Safari" width="26%">
+</p>
+<p align="center"><sub>The home page (Midnight), a character's play sheet (Porcelain) and Install Starfall on an
+iPhone. Made with synthetic test data.</sub></p>
 
-**Contents:** [What this fork adds](#what-this-fork-adds) · [Install](#install-with-docker) ·
-[Using it](#using-it) · [Settings](#settings) · [Content](#how-aurora-legacy-and-5etools-are-connected) ·
-[Updating](#updating) · [Backups](#backups-and-restoring) · [Playing away from home](#playing-away-from-home) ·
-[Troubleshooting](#troubleshooting) · [Removing it](#removing-it) · [Developer API](#developer-api) ·
-[Credits](#credits-and-legal)
+## Requirements
 
-## What this fork adds
-
-- **Docker install** for one machine: `deploy/setup.sh` sets everything up, and the app downloads its own content.
-- **Content page**: paste the GitHub links for Aurora Legacy and 5etools (or your forks) and the server downloads,
-  imports and wires everything: the builder's rules, the Compendium of Lore, and every character updated.
-- **Character wizard** for new players: class, species, background, ability scores, the books' starting equipment
-  (packages or gold) and spells, one step at a time, with a skip to the full builder.
-- **Character sheets like Aurora's**, on screen and as PDF, built in (nothing to copy from Aurora), with the portrait
-  sized and placed as you like and a last page showing the whole picture; bring in players' Aurora character files.
-- **Interactive play sheet** shares hit points, conditions, rests, equipment and spell preparation with Battle.
-  **Equipment → Custom Attacks** creates, edits, deletes and reorders attacks, including Aurora imports.
-  Manual edits and deletions survive reimports; figures and display order reach the sheet, PDF and Battle.
-  Unarmored armor class also recognizes Aurora's natural-armor calculations, including an autognome's Armored Casing.
-- **Portable characters**: export and import a Starfall character file between installations with matching content.
-  See [character portability](docs/character-portability.md) for compatibility requirements.
-- **Porcelain, Slate and Midnight themes**, responsive navigation and searchable, paginated spell cards.
-  Verified identical printings from the same rules edition share a choice; different editions and homebrew stay separate.
-- **Builder**: multiclassing, 2014 and 2024 rules (or both), Save / Discard, items that cast spells, extra feats,
-  languages and proficiencies. Each option in a choice says what it needs ("Artificer Level 6+"); the ones a character
-  doesn't qualify for yet are greyed out at the end of the list.
-- **Battle Action Simulator**: attacks, spells, slots and charges, familiars, conditions; magic items under the action
-  they take (wands and staffs cast, potions, charms with charges), and a potion or healing charm used on another
-  party member goes straight into their simulator; prepare spells right there, and cast one the player forgot to
-  prepare (the DM's call).
-- **Campaigns** with a DM's side: sessions, NPCs, places, quests, maps, handouts, magic items to hand out, notes, and a
-  Gold tab with the party fund and stash. The Magic items tab shows who carries each item. Players only see what the
-  DM reveals; a Compendium link can stay the DM's alone (the stat block behind an alias). **Export campaign** saves
-  all of it as one file.
-- **Encounters run as fights**: initiative, turns, monster hit points (hidden from players), and the party's hit points,
-  armor class (magic items included), passive Perception and conditions straight from their simulators.
-- **Encounter difficulty** compares 2014 and 2024 results separately, with an optional, labelled magic-item estimate.
-  Campaign sessions have search and collapsible navigation.
-- **Trading**: players give each other items and coins from their Equipment tab.
-- **Homebrew page**: make magic items (weapons can have their own damage dice), monsters, spells, subclasses and classes in forms, or upload Aurora
-  element files. Homebrew is off by default: a player ticks it in a character's Sources, and a DM switches on
-  "Use homebrew" in a campaign's settings.
-- **Compendium of Lore**: the books, creatures, spells and items from the 5etools data, linkable from campaigns.
-- Player names instead of accounts, with optional passwords; an admin password for the DM.
-
-## Install with Docker
-
-The full, step-by-step guide is **[docs/installation.md](docs/installation.md)**; this is the short version.
-
-### What you need
-
-- A computer that stays on while you play: a home server, a spare PC or a NAS that runs Docker.
-  - **64-bit Intel/AMD (x86-64) only.** The database (Microsoft SQL Server) has no ARM version: no Raspberry Pi,
-    no Windows on ARM.
+- **A computer that stays on while you play**: a home server, a spare PC or a NAS that runs Docker.
+  - **64-bit Intel/AMD (x86-64) only.** The database (Microsoft SQL Server) has no ARM version: no Raspberry Pi, no
+    Windows on ARM.
   - **4 GB of RAM** for Docker (8 GB recommended) and **at least 10 GB free disk** (20 GB recommended).
 - **Linux** (Ubuntu or Debian) with Docker Engine and its Compose plugin, or **Windows** with WSL2 and Docker Desktop.
   `git`, `python3` and `curl` in Linux/WSL. Your user must be able to run `docker info` without sudo.
 - An internet connection for the first setup (the Docker images and about 200 MB of content).
+- For players: any current browser. Installing it as an app needs the site's **https** address (see [HTTPS](#https)).
 
-The Docker build supplies Node.js and .NET; they are not required on the host. Windows/WSL2 installation and a full
-content download through the installer still require independent validation. See [installation requirements and
-validation status](docs/installation.md) before installing.
+The Docker build supplies Node.js and .NET; they are not needed on the host. Validation status: Linux installs,
+repeat setup, backups, restores, updates and rollbacks are tested on Ubuntu with real Docker; **Windows (Docker
+Desktop, WSL2) is implemented but not yet tested on real Windows hardware**. Details:
+[docs/installation.md](docs/installation.md).
 
-### Linux
+## Quick install
+
+The full, step-by-step guide (including Windows) is **[docs/installation.md](docs/installation.md)**.
+
+**Linux** (and Windows, in the Ubuntu terminal of WSL2):
 
 ```bash
 cd ~
-git clone --branch aurora-server https://github.com/CHassapis/starfall.git
+git clone --branch aurora-server https://github.com/CHassapis/Starfall.git starfall
 cd starfall/deploy
 ./setup.sh --check     # checks Docker, memory, disk and the port; changes nothing
 ./setup.sh
 ```
 
-### Windows (Docker Desktop + WSL2)
+On Windows, install WSL2 with Ubuntu and Docker Desktop (WSL2 backend, Linux containers, WSL integration for Ubuntu on),
+and keep the checkout in your Linux home (`~/starfall`), never on `C:\` or `/mnt/c`. A PowerShell launcher
+(`deploy/setup.ps1`) does the same from PowerShell; see
+[installation.md](docs/installation.md#windows-docker-desktop-and-wsl2).
 
-Install WSL2 with Ubuntu and Docker Desktop (WSL2 backend, Linux containers, WSL integration for Ubuntu switched on),
-then run the same commands **in the Ubuntu terminal**, with the checkout in your Linux home (`~/starlights`), never on
-`C:\` or `/mnt/c`. Open **http://localhost:8093** in your Windows browser. A PowerShell launcher (`deploy/setup.ps1`)
-does the same from PowerShell; see [docs/installation.md](docs/installation.md#windows-docker-desktop-and-wsl2).
+What setup does: it checks the prerequisites, writes `deploy/.env` once with random passwords (never printed), builds
+and starts the database, API and web app, and has the app download and import Aurora Legacy and the 5etools data
+(20–40 minutes the first time). Running `./setup.sh` again is safe: it never replaces `.env` and never deletes anything
+in `data/`, including your backups. The port is busy? `./setup.sh --port 8094` on a new install. On a slow machine,
+allow more time: `STARLIGHTS_SETUP_BUILD_TIMEOUT=3600 STARLIGHTS_SETUP_CONTENT_TIMEOUT=3600 ./setup.sh`.
 
-### What setup does
+## First run
 
-It checks the prerequisites, writes `deploy/.env` once with random passwords (never printed; your **admin password**
-is `STARLIGHTS_MASTER_PASSWORD` in that file), builds and starts the database, API and web app, and has the app
-download and import Aurora Legacy and the 5etools data (20–40 minutes the first time). Running `./setup.sh` again
-is safe: it never replaces `.env` and never deletes anything in `data/`, including your backups.
+1. **Open Starfall**: `http://localhost:8093` on that computer, or `http://<its LAN address>:8093` from phones and
+   other computers at home (`hostname -I` on Linux, `ipconfig` on Windows, or your router's device list). The site
+   restarts by itself after a reboot (on Windows, while Docker Desktop runs). Don't forward the port on your router:
+   for play away from home see [HTTPS](#https).
+2. **Unlock the DM side**: your admin password is `STARLIGHTS_MASTER_PASSWORD` in `deploy/.env` (open it privately in
+   an editor; setup never prints it). Enter it with the **key button** in the header. It opens every character and
+   campaign, and the **Content** page, which shows the content import's progress and the server's version.
+3. **Each player picks their name** (top right) and can lock it with a password. There are no accounts.
+4. **Create Character** once the content import has finished; "Guide me step by step" walks a new player through.
+   Press **Save** to keep changes.
+5. **Pick a theme and units** with the palette button: Porcelain, Slate or Midnight, Imperial or Metric.
+6. **Make your first backup** from the `deploy/` folder: `maintenance/backup.sh` (see
+   [Backups](#backups-and-restoring)).
 
-Open `http://localhost:8093` on that computer, or `http://<its LAN address>:8093` from phones and other computers at
-home. The site restarts by itself after a reboot (on Windows, while Docker Desktop runs).
+More for players and DMs (campaigns, encounters, homebrew, exporting): [docs/using-starfall.md](docs/using-starfall.md).
 
-**Then make your first backup**: `maintenance/backup.sh` (see [Backups and restoring](#backups-and-restoring)).
+## Install on iPhone and iPad
 
-## Using it
+Starfall can sit on the home screen and open full screen, without Safari's address bar. It is still your server's
+website: it needs the server and a connection, and nothing is stored for offline use. It needs the site's
+**https://** address ([HTTPS](#https)); on a plain `http://` address Safari can only add a bookmark.
 
-### Players
+1. Open Starfall's https address in **Safari**.
+2. Tap **Share** (the square with an arrow), then **Add to Home Screen**.
+3. Leave **Open as Web App** on (older iOS versions have no switch), then tap **Add**.
+4. Open Starfall from its new icon.
 
-1. Open the site and **pick your name** (top right). There are no accounts: your characters are filed under your name.
-   To stop others changing them, use **Lock your characters** to give your name a password.
-2. **Create Character**. Pick the rules (2014, 2024 or both) and leave "Guide me step by step" ticked if you're new:
-   the wizard walks through class, species, background, ability scores, the books' starting equipment and spells.
-   Experienced players untick it and go straight to the full builder (tabs: Build, Abilities, Magic, Equipment, Story,
-   Sources). Already have an Aurora character? Use **Import from Aurora** with its `.dnd5e` file.
-3. Changes are kept only when you press **Save** in the bar at the bottom (or **Discard changes** to go back).
-4. **Character sheet** shows the sheet and downloads it as a PDF. **Battle** opens the Battle Action Simulator for
-   playing: hit points, attacks, spells and slots, conditions, rests.
-5. Join your group's campaign with the **Campaigns** button on your character (the DM may give you a password).
+The same steps are in Starfall itself: **Menu → Install Starfall** on a phone, or the palette button's **Install
+Starfall as an app**. On iPhone and iPad the home-screen app keeps **its own storage**: choose your player (and unlock
+a locked character) once more inside it, and the theme and units too.
 
-### The DM
+## Install on Android and computers
 
-1. Press the **key button** in the header and enter the admin password. It opens every character and campaign, and
-   allows homebrew. (Anyone with it is a DM, so keep it to yourself.)
-2. **Campaigns → New campaign.** In **Campaign settings** choose the party, add a cover, set a password for players
-   and a DM password (so a co-DM can run it without the admin password), and switch on **Use homebrew** if you want it.
-3. Everything you add starts hidden: players see an entry only when you reveal it. Use the **DM / Player** switch at the
-   top to check what players see.
-4. **Encounters → Run the fight**: add the party and the monsters, roll initiative, track hit points; players follow
-   along in their simulators.
-5. **Magic items → Give to…** puts an item straight into a character's equipment and notes it in the Gold tab.
-6. **Campaign settings → Export campaign** saves the whole campaign as one `.zip` (see below).
+With the site's **https://** address ([HTTPS](#https)):
 
-### Exporting a campaign
+- **Android (Chrome)**: open Starfall, then **Menu → Install Starfall → Install Starfall** in the app, which shows
+  Chrome's own install prompt; or Chrome's menu **⋮ → Install app** (on some versions **Add to home screen →
+  Install**). Choose install, not "Create shortcut": a shortcut opens a normal browser tab.
+- **Computers (Chrome or Edge)**: the install button at the end of the address bar, or the palette button's **Install
+  Starfall as an app**. Firefox and Safari on a computer don't install sites; use Starfall in a tab.
 
-The DM (the campaign's DM password or the admin) can download a campaign as one `.zip` file to keep or read
-elsewhere. It holds `campaign.json` and a `pictures/` folder:
+Starfall never pops up an install banner by itself; it is offered only from those menus, and hidden once you are in
+the installed app. Updates arrive with the server's: close and reopen the app after an update.
 
-| Included | Left out on purpose |
-|---|---|
-| the campaign's name, description, cover, party, DM name and settings (Use homebrew; whether it has passwords) | the campaign's password, the DM password and players' passwords (no hashes either) |
-| every entry as the DM sees it: sessions, codex, quests, maps, handouts, notes, DM notes, links (DM-only ones too) | players' **private** notes (only their authors can read them, not even the DM) |
-| the ledger (Gold tab: party fund and stash lines) and the magic items with where each one is | unlock tokens, the admin key and every server setting |
-| encounters with their running fights (initiative, monster hit points, conditions) | the books' content (Aurora Legacy, 5etools): ids and links point into it |
-| each party member: all of their build (the same capture as the builder's Save/Discard), equipment, spells, story and fight state; who carries which magic item | the build of a character whose player locked it, unless the DM holds that player's unlock token (then only name and player) |
-| the books' and homebrew items the campaign's magic items are, by id, name and book | homebrew files themselves (back up `data/homebrew`), other campaigns and characters |
-| the campaign's pictures and the party's portraits and story pictures | |
+## HTTPS
 
-The export holds your DM notes: keep it private. Starfall can't import it yet; it is a readable, complete copy
-(`campaign.json` maps each picture to the address the campaign uses). For a full backup of the server, see
-[Backups](#backups-and-restoring).
+At home, `http://<server>:8093` is fine in a browser. HTTPS is needed to **install** Starfall on a phone or computer,
+and to use it **away from home**. The site must stay private: it serves book content for your table's own use, and
+players have names, not accounts. **Never forward the port on your router** or publish it on the open internet.
 
-### Homebrew
+**Recommended: Tailscale Serve.** [Tailscale](https://tailscale.com) (free for personal use) puts your devices on a
+private network and gives the server an https address with a real certificate, reachable only from your devices:
 
-Aurora XML uploads can contain new `<element>` definitions, `<append id="…">` patches, or both, inside one
-`<elements>` root. Append-only files are supported. The Files tab lists patch target IDs and warns when their
-source content is missing. Install that content and upload the patch again to apply it. Uploading the same
-filename replaces the patch; removing the file removes its additions while retaining other files’ patches.
-Patches modify the target's original source content, so they apply to characters using that source rather than
-creating a separate Homebrew book.
+1. Install Tailscale on the server and on each player's device, signed in to the same tailnet (or share the server
+   with players' accounts).
+2. In the Tailscale admin console, under **DNS**, turn on **MagicDNS** and **HTTPS Certificates**.
+3. On the server:
 
-On the **Homebrew** page (admin password needed) make magic items, monsters, spells, subclasses and classes with forms, or upload Aurora element
-files (`.xml`) for classes, species, backgrounds and anything else. Homebrew starts switched off everywhere:
+   ```bash
+   sudo tailscale serve --bg 8093           # https://<server-name>.<your-tailnet>.ts.net → Starfall
+   tailscale serve status                   # shows the address
+   ```
 
-- a player ticks the homebrew book in their character's **Sources** tab to use it in the builder;
-- a DM ticks **Use homebrew** in the campaign settings to hand out homebrew items and add homebrew monsters to fights.
+   (Use your `STARLIGHTS_PORT` if it isn't 8093; `sudo tailscale serve --https=443 off` stops it.) The first visit
+   can take a few seconds while the certificate is issued. The machine's name appears in public certificate logs.
+4. Everyone opens `https://<server-name>.<your-tailnet>.ts.net`, and can install it from there.
 
-## Settings
+Don't use Tailscale **Funnel**, or anything else that puts Starfall on the open internet: an install made by
+`setup.sh` has no site-wide password. (The project's own server publishes one only behind a site password, on a
+separate door of the web container; that is not part of this setup.)
 
-The settings live in `deploy/.env` (never share or commit it):
-
-| Setting | What it is |
-|---|---|
-| `STARLIGHTS_MASTER_PASSWORD` | The admin password (key button). Change it any time, then `docker compose up -d`. |
-| `STARLIGHTS_PORT` | The port the site is on (default `8093`). Change it, then `docker compose up -d`. |
-| `STARLIGHTS_ADMIN_KEY` | Sent by `./admin.sh` for imports. Any long random text. |
-| `STARLIGHTS_SA_PASSWORD` | The database password. Set once by `setup.sh`; **don't change it** after the first start (the database keeps the old one). |
-
-## How Aurora Legacy and 5etools are connected
-
-The app brings in its own content from two GitHub links, kept on its **Content** page (in the top bar once you unlock
-admin with the key button):
-
-| Content | Standard link | Used for |
-|---|---|---|
-| Aurora Legacy | [github.com/AuroraLegacy/elements](https://github.com/AuroraLegacy/elements) | classes, species, backgrounds, feats, spells, items: the builder's rules |
-| 5etools | [github.com/5etools-mirror-3/5etools-src](https://github.com/5etools-mirror-3/5etools-src) | the Compendium of Lore, deities and rules Aurora lacks, creatures for encounters, starting equipment |
-
-To use your own fork (or a branch, as `…/tree/branch-name`), paste its link and press **Save and update now**. The
-server then:
-
-1. downloads each repository at its newest commit (skipped when nothing changed; for 5etools only its `data` folder);
-2. sets up the base rules the first time;
-3. imports Aurora Legacy, what 5etools has and Aurora Legacy lacks, and the built-in extras;
-4. builds the Compendium of Lore;
-5. runs every character through the rules again, so they get new choices.
-
-**When 5etools is ahead of Aurora Legacy.** A new book often reaches 5etools first. Whatever 5etools has and Aurora
-Legacy (with its open pull requests and your homebrew) does not (spells, feats, class options such as invocations,
-backgrounds, species, subclasses, classes) is translated into Aurora's format and imported with everything else,
-marked "Imported automatically from 5etools". What 5etools records as data becomes rules: proficiencies and their
-choices, ability scores, prerequisites, spell slots and prepared spells, spells a subclass always has prepared. What it
-only describes in words stays words on the sheet. Aurora's version always wins: once Aurora Legacy adds the book, its
-own elements are used and the translation stops (a character who already took the translated one keeps it). To turn
-this off, set `FiveETools__Generate=false` for the API in `deploy/docker-compose.yml`.
-
-The page also shows where things stand: the **server** (the Starfall version it was built from, whether every
-database change is applied, and how many characters, campaigns, elements and homebrew items there are) and the
-**content** (Aurora Legacy's commit, the 5etools release, the last update that worked, and whether one is running).
-**Check for updates** asks GitHub, only when you press it, what is newer: Aurora Legacy's new commits and the files
-they change, 5etools' new release and its notes, and what **Update now** would download. Nothing updates by itself.
-
-Only GitHub links are accepted. The downloads live in `deploy/data/content`, the Compendium in `deploy/data/lore`, and
-your homebrew (`deploy/data/homebrew`) is never touched. The character sheet needs nothing extra: its templates and
-fonts are part of the app. An optional extra:
-
-- **Background pictures**: the app comes with its own. To use yours, put `lore.webp`, `battle.webp` or `homebrew.webp`
-  in `deploy/data/art`; a picture there is used instead of the one with the same name.
-
-Installed before the sheet was built in? The `deploy/data/aurora-sheets` folder is no longer used and can be deleted.
+**Your own reverse proxy** (Caddy, nginx, Traefik) also works, if its certificate is one your devices trust (a domain
+you own with a certificate from Let's Encrypt through a DNS challenge works without opening any port). Send
+everything to `http://127.0.0.1:8093`, allow uploads of at least **8 MB** (portraits, homebrew, campaign files) and
+responses up to **10 minutes** (a full content import runs in one request), and keep it on your private network.
+Self-signed certificates make phones refuse to install.
 
 ## Updating
 
-New code, from the `deploy/` folder:
+From the `deploy/` folder:
 
 ```bash
 maintenance/update.sh --check     # what the update brings and whether it changes the database; changes nothing
@@ -243,24 +192,17 @@ back: `maintenance/rollback.sh <old version>` (program only) or, when the update
 the backup it made. Details: [docs/maintenance.md](docs/maintenance.md#updating-to-a-new-version). Don't update with a
 bare `git pull` + `docker compose build`: that has no backup and no way back once the database has changed.
 
-Coming from a version before October 2026: this version changes how content is imported (Aurora's appends, what each option needs, and what 5etools has that Aurora Legacy lacks), so import it again once and update the characters, while nobody is using the site: `./admin.sh import AuroraLegacy.index --replace`, then `./admin.sh import homebrew --replace` if you have homebrew, then `./admin.sh import 5etools --replace`, `./admin.sh import starlights --replace` and `./admin.sh reprocess`. Characters keep their picks. Coming from a version before the sheet was built in: nothing is needed from Aurora any more, and the
-`deploy/data/aurora-sheets` folder can be deleted.
+Release notes say when content must be imported again. Coming from a version before October 2026, do it once, while
+nobody is using the site: `./admin.sh import AuroraLegacy.index --replace`, then `./admin.sh import homebrew --replace`
+if you have homebrew, then `./admin.sh import 5etools --replace`, `./admin.sh import starlights --replace` and
+`./admin.sh reprocess`. Characters keep their picks. New content (not code): the Content page's **Save and update
+now**, or `./admin.sh update` ([more](docs/using-starfall.md#content-from-the-command-line)).
 
-New content: press **Save and update now** on the Content page, or run `./admin.sh update`. The database changes a new
-version needs are applied by themselves when it starts. To get new content every night, add a cron job (`crontab -e`):
-
-```
-30 3 * * * cd /path/to/starlights/deploy && ./admin.sh update >> data/update.log 2>&1
-```
-
-`./admin.sh` (run it without arguments for help):
-
-| Command | What it does |
-|---|---|
-| `./admin.sh update [--force]` | the same as the Content page's button: downloads what changed, imports it, rebuilds the Compendium, updates characters (`--force`: everything again) |
-| `./admin.sh status` | what the content update is doing or last did |
-| `./admin.sh import <index> [--update\|--replace]` | imports one index again: `AuroraLegacy.index`, `5etools`, `starlights` (built-in extras), `homebrew` |
-| `./admin.sh reprocess` | runs every character through the rules again |
+**From Project Starlights' names.** Starfall is the same project under a new name: existing installs need no database
+migration or folder rename. Keep the `STARLIGHTS_*` settings, Docker project and volume names, storage keys and
+`.starlights.json` character files; API routes and internal names are unchanged. For an existing clone, update only
+your fork remote (`git remote set-url mine https://github.com/CHassapis/Starfall.git`, using your remote's name), never
+an `origin` that points to Bas Driessen's upstream. The default branch stays `aurora-server`.
 
 ## Backups and restoring
 
@@ -281,207 +223,128 @@ manifest of what is in it and checksums. **Copy it to another disk or computer**
 `restore.sh` replaces what is there now, so it checks the backup fully first, refuses one made by a newer version,
 asks you to type the install's name, makes a safety backup of the current state, and moves the current folders aside
 instead of deleting them. Moving to a new computer: install there with `setup.sh`, copy the backup folder into its
-`deploy/data/backups/`, restore. Everything else (nightly backups, what each message means):
-[docs/maintenance.md](docs/maintenance.md).
+`deploy/data/backups/`, restore. Nightly backups and what each message means: [docs/maintenance.md](docs/maintenance.md).
+These scripts are for installs made from `deploy/` by `setup.sh`; a server set up some other way needs its own backup
+routine.
 
-These scripts are for installs made from `deploy/` (by `setup.sh`). A server set up some other way (the project's
-own server is one) needs its own backup routine.
-
-## Playing away from home
-
-Don't open the port on your router: the site serves book content for your table's private use and must not be on the
-open internet. To play from anywhere, use a private network such as [Tailscale](https://tailscale.com) (free for
-personal use): install it on the server and on each player's device, then open `http://<server's Tailscale name>:8093`.
+**Stopping Starfall** without losing anything: `docker compose down` in `deploy/` stops and removes the containers;
+your data stays in `deploy/data` and `docker compose up -d` brings it back. To remove Starfall for good, first copy
+the backups you want to keep somewhere else, then delete the checkout yourself.
 
 ## Troubleshooting
 
 | Problem | What to do |
 |---|---|
-| `setup.sh` stops with an error | It names the step and what to do; rerunning it is safe. More in [docs/installation.md](docs/installation.md#timeouts-and-troubleshooting). |
-| A backup, restore or update stops | It says why and what to do; nothing was half-done without saying so. See [docs/maintenance.md](docs/maintenance.md#when-something-goes-wrong). |
-| "port is already allocated" | Another program uses 8093: set `STARLIGHTS_PORT=8094` (or another) in `.env` and run `docker compose up -d`. |
+| `setup.sh` stops with an error | It names the step and what to do; rerunning it is safe. Exit code 2 means the app runs but content is incomplete. More in [installation.md](docs/installation.md#timeouts-and-troubleshooting). |
+| A backup, restore or update stops | It says why and what to do; nothing was half-done without saying so. See [maintenance.md](docs/maintenance.md#when-something-goes-wrong). |
+| "port is already allocated" | Another program uses 8093: on a new install `./setup.sh --port 8094`; on an existing one set `STARLIGHTS_PORT` in `.env` and run `docker compose up -d`. |
+| Phones can't open `http://<server>:8093` | Use the server's LAN address, not `localhost` or the WSL address; the host firewall must allow the port on your private network. |
 | The Compendium of Lore says it isn't set up | On the Content page press **Download everything again** (or `./admin.sh update --force`). |
 | The content update stopped | The Content page shows the step and the reason. "GitHub did not answer" usually means its limit of 60 checks an hour: try again later. |
 | New classes or options don't show after an update | `./admin.sh reprocess` |
+| No way to install Starfall on a phone | Use the **https://** address ([HTTPS](#https)), in Safari on iPhone/iPad or Chrome on Android. On `http://` the Install Starfall dialog says so. |
+| The installed app asks for my player again (iPhone/iPad) | Expected: the home-screen app has its own storage. Pick your player once inside it. |
+| The installed app shows the old version after an update | Close it fully and open it again (nothing is kept offline, so a fresh start loads the new version). |
 | A player forgot their password | Unlock admin with the key button, pick that player's name (top right), and use **Change password** to set a new one or remove it. |
 | You forgot the admin password | It's `STARLIGHTS_MASTER_PASSWORD` in `deploy/.env`. |
-| Something else | `docker compose ps` shows what is running; `docker compose logs -f` follows the logs. |
+| Something else | `docker compose ps` shows what is running; `docker compose logs --tail=100 starlights-api` shows recent API logs. Logs can hold private content: don't paste them, or `.env`, into public bug reports. |
 
-## Removing it
+## Developer documentation
 
-First copy anything in `data/backups/` you want to keep somewhere else: the last command deletes it too.
+Starfall is a .NET modular monolith (API, EF Core, SQL Server) with a React + Vite web app.
+
+- **Architecture and working notes**: [docs/ai/ARCHITECTURE.md](docs/ai/ARCHITECTURE.md),
+  [FRONTEND_GUIDE.md](docs/ai/FRONTEND_GUIDE.md) (themes, ornament, units, PWA, large screens),
+  [DECISIONS.md](docs/ai/DECISIONS.md), [CI.md](docs/ai/CI.md) and the
+  [project status](docs/ai/PROJECT_STATUS.md).
+- **HTTP API** for other programs: [docs/api/README.md](docs/api/README.md) (players and `X-Player-Token`,
+  characters, attacks, inventory, magic and combat), the OpenAPI 3.1 description [docs/api/openapi.json](docs/api/openapi.json)
+  (checked against the endpoints by a test), viewable with [docs/api/index.html](docs/api/index.html), and
+  [Python](docs/api/examples/starlights_client.py) and [TypeScript](docs/api/examples/starlights-client.ts) examples.
+  Keep the server on your private network.
+- **Installer and maintenance tools**: `deploy/` ([installation.md](docs/installation.md#validation-and-maintenance-handoff),
+  [maintenance.md](docs/maintenance.md)).
+
+### Running locally
+
+Needs the .NET 10 SDK, Node.js 22.19+ (or a supported Node.js 24) and Docker. The project uses .NET Aspire: open
+`Starlights.slnx` in Visual Studio with `Starlights.AppHost` as the startup project (`https` profile) and press F5, or
+run `aspire run` ([aspire.dev](https://aspire.dev)) in the repository root. It starts SQL Server in a container, applies
+the migrations, and runs the API, the web app and the Aspire dashboard; run the API's **Initialize Database** action
+in the dashboard once.
+
+### Tests
 
 ```bash
-cd starfall/deploy
-docker compose down
-docker rmi $(docker compose config --images | grep -v mssql)   # this install's own images
-docker run --rm -v "$PWD:/d" alpine rm -rf /d/data     # deletes everything, including characters, campaigns and backups
+dotnet test                                                # backend, from the repository root
+python3 -m unittest discover -s deploy/installer-tests -v  # installer contract tests
+cd src/frontend && npm ci && npm run build && npm run test -w apps/builder-app && npm run lint
 ```
 
-## Starfall compatibility
+Set `LORE_SRC` to a complete local 5etools source checkout to include the real-content tests. The browser checks in
+`tools/frontend/` (`smoke`, `accessibility`, `homepage-branding`, `ornaments`, `units`, `pwa`, …) run with Playwright
+against a local build started with `VITE_API_BASE=''` and answer every API request from a synthetic fixture; see
+[FRONTEND_GUIDE.md](docs/ai/FRONTEND_GUIDE.md). Keep test databases, content and browser fixtures away from a real
+install, and never run deployment scripts as tests.
 
-Starfall continues this fork under its new name. Existing installations need no database migration or directory rename.
-Keep existing `STARLIGHTS_*` settings, Docker project/volume names, storage keys and `.starlights.json` character files.
-API routes, scoped packages and internal namespaces remain unchanged. For an existing clone, update only the fork remote
-after the GitHub rename: `git remote set-url mine https://github.com/CHassapis/starfall.git` (use your fork remote’s name).
-Do not change an `origin` remote that points to Bas Driessen’s upstream repository. The default branch stays `aurora-server`.
+### Known limitations
 
-## Developer API
-
-Other programs can read your group's characters from a Starfall server: the web app runs on the same HTTP API.
-
-- **Guide:** [docs/api/README.md](docs/api/README.md): players and passwords (`X-Player-Token`), characters,
-  attacks (custom attacks included), inventory, magic and combat, with what the API does not do yet.
-- **Description:** [docs/api/openapi.json](docs/api/openapi.json) (OpenAPI 3.1, generated from the endpoints by a test
-  that fails when they drift), readable with [docs/api/index.html](docs/api/index.html) (Scalar).
-- **Examples:** [Python](docs/api/examples/starlights_client.py) and [TypeScript](docs/api/examples/starlights-client.ts).
-
-Keep the server on your private network; the documentation lives here, not on the server.
-
-## Verification and beta limitations
-
-The release commit passes the full backend suite (**803 tests: 779 passed, 0 failed, 24 skipped**, including the
-OpenAPI drift check and the wrapped 5etools book tests), a clean `npm ci`, the full frontend build, **235 frontend
-tests** with the optional real-content checks, and the **39 installer contract tests**; CI ran on the release commit.
-All 19 bundled PDF templates parse, and a synthetic character exports through the real PDF generator. Both legacy and
-wrapped 5etools books and adventures are read: built from 5etools 2.38, all 101 adventures and 67 books have their
-chapters. Full evidence and commands are in the [verification report](docs/ai/V0_10_0_VERIFICATION.md).
-
-- Browser journeys on a disposable install (homebrew, sheet and PDF downloads, spells, Battle, permissions,
-  persistence) were not rerun on this exact commit; earlier checks of those features are historical.
-- `npm audit` lists 24 advisories in the production dependency tree. They are in server-side packages brought in by
-  the `shadcn` command-line tool (a developer tool in `packages/ui-framework`) or in react-router's server (RSC) mode;
-  the released web app is static files served by nginx and runs none of them. Existing lint debt is 38 errors and
-  one warning.
-- `ReorderElementRulesEndpointTests` has failed intermittently in CI before (a likely start-up race in the test
-  hosts, not a confirmed cause). On the release commit it passed 10 of 10 runs alone and 3 of 3 runs of the whole
-  integration project.
-- The server's NuGet audit lists a transitive `System.Security.Cryptography.Pkcs` 9.0.4 with one high and one
-  moderate advisory (and older `Pkcs`/`MessagePack` in the development-only AppHost); updating it is a follow-up.
+- Windows/WSL2 installs and exhaustive class, content and accessibility coverage are not certified. Installing as an
+  app was checked with browser emulation of iPhone and Android, not on physical devices.
 - Homebrew saving needs a completed initial content import. Custom classes do not implement Mystic Arcanum,
   third-casters or custom resource pools. Simultaneous builder/Battle edits can leave charge displays stale.
 - Custom attack figures stay as written; they are not recalculated on level-up. The API exposes the ingredients for
-  weapon attacks, not finished attack totals. The API guide documents missing query metadata and some inaccurate
-  content-administration response codes in the OpenAPI description.
+  weapon attacks, not finished attack totals.
 - Campaign exports are readable archives; campaign import is not implemented. Character imports require matching
-  books and homebrew. Windows/WSL2 and exhaustive class/content/accessibility coverage are not certified.
-- The software's MIT licence does not establish redistribution rights for third-party artwork or sheet logos. No
-  grant is on record for the bundled pictures or the sheet templates' D&D logos; the owner chose to publish them as
-  they are.
+  books and homebrew. Units convert numbers and short rule labels, not rules prose or free text.
+- There is no offline mode: the installed app needs the server.
+- `npm audit` lists advisories in development tooling and react-router's server mode, which the released static web
+  app does not run; the server's NuGet audit lists a transitive `System.Security.Cryptography.Pkcs` to update.
+  The v0.10.0 [verification report](docs/ai/V0_10_0_VERIFICATION.md) has the full evidence.
 
-## Credits and legal
+## Licence and attribution
 
-- [Project Starlights](https://github.com/swdriessen/starlights) and [Aurora Builder](https://www.aurorabuilder.com) by
-  **Bas Driessen**: the app, its rules engine and the Aurora way of building characters (MIT licence, kept in
-  [LICENSE](./LICENSE)).
-- [Aurora Legacy](https://github.com/AuroraLegacy/elements): the community's content files.
-- [5etools](https://github.com/5etools-mirror-3/5etools-src): the data behind the Compendium of Lore.
-- The PDF sheet: Aurora Builder's sheet templates (their artwork and the Dungeons & Dragons logos belong to their
-  owners), and the fonts [Carlito](https://github.com/googlefonts/carlito) and
-  Adobe's [Source Sans 3](https://github.com/adobe-fonts/source-sans) (SIL Open Font License); see
+- **Software**: MIT licence, [LICENSE](./LICENSE) (© 2025 Bas Driessen). [Project Starlights](https://github.com/swdriessen/starlights)
+  and [Aurora Builder](https://www.aurorabuilder.com) by **Bas Driessen**: the app, its rules engine and the Aurora way
+  of building characters. This fork (Docker packaging, and the features above) by C Hassapis.
+- **Content**: [Aurora Legacy](https://github.com/AuroraLegacy/elements) (the community's content files) and
+  [5etools](https://github.com/5etools-mirror-3/5etools-src) (the data behind the Compendium of Lore), downloaded by
+  your own server for your own table's use. **No book content is in this repository.**
+- **PDF sheet**: Aurora Builder's sheet templates (their artwork and the Dungeons & Dragons logos belong to their
+  owners) and the fonts [Carlito](https://github.com/googlefonts/carlito) and Adobe's
+  [Source Sans 3](https://github.com/adobe-fonts/source-sans) (SIL Open Font License); see
   [the sheet's folder](./src/frontend/apps/builder-app/src/assets/sheet/README.md).
-- This fork (Docker packaging and the features listed above) by C Hassapis.
+- **Branding**: the Starfall emblem, icons and celestial ornament are the project's own
+  ([branding notes](src/frontend/apps/builder-app/public/branding/README.md)).
+- **Artwork**: the MIT licence does not establish redistribution rights for third-party artwork or sheet logos. No
+  grant is on record for the bundled background pictures or the sheet templates' D&D logos; the owner chose to publish
+  them as they are. A group can use its own pictures instead ([how](docs/using-starfall.md#how-aurora-legacy-and-5etools-are-connected)).
 
-Dungeons & Dragons and its books belong to Wizards of the Coast. This is an unofficial fan project, not approved or
-endorsed by Wizards of the Coast. No book content is in this repository: `setup.sh` downloads it onto your own machine
-for your own table's use.
+Dungeons & Dragons and its books belong to Wizards of the Coast. Starfall is an unofficial fan project, not approved
+or endorsed by Wizards of the Coast.
 
-## The original README
+<details>
+<summary>The original Project Starlights README (Bas Driessen)</summary>
 
-This is a work-in-progress project intended as an online toolset to enhance tabletop role‑playing games. Its initial focus is creating characters for Dungeons & Dragons in the form of an online version of [Aurora](https://www.aurorabuilder.com), which was my original creation years ago.
+This is a work-in-progress project intended as an online toolset to enhance tabletop role‑playing games. Its initial
+focus is creating characters for Dungeons & Dragons in the form of an online version of
+[Aurora](https://www.aurorabuilder.com), which was my original creation years ago.
 
 If you'd like to see this project grow, please consider giving it a star :star: — thank you!
 
-There is no public-facing website hosted for this project at this time, and more details will be shared as development progresses.
-
-<hr />
+There is no public-facing website hosted for this project at this time, and more details will be shared as
+development progresses.
 
 _A screenshot from the experimental Development UI in this project._
 
 ![Demo UI](./assets/images/development-ui.png)
 
-## Running Locally
+The project follows a **Modular Monolith** architecture, organized by business capability: the **Elements Module**
+(game data: classes, abilities, features, rules), the **Characters Module** (character creation and management) and
+the **Platform Layer** (hosting, logging, data, eventing). Each module is self-contained with its own domain logic,
+data persistence, and API endpoints.
 
-This project uses .NET Aspire for local orchestration. You can run it using Visual Studio or the command line.
+This project builds on my experience developing [Aurora](https://www.aurorabuilder.com), a character builder for
+Windows. It is developed in the open under the [MIT License](./LICENSE).
 
-### Prerequisites
-
-- .NET 10 SDK
-- Node.js 22.19+ or a supported Node.js 24 release; install the locked workspace dependencies with `npm ci`
-- Docker Desktop (or compatible container runtime)
-- Visual Studio (recent version) or Visual Studio Code
-
-### Using Visual Studio
-
-1. Open `Starlights.slnx` in Visual Studio.
-2. Ensure `Starlights.AppHost` is set as the startup project with `https` as the launch profile.
-3. Press **F5** to start debugging.
-
-Once running, the Aspire Dashboard will launch automatically. From there, you can access the frontend application, backend API, and Scalar API documentation.
-
-### Using Aspire CLI
-
-To run the application using the Aspire CLI (see [aspire.dev](https://aspire.dev)), execute the following command in the root directory:
-
-```bash
-aspire run
-```
-
-This will start the AppHost, which orchestrates:
-
-- **SQL Server**: A container (port `61070`)
-- **Migrations**: Automatically applies EF Core migrations
-- **Backend API**: The .NET Web API
-- **Frontend**: The React/Vite application
-- **Dashboard**: The Aspire dashboard for logs and metrics
-
-### Initial Setup
-
-Before using the application, initialize the sample data. In the Aspire Dashboard, locate the backend API resource and run the database initialization/seed action named **Initialize Database**.
-
-## Running Tests
-
-You can run the automated test suite using Visual Studio or the command line.
-
-### Using Visual Studio 2026
-
-1. Open the **Test Explorer** window (**Test** > **Test Explorer**).
-2. Click the **Run All Tests** button (or press **Ctrl+R, A**).
-
-### Using CLI
-
-To run all tests, execute the following command in the root directory:
-
-```bash
-dotnet test
-```
-
-Frontend checks, from `src/frontend`:
-
-```bash
-npm ci
-npm run build
-npm run test -w apps/builder-app
-npm run lint
-```
-
-Set `LORE_SRC` to a complete local 5etools source checkout to include the five real-content tests. Keep all test
-databases, content and browser fixtures separate from production. Never run deployment scripts as tests.
-
-## Architecture
-
-The project follows a **Modular Monolith** architecture, organized by business capability:
-
-- **Elements Module**: Manages game data (classes, abilities, features, rules).
-- **Characters Module**: Handles character creation and management.
-- **Platform Layer**: Provides shared infrastructure (hosting, logging, data, eventing).
-
-Each module is self-contained with its own domain logic, data persistence, and API endpoints.
-
-## Acknowledgements
-
-This project builds on my experience developing [Aurora](https://www.aurorabuilder.com), a character builder for Windows.
-
-## License
-
-This project is being developed in the open under the [MIT License](./LICENSE).
+</details>

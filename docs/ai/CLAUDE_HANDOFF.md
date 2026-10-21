@@ -1,17 +1,24 @@
 # Claude handoff
 
-Updated 2026-10-21 (session 5d4ac16e). Keep under ~80 lines; replace stale lines.
+Updated 2026-10-21 (polish session 33d95646). Keep under ~80 lines; replace stale lines.
 
-## Task (done on its branch, not deployed): visual-fidelity correction
-Owner's pack `Starfall_Claude_Visual_Fidelity_Pack.zip` (Copyparty data folder). Branch `feature/visual-fidelity`
-(worktree `~/starfall-visual-fidelity`) from `aurora-server` `79610c3`; report with asset choices, checks and the
-remaining differences: [VISUAL_FIDELITY_REPORT.md](VISUAL_FIDELITY_REPORT.md). One page frame (`StarfallShell`) with
-the supplied corners/edges on its line, homepage rebuilt to the mockup (brand block, not the portrait), Slate now a
-dark theme, theme applied before first paint. Evidence and disposable install: `~/.cache/starlights-test/vf/`
-(README.md, shots/, checks/). Superseded: `feature/celestial-polish` (unpushed `f4d4e85`, same files) — don't merge both.
+## Task (done on its branches, not deployed): polish & release readiness (5 stacked PRs)
+Owner's mission + three packs (D20 refinement, universal UI assets, PWA home-screen kit). Worktree
+`~/starfall-polish`, branches stacked from `aurora-server` `1f47f91`; merge **in order** #22 → #23 → #24 → #26 → docs PR:
+1. #22 `feature/polish-brand-responsive`: D20 redrawn as a true icosahedron (`tools/frontend/d20-emblem.mjs`), the
+   kit's app icons in `public/icons` (`tools/frontend/app-icons.py`), `3xl`/`4xl` breakpoints + type step for
+   1440p/4K/ultrawide.
+2. #23 `feature/polish-ornament`: shared ornament rules (title marker, corners, empty-state accent, sprig, book rule).
+3. #24 `feature/polish-units`: Imperial/Metric display preference (`lib/units.ts`, `useUnits()`), no data change.
+4. #26 `feature/polish-pwa`: manifest, install dialog/menu (`lib/install.ts`), no service worker; `deploy/nginx.conf`
+   opens manifest + `/icons/` on the gated door (needs owner review before deploy).
+5. `feature/polish-docs`: README rewritten as the entry point (13 sections, HTTPS via Tailscale Serve), user guide
+   moved to `docs/using-starfall.md`, new synthetic screenshots.
+Checks per stage in each PR; `tools/frontend/{units,pwa}.mjs` new. Evidence: `~/.cache/starlights-test/polish/`.
+#25 (another session, `fix/backup-outside-compose`) edits `deploy/maintenance` + `docs/maintenance.md`: untouched here.
 
-## Previous task (done, merged and live): Mk2 final completion
-[MK2_FINAL_COMPLETION_REPORT.md](MK2_FINAL_COMPLETION_REPORT.md); live `24fd60b` (2026-10-20 12:59), released v0.11.1.
+## Previous task (merged; web live 1f47f91 since 2026-10-21 15:08): visual fidelity
+[VISUAL_FIDELITY_REPORT.md](VISUAL_FIDELITY_REPORT.md): one page frame, mockup homepage, dark Slate.
 
 ## Earlier work
 Mk2 stabilization, v0.11.0 (2026-10-20, [MK2_VERIFICATION_REPORT.md](MK2_VERIFICATION_REPORT.md)); homebrew workshop
@@ -20,6 +27,7 @@ Mk2 stabilization, v0.11.0 (2026-10-20, [MK2_VERIFICATION_REPORT.md](MK2_VERIFIC
 
 ## Not done / known limits
 - Windows (Docker Desktop, WSL2, `setup.ps1`) never run on real Windows.
+- PWA install checked by emulation (iPhone 13, Pixel 7) and Chrome's installability check, not on real devices.
 - Builder: an edit made in the first seconds after levelling, while the save snapshot waits for processing, is not
   undone by Discard (kept, not lost).
 - Resistance order can differ from Aurora's; battle page violet chip contrast 3.3–3.9:1; Characters cards nest
@@ -38,6 +46,9 @@ Mk2 stabilization, v0.11.0 (2026-10-20, [MK2_VERIFICATION_REPORT.md](MK2_VERIFIC
   `theme-provider.tsx`, `ui/sonner.tsx`, `index.html` (pre-paint theme), `default-layout.tsx` (header text/padding),
   `App.tsx`, `ornaments.tsx`, `ornament.css`, landing, `lore-home.tsx` banner, `campaigns-page.tsx` cards,
   `tools/frontend/ornaments.mjs` + `homepage-branding.mjs` (new contracts).
+- Polish: `default-layout.tsx` (nav emblem, phone menu Install), `mode-toggle.tsx` (units, install), `main.tsx`
+  (providers), `ornament.css`, `themes.css`, `index.html`, many pages (`3xl:` widths, `useUnits`), `deploy/nginx.conf`,
+  README.md; the `Choose theme` label became `Choose theme and units` in five `tools/frontend` checks.
 - Earlier (Mk2): `pages/landing/Index.tsx` hero, `styles/ornament.css`, `components/ornaments.tsx`, `App.tsx`,
   `lib/api/sheet.ts`, `lib/rules/proficiencies.ts`, `lib/rules/items.ts`, `lib/aurora-character-import.ts`.
 
