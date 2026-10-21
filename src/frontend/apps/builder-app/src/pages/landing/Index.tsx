@@ -142,7 +142,7 @@ export function LandingPage2() {
         </div>
       </header>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 lg:grid-rows-2 lg:h-[31rem]">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 lg:grid-rows-2 lg:h-[31rem] 4xl:h-[38rem]">
         <div className="h-72 sm:col-span-2 lg:row-span-2 lg:h-auto">
           <LandingTile {...tiles[0]} />
         </div>

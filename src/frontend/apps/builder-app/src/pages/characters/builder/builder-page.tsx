@@ -103,7 +103,7 @@ export function CharacterBuilderPage() {
   }
 
   return (
-    <div className="container mx-auto space-y-6 px-4 py-8 pb-24">
+    <div className="container mx-auto space-y-6 px-4 py-8 pb-24 4xl:max-w-[125rem]">
       <BuilderHeader characterId={id} choices={choicesData?.choices ?? []} pending={choicesData?.pending ?? false} guided={guided} />
       <SaveBar characterId={id} name={header.data?.character.name ?? ""} />
 
@@ -175,7 +175,7 @@ export function CharacterBuilderPage() {
         </TabsContent>
 
         <TabsContent value="build" className="mt-4">
-          <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_24rem] xl:grid-cols-[minmax(0,1fr)_28rem]">
+          <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_24rem] xl:grid-cols-[minmax(0,1fr)_28rem] 3xl:grid-cols-[minmax(0,1fr)_36rem]">
             {/* min-w-0: a long pick must not stretch the column past a phone's screen */}
             <div className="min-w-0 space-y-4">
               {isLoading && <Spinner className="mx-auto my-12 size-6" />}

@@ -17,7 +17,7 @@ export function BattleIndexPage() {
   return (
     <div className="relative min-h-[calc(100vh-4rem)] overflow-hidden">
       <BattleBackdrop />
-      <div className="relative mx-auto max-w-5xl px-4 py-10 sm:py-16">
+      <div className="relative mx-auto max-w-5xl px-4 py-10 sm:py-16 3xl:max-w-7xl">
         <p className="text-sm font-semibold uppercase tracking-[0.3em] text-[var(--warning)]">Encounter helper</p>
         <h1 className="mt-2 font-heading text-4xl tracking-wide text-foreground drop-shadow sm:text-5xl">Battle Action Simulator</h1>
         <p className="mt-3 max-w-2xl text-sm text-muted-foreground sm:text-base">
@@ -46,7 +46,7 @@ export function BattleIndexPage() {
             .
           </p>
         ) : (
-          <ul className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <ul className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 3xl:grid-cols-4">
             {characters.map((c) => (
               <li key={c.characterId}>
                 <Link

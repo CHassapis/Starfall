@@ -58,7 +58,7 @@ export function CampaignPage() {
   const nextSession = Math.max(0, ...view.entries.filter((e) => e.kind === "session").map((e) => e.number ?? 0)) + 1;
 
   return (
-    <div className="container mx-auto max-w-5xl space-y-6 px-4 py-6 pb-24">
+    <div className="container mx-auto max-w-5xl space-y-6 px-4 py-6 pb-24 3xl:max-w-7xl">
       <Link to="/campaigns" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
         <ArrowLeftIcon className="size-4" /> Campaigns
       </Link>

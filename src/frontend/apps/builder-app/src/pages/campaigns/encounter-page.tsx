@@ -138,7 +138,7 @@ export function EncounterPage() {
   const update = (cid: string, patch: Partial<Combatant>) => apply((x) => ({ ...x, combatants: x.combatants.map((c) => (c.id === cid ? { ...c, ...patch } : c)) }));
 
   return (
-    <div className="container mx-auto max-w-5xl space-y-5 px-4 py-6 pb-24">
+    <div className="container mx-auto max-w-5xl space-y-5 px-4 py-6 pb-24 3xl:max-w-7xl">
       {back}
       <header className="flex flex-wrap items-center gap-3">
         <SwordsIcon className="size-6 text-amber-500" />

@@ -26,7 +26,14 @@
   --success: #8fe0b2; --warning: #f5ce85; --info: #95cefa;
 }
 :root { --sidebar: var(--card); --sidebar-foreground: var(--foreground); --sidebar-border: var(--border); }
+/* two breakpoints above 2xl (1536px) for large monitors: 3xl from 2000px (QHD, ultrawide, 4K), 4xl from 2560px CSS width */
+@theme { --breakpoint-3xl: 125rem; --breakpoint-4xl: 160rem; }
 @layer base {
+  /* large monitors at 100% scaling: one modest step up in type (and everything sized in rem) instead of a 1080p-sized
+     island; 4K gets a second step. Not a proportional zoom, and the height condition keeps 3440 × 1440 ultrawides on
+     the 1440p step. Media queries measure rem at 16px, so the breakpoints do not move. */
+  @media (min-width: 2400px) and (min-height: 1250px) { html { font-size: 106.25%; } }
+  @media (min-width: 3200px) and (min-height: 1800px) { html { font-size: 125%; } }
   body { background: var(--background); color: var(--foreground); font-size: 1rem; line-height: 1.5; }
   :focus-visible { outline: 2px solid var(--ring); outline-offset: 3px; }
   button, input, select, textarea { font: inherit; }

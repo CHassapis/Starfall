@@ -102,6 +102,12 @@
   }
   .shell-edge[data-edge="left"] { left: var(--at); }
   .shell-edge[data-edge="right"] { right: var(--at); }
+  /* large monitors: the frame takes more of the screen (with the larger type above: ~80% / 98% of a 2560px window,
+     ~60% / 80% of 4K and ultrawide) instead of staying a 1440px island; the tool pages' own widths grow at 3xl */
+  @media (min-width: 2400px) {
+    .starfall-shell { --shell-corner: 144px; --shell-edge: 24rem; width: min(100% - 3rem, 120rem); margin: 1.5rem auto; min-height: calc(100vh - 3rem); }
+    .starfall-shell[data-width="wide"] { width: min(100% - 3rem, 160rem); }
+  }
   @media (min-width: 768px) and (max-width: 1279.98px) {
     .starfall-shell { --shell-corner: 88px; --shell-edge: 15rem; width: min(100% - 1.5rem, 90rem); margin: 0.75rem auto; min-height: calc(100vh - 1.5rem); }
   }

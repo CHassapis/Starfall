@@ -67,6 +67,7 @@ const inspect = (page) => page.evaluate(() => {
   return {
     overflow: document.documentElement.scrollWidth - innerWidth, height: document.documentElement.scrollHeight,
     framed, corners, tiles, dividers, pseudo, navUnderline: nav ? getComputedStyle(nav).backgroundImage : null, theme: document.documentElement.dataset.theme,
+    share: frame ? frame.width / innerWidth : 0,
   };
 });
 
@@ -100,10 +101,12 @@ const known = (process.env.KNOWN_OVERFLOW ?? "").split(",").filter(Boolean);
 
 try {
   for (const theme of ["porcelain", "slate", "midnight"])
-    for (const width of [390, 768, 1440, 1920]) {
+    // 2560 × 1440 and 3840 × 2160: the large-monitor frame (wider, 144px corners) and the larger type step
+    for (const width of [390, 768, 1440, 1920, 2560, 3840]) {
       for (const [name, path] of pages) {
         if ((width === 1920 || width === 768) && !["home", "compendium", "homebrew", "campaigns"].includes(name)) continue;
-        const { context, page, errors, ornaments } = await open({ width, height: 900 }, theme);
+        if (width > 1920 && !["home", "campaigns", "lore"].includes(name)) continue;
+        const { context, page, errors, ornaments } = await open({ width, height: width > 1920 ? (width * 9) / 16 : 900 }, theme);
         await page.goto(base + path);
         await page.waitForLoadState("networkidle");
         await page.waitForTimeout(500);
@@ -121,6 +124,8 @@ try {
           assert.ok(m.corners.every((c) => c.hidden && c.pe === "none" && c.attached), `${label}: shell ornament ${JSON.stringify(m.corners)}`);
           assert.equal(m.framed, width >= 768, `${label}: shell frame ${m.framed ? "on a phone" : "missing"}`);
           assert.equal(m.corners.length, width >= 768 ? 8 : 0, `${label}: ${m.corners.length} shell corners and edges`);
+          // large monitors: the frame uses the screen (no 1440px island in the middle of a 2560 or 3840 window)
+          if (width >= 2560) assert.ok(m.share >= 0.6, `${label}: frame is ${Math.round(m.share * 100)}% of the window`);
           assert.ok(m.tiles.every((t) => t.hidden && t.pe === "none"), `${label}: tile corner ${JSON.stringify(m.tiles)}`);
           assert.ok(m.dividers.every((d) => d.hidden && d.pe === "none"), `${label}: divider ${JSON.stringify(m.dividers)}`);
           assert.ok(m.pseudo.every((pe) => pe === "none"), `${label}: corner takes clicks`);

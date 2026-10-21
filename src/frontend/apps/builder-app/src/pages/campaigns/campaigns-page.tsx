@@ -16,7 +16,7 @@ export function CampaignsPage() {
   const { data, isLoading } = useCampaigns();
   const [creating, setCreating] = useState(false);
   return (
-    <div className="container mx-auto max-w-5xl space-y-6 px-4 py-6 pb-24">
+    <div className="container mx-auto max-w-5xl space-y-6 px-4 py-6 pb-24 3xl:max-w-7xl">
       <div className="flex flex-wrap items-center gap-3">
         <h1 className="font-heading text-3xl tracking-wide">Campaigns</h1>
         {data && (
@@ -34,7 +34,7 @@ export function CampaignsPage() {
           No campaigns yet. Start one with “New campaign”.
         </p>
       )}
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid gap-4 sm:grid-cols-2 3xl:grid-cols-3">
         {data?.campaigns.map((c) => (
           <div key={c.id} className="relative [--ornament-corner-size:2.75rem]">
             <Link to={`/campaigns/${c.id}`} className="ornament-hover block h-full overflow-hidden rounded-[0.7rem] border border-[var(--ornament-line)] bg-card hover:bg-muted/40">
