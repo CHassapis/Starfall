@@ -84,7 +84,7 @@ export function SaveBar({ characterId, name }: { characterId: string; name: stri
 
   return (
     <>
-      <div className="fixed inset-x-0 bottom-0 z-40 border-t bg-background/95 shadow-[0_-4px_16px_rgba(0,0,0,0.15)] backdrop-blur">
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t bg-background/95 pb-[env(safe-area-inset-bottom)] shadow-[0_-4px_16px_rgba(0,0,0,0.15)] backdrop-blur">
         <div className="container mx-auto flex flex-wrap items-center gap-2 px-4 py-2.5">
           <p className="min-w-0 flex-1 text-sm">
             {changed ? (

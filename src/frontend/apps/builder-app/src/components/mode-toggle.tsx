@@ -4,12 +4,15 @@ import { useTheme } from "@/components/theme-provider";
 import { THEMES, type Theme } from "@/lib/themes";
 import { useUnits } from "@/components/units-provider";
 import { UNITS } from "@/lib/units";
+import { InstallSteps } from "@/components/install-starfall";
+import { useInstall } from "@/lib/install";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 export function ModeToggle() {
   const { theme, setTheme, previewTheme } = useTheme();
   const { units, setUnits } = useUnits();
+  const { installed } = useInstall();
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState<Theme>(theme);
   function close(next: boolean) {
@@ -78,6 +81,14 @@ export function ModeToggle() {
             Speeds, ranges, weights and carrying capacity follow your choice (5 ft = 1.5 m, 1 lb = 0.5 kg, as at most tables). Rules text, the printed sheet and Aurora files keep feet and pounds.
           </p>
         </div>
+        {!installed && (
+          <details className="border-t pt-4">
+            <summary className="text-sm font-semibold">Install Starfall as an app</summary>
+            <div className="mt-3">
+              <InstallSteps />
+            </div>
+          </details>
+        )}
         <div className="flex flex-wrap justify-end gap-2">
           <Button variant="ghost" onClick={() => close(false)}>
             Cancel

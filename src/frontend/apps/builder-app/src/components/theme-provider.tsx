@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState } from "react";
 
-import { isDarkTheme, normalizeTheme as normalize, type Theme } from "@/lib/themes";
+import { isDarkTheme, normalizeTheme as normalize, THEMES, type Theme } from "@/lib/themes";
 const Context = createContext<{
   theme: Theme;
   resolvedTheme: Exclude<Theme, "system">;
@@ -47,6 +47,8 @@ export function ThemeProvider({
     root.classList.toggle("dark", isDarkTheme(resolvedTheme));
     root.classList.toggle("light", !isDarkTheme(resolvedTheme));
     root.style.colorScheme = isDarkTheme(resolvedTheme) ? "dark" : "light";
+    // the browser bar and an installed app's title bar follow the theme's background
+    document.querySelector('meta[name="theme-color"]')?.setAttribute("content", THEMES.find((t) => t.id === resolvedTheme)?.colors[0] ?? "#f4f0e8");
   }, [resolvedTheme]);
   function setTheme(next: Theme) {
     update(next);

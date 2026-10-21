@@ -125,7 +125,7 @@ export function LoreShell() {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="fixed bottom-4 right-4 z-40 inline-flex items-center gap-2 rounded-full border bg-background/90 px-4 py-2 text-sm shadow-lg backdrop-blur hover:bg-muted focus-visible:outline-2 focus-visible:outline-ring print:hidden"
+        className="fixed right-4 bottom-[max(1rem,env(safe-area-inset-bottom))] z-40 inline-flex items-center gap-2 rounded-full border bg-background/90 px-4 py-2 text-sm shadow-lg backdrop-blur hover:bg-muted focus-visible:outline-2 focus-visible:outline-ring print:hidden"
         aria-label="Search the whole compendium (Ctrl K)"
       >
         <SearchIcon className="size-4" />

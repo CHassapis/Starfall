@@ -1,3 +1,5 @@
+// first: keeps the browser's install prompt for the Install Starfall button (lib/install.ts)
+import "./lib/install";
 import { Toaster } from "@/components/ui/sonner";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { StrictMode } from "react";
