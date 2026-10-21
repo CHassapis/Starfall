@@ -21,7 +21,7 @@
   --ornament-tile-corner: url("/ornaments/midnight/tile-corner.svg"); --ornament-divider: url("/ornaments/midnight/section-divider.svg");
   --ornament-marker: url("/ornaments/midnight/section-marker.svg"); --ornament-underline: url("/ornaments/midnight/nav-active-underline.svg");
   --ornament-edge-h: url("/ornaments/midnight/edge-horizontal.svg"); --ornament-edge-v: url("/ornaments/midnight/edge-vertical.svg");
-  --ornament-emblem: url("/ornaments/midnight/home-d20-icon.svg");
+  --ornament-emblem: url("/ornaments/midnight/home-d20-icon.svg?v=2");
   --ornament-accent-mark: url("/ornaments/midnight/celestial-accent.svg"); --ornament-sprig: url("/ornaments/midnight/botanical-sprig-optional.svg");
 }
 /* Porcelain: muted bronze, slate-blue details */
@@ -36,7 +36,7 @@
   --ornament-tile-corner: url("/ornaments/porcelain/tile-corner.svg"); --ornament-divider: url("/ornaments/porcelain/section-divider.svg");
   --ornament-marker: url("/ornaments/porcelain/section-marker.svg"); --ornament-underline: url("/ornaments/porcelain/nav-active-underline.svg");
   --ornament-edge-h: url("/ornaments/porcelain/edge-horizontal.svg"); --ornament-edge-v: url("/ornaments/porcelain/edge-vertical.svg");
-  --ornament-emblem: url("/ornaments/porcelain/home-d20-icon.svg");
+  --ornament-emblem: url("/ornaments/porcelain/home-d20-icon.svg?v=2");
   --ornament-accent-mark: url("/ornaments/porcelain/celestial-accent.svg"); --ornament-sprig: url("/ornaments/porcelain/botanical-sprig-optional.svg");
 }
 /* Slate: brushed silver, pale blue */
@@ -48,7 +48,7 @@
   --ornament-tile-corner: url("/ornaments/slate/tile-corner.svg"); --ornament-divider: url("/ornaments/slate/section-divider.svg");
   --ornament-marker: url("/ornaments/slate/section-marker.svg"); --ornament-underline: url("/ornaments/slate/nav-active-underline.svg");
   --ornament-edge-h: url("/ornaments/slate/edge-horizontal.svg"); --ornament-edge-v: url("/ornaments/slate/edge-vertical.svg");
-  --ornament-emblem: url("/ornaments/slate/home-d20-icon.svg");
+  --ornament-emblem: url("/ornaments/slate/home-d20-icon.svg?v=2");
   --ornament-accent-mark: url("/ornaments/slate/celestial-accent.svg"); --ornament-sprig: url("/ornaments/slate/botanical-sprig-optional.svg");
 }
 :root {

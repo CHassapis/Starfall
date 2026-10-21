@@ -2,7 +2,7 @@
 
 Updated 2026-10-21 (polish session 33d95646). Keep under ~80 lines; replace stale lines.
 
-## Task (done on its branches, not deployed): polish & release readiness (5 stacked PRs)
+## Task (merged #22–#27; web live b5492d6 since 2026-10-21 18:17): polish & release readiness
 Owner's mission + three packs (D20 refinement, universal UI assets, PWA home-screen kit). Worktree
 `~/starfall-polish`, branches stacked from `aurora-server` `1f47f91`; merge **in order** #22 → #23 → #24 → #26 → docs PR:
 1. #22 `feature/polish-brand-responsive`: D20 redrawn as a true icosahedron (`tools/frontend/d20-emblem.mjs`), the
@@ -16,6 +16,8 @@ Owner's mission + three packs (D20 refinement, universal UI assets, PWA home-scr
    moved to `docs/using-starfall.md`, new synthetic screenshots.
 Checks per stage in each PR; `tools/frontend/{units,pwa}.mjs` new. Evidence: `~/.cache/starlights-test/polish/`.
 #25 (another session, `fix/backup-outside-compose`) edits `deploy/maintenance` + `docs/maintenance.md`: untouched here.
+After go-live an iPhone kept the old D20 (unversioned `/ornaments/` file, no Cache-Control, Safari reused it):
+`fix/ornament-cache` versions the emblem URL (`?v=2`) and serves `/ornaments/` + `/icons/` with `no-cache`.
 
 ## Previous task (merged; web live 1f47f91 since 2026-10-21 15:08): visual fidelity
 [VISUAL_FIDELITY_REPORT.md](VISUAL_FIDELITY_REPORT.md): one page frame, mockup homepage, dark Slate.
