@@ -252,7 +252,7 @@ function CharactersCollection({ showAll }: { showAll: boolean }) {
       )}
 
       {characterCards && characterCards.characters.length > 0 && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 3xl:grid-cols-8 4xl:grid-cols-10 gap-4">
           {characterCards.characters.map((card) => (
             <div key={card.characterId} className="group relative">
               <PortraitDrop characterId={card.characterId} name={card.name} hasPortrait={!!card.portraitUrl}>
@@ -342,7 +342,7 @@ function CharactersPageContent() {
 
   return (
     <>
-      <div className="container mx-auto px-4 mt-12">
+      <div className="container mx-auto px-4 mt-12 4xl:max-w-[125rem]">
         <CardWrapper>
           <Card data-ornament="restrained" className="rounded-lg shadow-none">
             {/* phones: the actions go under the title and wrap, instead of running off the screen */}

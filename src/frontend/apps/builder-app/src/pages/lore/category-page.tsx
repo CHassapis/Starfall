@@ -101,7 +101,7 @@ function CategoryList({ meta, category, openKey }: { meta: LoreMeta; category: s
   const filterPanel = <FilterPanel rows={rows} query={query} facets={facets} selection={selection} onChange={setSelection} />;
 
   return (
-    <div className="mx-auto max-w-screen-2xl px-4 py-4">
+    <div className="mx-auto max-w-screen-2xl px-4 py-4 3xl:max-w-[130rem]">
       <nav className="mb-3 flex items-center gap-1.5 text-sm text-muted-foreground print:hidden">
         <Link to="/lore" className="hover:text-foreground">
           Compendium of Lore

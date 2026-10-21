@@ -84,7 +84,7 @@ export function LoreHome() {
   if (!meta.data) return <Spinner className="mx-auto my-16 size-6" />;
   const built = CATEGORIES.filter((c) => meta.data.categories[c.id]);
   return (
-    <div className="mx-auto max-w-6xl space-y-8 px-4 py-8">
+    <div className="mx-auto max-w-6xl space-y-8 px-4 py-8 3xl:max-w-[100rem]">
       {/* the home page's feature-tile accent: the tile corner on two opposite corners */}
       <div className="relative [--ornament-corner-size:3.25rem]">
         <header className="relative isolate overflow-hidden rounded-[0.7rem] border border-[var(--ornament-line)] bg-neutral-950 px-5 py-10 text-white shadow-lg sm:px-8 sm:py-14">
@@ -112,7 +112,7 @@ export function LoreHome() {
       <MyBooks meta={meta.data} open={booksOpen} onOpenChange={setBooksOpen} />
       <RefList title="Pinned" icon={<PinIcon className="size-4" />} refs={pins} />
       <RefList title="Recently opened" icon={<ClockIcon className="size-4" />} refs={recent} />
-      <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 3xl:grid-cols-4">
         {built.map((c) => (
           <Link key={c.id} to={`/lore/${c.id}`} className="group rounded-lg border bg-background/60 p-4 transition-colors hover:border-primary/50 hover:bg-muted/40 motion-reduce:transition-none">
             <div className="flex items-baseline justify-between gap-2">

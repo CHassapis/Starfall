@@ -45,7 +45,7 @@ export function LibraryPage({ kind }: { kind: "books" | "adventures" }) {
   const info = CATEGORY_BY_ID[kind];
   const chip = (on: boolean) => cn("rounded-full border px-2.5 py-0.5 text-xs", on ? "border-primary bg-primary text-primary-foreground" : "hover:bg-muted");
   return (
-    <div className="mx-auto max-w-6xl space-y-5 px-4 py-6">
+    <div className="mx-auto max-w-6xl space-y-5 px-4 py-6 3xl:max-w-[100rem]">
       <nav className="flex items-center gap-1.5 text-sm text-muted-foreground">
         <Link to="/lore" className="hover:text-foreground">
           Compendium of Lore
@@ -74,7 +74,7 @@ export function LibraryPage({ kind }: { kind: "books" | "adventures" }) {
         ))}
       </div>
       <p className="text-xs text-muted-foreground">{shown.length} of {rows.length}</p>
-      <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
+      <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 3xl:grid-cols-8">
         {shown.map((r) => (
           <li key={r.k}>
             <Link to={`/lore/${kind}/${r.k}`} className="group block space-y-1.5 rounded-md focus-visible:outline-2 focus-visible:outline-ring">

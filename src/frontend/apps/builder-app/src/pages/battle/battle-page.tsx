@@ -485,7 +485,7 @@ function Shell({ children }: { children: ReactNode }) {
   return (
     <div className="relative min-h-[calc(100vh-4rem)] overflow-clip bg-card text-foreground">
       <BattleBackdrop />
-      <div className="relative mx-auto max-w-6xl space-y-4 px-3 py-6 sm:px-4">{children}</div>
+      <div className="relative mx-auto max-w-6xl space-y-4 px-3 py-6 sm:px-4 3xl:max-w-[100rem]">{children}</div>
     </div>
   );
 }
@@ -1155,7 +1155,7 @@ function Choices({ ctx, speed }: { ctx: Ctx; speed: number }) {
 
       <TabsContent value="action" className="space-y-3">
         <Panel title={`Attack action${data.attacksPerAction > 1 ? ` · ${data.attacksPerAction} attacks` : ""}`} icon={<SwordIcon className="size-4 text-[var(--warning)]" />}>
-          <div className="grid gap-2 md:grid-cols-2">
+          <div className="grid gap-2 md:grid-cols-2 3xl:grid-cols-3">
             {[...model.weapons.filter((w) => w.equipped !== false), ...model.offHand.filter((w) => w.equipped !== false && model.offHandAction[w.name] === "Attack"), model.unarmed].map((w) => (
               <WeaponCard key={`${w.name}|${w.mode ?? ""}`} ctx={ctx} weapon={w} slot="Attack" attacks={w.mode === "Off hand" ? 1 : data.attacksPerAction} />
             ))}
@@ -1469,7 +1469,7 @@ function FeatureItem({ ctx, f }: { ctx: Ctx; f: BattleFeature }) {
 function StandardList({ ctx }: { ctx: Ctx }) {
   const lookup = useLoreLookup();
   return (
-    <ul className="grid gap-2 sm:grid-cols-2">
+    <ul className="grid gap-2 sm:grid-cols-2 3xl:grid-cols-3">
       {ctx.model.standard.map((a) => {
         const key = a.lore ? lookup("actions", a.lore, ctx.model.edition) : null;
         return (
@@ -1538,7 +1538,7 @@ function SlotsPanel({ ctx }: { ctx: Ctx }) {
 
 function SpellList({ ctx, spells, grouped }: { ctx: Ctx; spells: BattleSpell[]; grouped?: boolean }) {
   const all = [...spells].sort((a, b) => a.level - b.level || a.name.localeCompare(b.name));
-  if (!grouped) return <div className="grid gap-2 md:grid-cols-2">{all.map((s) => <SpellCard key={`${s.name}|${s.level}|${s.origin}|${s.item?.entryId ?? ""}`} ctx={ctx} spell={s} />)}</div>;
+  if (!grouped) return <div className="grid gap-2 md:grid-cols-2 3xl:grid-cols-3">{all.map((s) => <SpellCard key={`${s.name}|${s.level}|${s.origin}|${s.item?.entryId ?? ""}`} ctx={ctx} spell={s} />)}</div>;
   // spells the character has but cannot cast now (a wizard's unprepared spellbook) go last, folded away
   const sorted = all.filter((s) => ctx.castable(s) && !s.item);
   const resting = all.filter((s) => !ctx.castable(s));

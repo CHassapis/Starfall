@@ -115,12 +115,18 @@ try {
     await context.close();
   }
 
-  // the favicons and the navigation emblem stay as they were
+  // the favicons, the home-screen icon and the navigation emblem are the Starfall D20 icon set (public/icons), and load
   const { context, page } = await open({ width: 1280, height: 900 }, "slate");
   await page.goto(base + "/");
   const icons = await page.evaluate(() => [...document.querySelectorAll('link[rel~="icon"], link[rel="apple-touch-icon"]')].map((l) => new URL(l.href).pathname));
-  assert.ok(icons.includes("/branding/favicon.ico") && icons.includes("/branding/apple-touch-icon.png"), `favicons ${icons}`);
-  assert.equal(await page.locator('img[src="/branding/starlights-emblem.webp"]').count() > 0, true, "navigation emblem");
+  assert.ok(icons.includes("/icons/favicon.ico") && icons.includes("/icons/apple-touch-icon.png"), `favicons ${icons}`);
+  for (const icon of icons) {
+    const response = await page.request.get(base + icon);
+    assert.ok(response.ok() && /^image\//.test(response.headers()["content-type"] ?? ""), `${icon} is an image`);
+  }
+  const emblem = page.locator('header img[src="/icons/icon-192.png"]');
+  assert.equal(await emblem.count() > 0, true, "navigation emblem");
+  assert.ok(await emblem.first().evaluate((img) => img.complete && img.naturalWidth === 192), "navigation emblem loaded");
   await context.close();
   await writeFile(`${output}/results.json`, JSON.stringify(results, null, 2));
   console.log(`homepage branding: ${results.length} checks passed`);
