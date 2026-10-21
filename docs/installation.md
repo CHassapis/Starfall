@@ -128,6 +128,8 @@ do not affect Bash. Git attributes keep the Linux entrypoint LF. The `.env` read
 - For LAN access, your host firewall must allow the chosen TCP port on your private network. The installer does not
   change Windows Firewall or Linux firewall rules. Docker Desktop LAN access depends on your host/network settings;
   try localhost first. Do not set up router port forwarding to the public internet.
+- To install Starfall on phones (home-screen app) or to play away from home you need an **https** address: see the
+  README's [HTTPS](../README.md#https) section (Tailscale Serve keeps it private).
 
 Select your player name, then create a character after content import finishes. Use **Save** to keep character changes.
 For administrator access, open `deploy/.env` privately in an editor and read `STARLIGHTS_MASTER_PASSWORD`. Enter it using
