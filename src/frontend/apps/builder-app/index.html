@@ -7,7 +7,17 @@
     <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png" />
     <link rel="icon" type="image/png" sizes="16x16" href="/icons/favicon-16.png" />
     <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- installable as an app (iPhone/iPad: Share > Add to Home Screen; Android/desktop Chrome: Install app). No
+         service worker: nothing is cached for offline use. use-credentials: the manifest is fetched with the site
+         password where the site has one -->
+    <link rel="manifest" href="/manifest.webmanifest" crossorigin="use-credentials" />
+    <meta name="application-name" content="Starfall" />
+    <meta name="apple-mobile-web-app-title" content="Starfall" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="theme-color" content="#f4f0e8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>Starfall</title>
     <!-- the saved theme before the first paint (mirrors normalizeTheme in src/lib/themes.ts), so a Midnight or
          Slate page never flashes Porcelain while the app loads -->
@@ -23,6 +33,9 @@
         root.dataset.theme = t;
         root.classList.add(dark ? "dark" : "light");
         root.style.colorScheme = dark ? "dark" : "light";
+        // the browser bar / installed app's title bar in the theme's background (lib/themes.ts THEMES[].colors[0])
+        var bar = document.querySelector('meta[name="theme-color"]');
+        if (bar) bar.setAttribute("content", t === "midnight" ? "#0c1628" : t === "slate" ? "#2d3e51" : "#f4f0e8");
       })();
     </script>
 

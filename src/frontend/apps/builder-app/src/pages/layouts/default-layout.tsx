@@ -1,9 +1,9 @@
 import { Button } from "@/components/ui/button";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
-import { BookOpenIcon, CrownIcon, DatabaseIcon, FlaskConicalIcon, LibraryBigIcon, MenuIcon, ScrollTextIcon, SwordsIcon, UserIcon } from "lucide-react";
+import { BookOpenIcon, CrownIcon, DatabaseIcon, DownloadIcon, FlaskConicalIcon, LibraryBigIcon, MenuIcon, ScrollTextIcon, SwordsIcon, UserIcon } from "lucide-react";
 import { Link, NavLink, Outlet } from "react-router-dom";
 import { ModeToggle } from "@/components/mode-toggle";
 import { GitHubIconButton } from "@/components/navigation/github-icon-button";
@@ -12,6 +12,8 @@ import { AdminButton } from "@/components/admin-button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { PlayerChooser } from "@/pages/characters/player-picker";
 import { useState } from "react";
+import { InstallStarfallDialog } from "@/components/install-starfall";
+import { useInstall } from "@/lib/install";
 
 export function LandingBackground() {
   return (
@@ -158,7 +160,25 @@ const MAIN_LINKS = [
 function MobileNavigation() {
   const admin = useIsAdmin();
   const links = admin ? [...MAIN_LINKS, { to: "/content", label: "Content", icon: DatabaseIcon }] : MAIN_LINKS;
-  return <div className="lg:hidden"><DropdownMenu><DropdownMenuTrigger asChild><Button variant="outline" aria-label="Open navigation"><MenuIcon /><span className="hidden min-[390px]:inline">Menu</span></Button></DropdownMenuTrigger><DropdownMenuContent align="end">{links.map(({ to, label, icon: Icon }) => <DropdownMenuItem key={to} asChild><Link to={to} className="min-h-11"><Icon />{label}</Link></DropdownMenuItem>)}</DropdownMenuContent></DropdownMenu></div>;
+  const { installed } = useInstall();
+  const [install, setInstall] = useState(false);
+  return (
+    <div className="lg:hidden">
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild><Button variant="outline" aria-label="Open navigation"><MenuIcon /><span className="hidden min-[390px]:inline">Menu</span></Button></DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          {links.map(({ to, label, icon: Icon }) => <DropdownMenuItem key={to} asChild><Link to={to} className="min-h-11"><Icon />{label}</Link></DropdownMenuItem>)}
+          {!installed && (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem className="min-h-11" onSelect={() => setInstall(true)}><DownloadIcon />Install Starfall</DropdownMenuItem>
+            </>
+          )}
+        </DropdownMenuContent>
+      </DropdownMenu>
+      <InstallStarfallDialog open={install} onOpenChange={setInstall} />
+    </div>
+  );
 }
 
 function MainLinks({ className, compact }: { className?: string; compact?: boolean }) {
