@@ -10,6 +10,7 @@ import { useItemCatalog } from "@/lib/api/items";
 import type { ItemInfo } from "@/lib/rules/items";
 import { cn } from "@/lib/utils";
 
+import { useUnits } from "@/components/units-provider";
 const ORDINAL = ["Cantrip", "1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th", "9th"];
 
 /** "3rd-level evocation (ritual)", "Divination cantrip". */
@@ -73,6 +74,7 @@ export function ElementDetails({ id, emptyHint, compact = false }: { id: string 
 }
 
 function Details({ id, compact, onOpen }: { id: string; compact: boolean; onOpen: (id: string) => void }) {
+  const u = useUnits();
   const { data, isLoading } = useCompendiumEntry(id);
   const catalog = useItemCatalog();
   const item = catalog.data?.byId.get(id);
@@ -138,7 +140,7 @@ function Details({ id, compact, onOpen }: { id: string; compact: boolean; onOpen
           {(
             [
               ["Casting time", setters.time],
-              ["Range", setters.range],
+              ["Range", setters.range && u.label(setters.range)],
               ["Components", spellComponents(setters)],
               ["Duration", setters.duration],
             ] as const
@@ -172,11 +174,12 @@ function Details({ id, compact, onOpen }: { id: string; compact: boolean; onOpen
 }
 
 function ItemFigures({ item }: { item: ItemInfo }) {
+  const u = useUnits();
   const facts = [
-    item.weight ? `${item.weight} lb` : null,
+    item.weight ? u.weight(item.weight) : null,
     item.cost ? `${item.cost} ${item.currency ?? "gp"}` : null,
     item.magic?.charges ? `${item.magic.charges} charges` : null,
-    item.container?.capacityLb ? `Holds ${item.container.capacityLb} lb${item.container.weightless ? " (weighs nothing inside)" : ""}` : null,
+    item.container?.capacityLb ? `Holds ${u.weight(item.container.capacityLb)}${item.container.weightless ? " (weighs nothing inside)" : ""}` : null,
     item.magic?.cursed ? "Cursed" : null,
   ].filter(Boolean);
   const weapon = item.weapon;
@@ -188,7 +191,7 @@ function ItemFigures({ item }: { item: ItemInfo }) {
         <p>
           <span className="font-medium">{weapon.damage} {weapon.damageType}</span>
           {weapon.versatile && <span> (versatile {weapon.versatile})</span>}
-          {weapon.range && <span> · range {weapon.range}</span>}
+          {weapon.range && <span> · range {u.range(weapon.range)}</span>}
           {weapon.properties?.length ? <span className="text-muted-foreground"> · {weapon.properties.join(", ")}</span> : null}
         </p>
       )}

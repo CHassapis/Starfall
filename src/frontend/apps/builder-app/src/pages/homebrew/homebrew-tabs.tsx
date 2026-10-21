@@ -18,6 +18,8 @@ import { ABILITY_KEYS, EMPTY_MONSTER, type HomebrewMonster } from "@/lib/rules/h
 import { cn } from "@/lib/utils";
 import { area, select } from "./form-styles";
 
+import { useUnits } from "@/components/units-provider";
+import { WeightInput } from "@/components/weight-input";
 const KINDS = ["Wondrous Item", "Weapon", "Armor", "Ring", "Potion", "Scroll", "Staff", "Wand", "Rod"];
 const RARITIES = ["Common", "Uncommon", "Rare", "Very Rare", "Legendary", "Artifact"];
 
@@ -123,6 +125,7 @@ export function HomebrewItems({ startNew }: { startNew?: boolean } = {}) {
 }
 
 function ItemDialog({ item, busy, onClose, onSave }: { item: HomebrewItem; busy: boolean; onClose: () => void; onSave: (i: HomebrewItem) => void }) {
+  const u = useUnits();
   const [f, setF] = useState<HomebrewItem>(item);
   const set = (patch: Partial<HomebrewItem>) => setF((x) => ({ ...x, ...patch }));
   const num = (v: string) => (v.trim() === "" ? null : Number(v) || 0);
@@ -180,8 +183,8 @@ function ItemDialog({ item, busy, onClose, onSave }: { item: HomebrewItem; busy:
           <Field label="Charges (optional)">
             <Input inputMode="numeric" value={f.charges ?? ""} onChange={(e) => set({ charges: num(e.target.value.replace(/\D/g, "")) })} />
           </Field>
-          <Field label="Weight in lb (optional)">
-            <Input inputMode="decimal" value={f.weight ?? ""} onChange={(e) => set({ weight: num(e.target.value.replace(/[^\d.]/g, "")) })} />
+          <Field label={`Weight in ${u.weightUnit} (optional)`}>
+            <WeightInput pounds={f.weight} onPounds={(weight) => set({ weight })} />
           </Field>
           <Field label="What it does" hint="Plain text. Leave a blank line between paragraphs." wide>
             <textarea rows={8} className={area} value={f.description} onChange={(e) => set({ description: e.target.value })} maxLength={20000} />
@@ -268,6 +271,7 @@ export function HomebrewMonsters({ startNew }: { startNew?: boolean } = {}) {
 }
 
 function MonsterDialog({ monster, busy, onClose, onSave }: { monster: HomebrewMonster; busy: boolean; onClose: () => void; onSave: (m: HomebrewMonster) => void }) {
+  const u = useUnits();
   const [m, setM] = useState<HomebrewMonster>(monster);
   const set = (patch: Partial<HomebrewMonster>) => setM((x) => ({ ...x, ...patch }));
   const text = (key: keyof HomebrewMonster, label: string, hint?: string, rows = 3) => (
@@ -300,7 +304,7 @@ function MonsterDialog({ monster, busy, onClose, onSave }: { monster: HomebrewMo
             <Input inputMode="numeric" value={m.hp} onChange={(e) => set({ hp: Number(e.target.value.replace(/\D/g, "")) || 0 })} />
           </Field>
           {line("hpFormula", "Hit dice (optional)", "e.g. 15d8 + 45")}
-          {line("speed", "Speed", "e.g. 30 ft., fly 60 ft.")}
+          {line("speed", "Speed", `e.g. 30 ft., fly 60 ft.${u.units === "metric" ? " In feet: shown in metres." : ""}`)}
           {line("cr", "Challenge rating", "e.g. 5 or 1/2")}
           <div className="grid grid-cols-6 gap-2 sm:col-span-2">
             {ABILITY_KEYS.map((k) => (
@@ -312,7 +316,7 @@ function MonsterDialog({ monster, busy, onClose, onSave }: { monster: HomebrewMo
           {line("saves", "Saving throws (optional)", "e.g. Dex +5, Wis +3")}
           {line("skills", "Skills (optional)", "e.g. Perception +5, Stealth +6")}
           {line("defenses", "Resistances and immunities (optional)")}
-          {line("senses", "Senses (optional)", "e.g. darkvision 60 ft., passive Perception 15")}
+          {line("senses", "Senses (optional)", `e.g. darkvision 60 ft., passive Perception 15${u.units === "metric" ? " In feet: shown in metres." : ""}`)}
           {line("languages", "Languages (optional)")}
           <span />
           {text("traits", "Traits", "One per line: Name. What it does.", 4)}

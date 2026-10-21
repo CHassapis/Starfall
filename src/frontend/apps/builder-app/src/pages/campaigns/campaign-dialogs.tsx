@@ -14,6 +14,8 @@ import { COIN_KINDS, formatCoins, isEmpty, shareOut, type Coins } from "@/lib/ru
 import { cn } from "@/lib/utils";
 import { CODEX_KINDS, KIND_NAMES, textareaClass, useCampaignRestricted, WHEREABOUTS } from "./campaign-shared";
 
+import { useUnits } from "@/components/units-provider";
+import { WeightInput } from "@/components/weight-input";
 const RARITIES = ["Common", "Uncommon", "Rare", "Very Rare", "Legendary", "Artifact"];
 
 // the compendium's picker and link chips load only when a dialog uses them
@@ -113,6 +115,7 @@ export function EntryDialog({
   sort: number;
   useHomebrew?: boolean;
 }) {
+  const u = useUnits();
   const actions = useCampaignActions(campaignId);
   const restricted = useCampaignRestricted(useHomebrew);
   const [form, setForm] = useState<EntryInput>(() =>
@@ -299,14 +302,8 @@ export function EntryDialog({
               <Field label="Attunement" hint="Empty for none; 'Yes', or 'by a cleric'">
                 <Input value={(form.data.attunement as string) ?? ""} onChange={(e) => setData({ attunement: e.target.value })} maxLength={100} />
               </Field>
-              <Field label="Weight (lb)">
-                <Input
-                  type="number"
-                  min={0}
-                  step="0.5"
-                  value={(form.data.weight as number | undefined) ?? ""}
-                  onChange={(e) => setData({ weight: e.target.value === "" ? null : Math.max(0, Number(e.target.value)) })}
-                />
+              <Field label={`Weight (${u.weightUnit})`}>
+                <WeightInput pounds={form.data.weight as number | undefined} onPounds={(weight) => setData({ weight })} />
               </Field>
             </div>
           )}

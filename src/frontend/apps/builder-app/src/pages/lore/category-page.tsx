@@ -25,6 +25,7 @@ import { DEFAULT_CONFIG, LIST_CONFIG, type ListConfig } from "./list-config";
 import { LoreMissing } from "./lore-missing";
 import { isPinned, rememberRecent, togglePin, useHiddenSources, usePins } from "./lore-storage";
 
+import { useUnits } from "@/components/units-provider";
 const ROW = 56;
 
 export function CategoryPage() {
@@ -49,6 +50,7 @@ export function CategoryPage() {
 }
 
 function CategoryList({ meta, category, openKey }: { meta: LoreMeta; category: string; openKey: string | null }) {
+  const u = useUnits();
   const info = CATEGORY_BY_ID[category];
   const config = (LIST_CONFIG[category] ?? DEFAULT_CONFIG) as ListConfig<IndexRow>;
   const index = useCategoryIndex(meta, category);
@@ -204,7 +206,7 @@ function CategoryList({ meta, category, openKey }: { meta: LoreMeta; category: s
                       {row.ed === "2014" && !/['’]14/.test(meta.sources[row.src]?.short ?? "") && <span className="ml-1">’14</span>}
                     </span>
                   </span>
-                  <span className="truncate text-xs text-muted-foreground">{config.summary(row)}</span>
+                  <span className="truncate text-xs text-muted-foreground">{config.summary(row, u.label)}</span>
                 </button>
               )}
             />

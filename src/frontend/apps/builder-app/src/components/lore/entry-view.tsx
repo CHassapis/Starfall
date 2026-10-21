@@ -17,6 +17,7 @@ import { ItemBlock } from "./item-block";
 import { OtherBody } from "./category-bodies";
 import { itemSubtitle } from "@/lib/lore/item-text";
 
+import { useUnits } from "@/components/units-provider";
 type Obj = Record<string, unknown>;
 
 /** "Player's Handbook (2024), p. 274" with the edition. */
@@ -48,6 +49,7 @@ function Stat({ label, children }: { label: string; children: ReactNode }) {
 }
 
 function SpellBlock({ entry }: { entry: LoreEntry }) {
+  const u = useUnits();
   const time = timeText(entry.time, true);
   const classes = (entry._classes as { name: string; source: string; variant?: boolean }[] | undefined) ?? [];
   const bySource = new Map<string, string[]>();
@@ -56,7 +58,7 @@ function SpellBlock({ entry }: { entry: LoreEntry }) {
     <>
       <dl className="grid grid-cols-2 gap-x-4 gap-y-2 rounded-md border bg-muted/30 p-3 @2xl:grid-cols-4">
         <Stat label="Casting time">{time}{(entry.meta as Obj | undefined)?.ritual ? " or ritual" : ""}</Stat>
-        <Stat label="Range">{rangeText(entry.range)}</Stat>
+        <Stat label="Range">{u.label(rangeText(entry.range))}</Stat>
         <Stat label="Components"><RichText text={componentsText(entry.components, true)} /></Stat>
         <Stat label="Duration">{durationText(entry.duration)}</Stat>
       </dl>

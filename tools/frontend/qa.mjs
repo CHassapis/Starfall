@@ -73,7 +73,7 @@ try {
   await page.waitForFunction(()=>!document.querySelector('fieldset')?.disabled);assert.equal(data.combat.damage,0);assert.equal(data.combat.temporaryHitPoints,0);assert.deepEqual(data.magic.expendedSlots,{});
   await shot('sheet-play');
   for(const theme of ['Porcelain','Slate','Midnight']){
-   await page.getByRole('button',{name:'Choose theme',exact:true}).click();await page.getByRole('button',{name:new RegExp('^'+theme+' ')}).click();await page.getByRole('button',{name:'Save theme',exact:true}).click();
+   await page.getByRole('button',{name:'Choose theme and units',exact:true}).click();await page.getByRole('button',{name:new RegExp('^'+theme+' ')}).click();await page.getByRole('button',{name:'Save theme',exact:true}).click();
    await page.goto(base);const logo=page.getByRole('img',{name:'Project Starlights',exact:true});await logo.waitFor();await logo.evaluate(async img=>{await img.decode();await new Promise(requestAnimationFrame)});assert.ok(await logo.evaluate(img=>img.complete&&img.naturalWidth>0));await shot('logo-'+theme.toLowerCase());
   }
   assert.deepEqual(errors,[]);results.push({width,spellIdentity:true,previewNoWrites:true,multiclass:true,replacementSaveReload:true,explicitRemoval:true,playState:true,themes:true});

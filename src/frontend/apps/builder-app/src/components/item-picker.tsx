@@ -12,6 +12,8 @@ import type { CustomItem, ItemInfo } from "@/lib/rules/items";
 import { ITEM_CATEGORIES, NO_FILTERS, RARITIES, categoryCounts, rarityOf, searchItems, type ItemFilters } from "@/lib/rules/picker";
 import { cn } from "@/lib/utils";
 
+import { useUnits } from "@/components/units-provider";
+import { WeightInput } from "@/components/weight-input";
 const RECENTS_KEY = "starlights.recent-items";
 const PAGE = 100;
 
@@ -320,6 +322,7 @@ function sameFilters(a: ItemFilters, b: ItemFilters) {
 }
 
 function ItemRow({ item, index, active, onClick }: { item: ItemInfo; index?: number; active: boolean; onClick: () => void }) {
+  const u = useUnits();
   const rarity = rarityOf(item);
   return (
     <button
@@ -340,7 +343,7 @@ function ItemRow({ item, index, active, onClick }: { item: ItemInfo; index?: num
           {[item.categories.slice(0, 2).join(", "), item.magic?.rarity, item.source].filter(Boolean).join(" · ")}
         </span>
       </span>
-      {item.weight ? <span className="shrink-0 text-xs tabular-nums text-muted-foreground">{item.weight} lb</span> : null}
+      {item.weight ? <span className="shrink-0 text-xs tabular-nums text-muted-foreground">{u.weight(item.weight)}</span> : null}
     </button>
   );
 }
@@ -435,6 +438,7 @@ function AddPanel({ item, restricted, onAdd, onBack }: { item: ItemInfo; restric
 
 /** A homebrew item: a name, what it is and weighs, and whether it is magic or holds other things. */
 function CustomItemForm({ onAdd, onCancel }: { onAdd: (add: AddItem) => void; onCancel: () => void }) {
+  const u = useUnits();
   const [name, setName] = useState("");
   const [custom, setCustom] = useState<CustomItem>({ category: "Adventuring Gear" });
   const set = (change: Partial<CustomItem>) => setCustom({ ...custom, ...change });
@@ -464,8 +468,8 @@ function CustomItemForm({ onAdd, onCancel }: { onAdd: (add: AddItem) => void; on
           </select>
         </label>
         <label className="block space-y-1 text-sm">
-          <span className="text-muted-foreground">Weight (lb)</span>
-          <Input inputMode="decimal" value={custom.weight ?? ""} onChange={(e) => set({ weight: e.target.value === "" ? null : Math.max(0, Number(e.target.value) || 0) })} />
+          <span className="text-muted-foreground">Weight ({u.weightUnit})</span>
+          <WeightInput pounds={custom.weight} onPounds={(weight) => set({ weight })} />
         </label>
       </div>
       <label className="flex items-center gap-2 text-sm">
@@ -489,7 +493,7 @@ function CustomItemForm({ onAdd, onCancel }: { onAdd: (add: AddItem) => void; on
       </label>
       {custom.container && (
         <label className="flex items-center gap-2 pl-6 text-sm">
-          Capacity <Input className="w-24" inputMode="decimal" value={custom.capacity ?? ""} onChange={(e) => set({ capacity: e.target.value === "" ? null : Number(e.target.value) || 0 })} /> lb
+          Capacity <WeightInput className="w-24" pounds={custom.capacity} onPounds={(capacity) => set({ capacity })} /> {u.weightUnit}
         </label>
       )}
       <label className="block space-y-1 text-sm">

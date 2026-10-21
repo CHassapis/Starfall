@@ -45,6 +45,7 @@ import { EditionPicker } from "@/components/edition-picker";
 import { isOpen, openByTab, stepChoices, type BuilderTab } from "@/lib/rules/wizard-steps";
 import { cn } from "@/lib/utils";
 
+import { useUnits } from "@/components/units-provider";
 const SECTION_ORDER = ["Class", "Species", "Background", "Alignment", "Deity"];
 const SECTION_ICONS: Record<string, ComponentType<{ className?: string }>> = {
   Class: SwordsIcon,
@@ -519,6 +520,7 @@ function ChoiceRow({
   onPicked: (id: string) => void;
   onInspect: (id: string) => void;
 }) {
+  const u = useUnits();
   const [open, setOpen] = useState(false);
   const optionsQuery = useChoiceOptions(characterId, choice.ruleId, open);
   const pickChoice = usePickChoice(characterId);
@@ -543,10 +545,10 @@ function ChoiceRow({
         disabled: o.eligible === false,
         facets: o.spell ? spellFacets(o.spell) : undefined,
         kind: o.spell ? spellKind(o.spell) : null,
-        details: o.spell ? spellDetails(o.spell) : undefined,
+        details: o.spell ? spellDetails(o.spell).map((d) => (d.label === "Range" ? { ...d, value: u.label(d.value) } : d)) : undefined,
         needs: o.prerequisite ?? (o.eligible === false ? "something you don't have yet" : null),
       })),
-    [optionsQuery.data],
+    [optionsQuery.data, u],
   );
   const facets = useMemo(() => (optionsQuery.data?.options.some((o) => o.spell) ? SPELL_FACETS : undefined), [optionsQuery.data]);
 

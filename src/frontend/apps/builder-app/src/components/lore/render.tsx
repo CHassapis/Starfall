@@ -15,6 +15,7 @@ import { LoreLink } from "./lore-link";
 import { EmbeddedEntry } from "./embedded-entry";
 import { RenderContext, useLoreRender, type LoreRenderContext } from "./render-context";
 
+import { useUnits } from "@/components/units-provider";
 type Obj = Record<string, unknown>;
 
 const isObj = (v: unknown): v is Obj => typeof v === "object" && v !== null && !Array.isArray(v);
@@ -357,6 +358,7 @@ export function Entry({ entry, depth = 0 }: { entry: unknown; depth?: number }):
 
 /** Entries that sit inside a sentence (an "inline" entry's parts). */
 function InlineEntry({ entry }: { entry: unknown }) {
+  const u = useUnits();
   if (typeof entry === "string") return <RichText text={entry} />;
   if (!isObj(entry)) return null;
   switch (entry.type) {
@@ -379,7 +381,7 @@ function InlineEntry({ entry }: { entry: unknown }) {
     case "bonus":
       return <>{Number(entry.value) >= 0 ? "+" : ""}{String(entry.value)}</>;
     case "bonusSpeed":
-      return <>{Number(entry.value) >= 0 ? "+" : ""}{String(entry.value)} ft.</>;
+      return <>{Number(entry.value) >= 0 ? "+" : ""}{u.units === "metric" ? u.distance(Number(entry.value)) : `${String(entry.value)} ft.`}</>;
     default:
       return <Entries entries={entry.entries} depth={3} />;
   }

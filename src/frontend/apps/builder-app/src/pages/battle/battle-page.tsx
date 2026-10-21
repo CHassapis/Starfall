@@ -88,6 +88,7 @@ import { BattleBackdrop } from "./battle-index";
 import { Companions } from "./companions";
 import { Items, ItemUses } from "./items";
 
+import { useUnits } from "@/components/units-provider";
 // ---- this turn (kept for the browser tab, so a reload keeps it)
 
 interface Turn {
@@ -603,6 +604,7 @@ export function Vitals({
   onHeal: (n: number) => void;
   onTemp: (n: number) => void;
 }) {
+  const u = useUnits();
   const [amount, setAmount] = useState("");
   const [more, setMore] = useState(false);
   const n = Math.max(0, Math.floor(Number(amount) || 0));
@@ -649,7 +651,7 @@ export function Vitals({
       <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4 sm:gap-2">
         <Stat label="Armor class" value={ac.total} sub={ac.changes.length ? ac.changes.join(" · ") : data.armor.label + (data.armor.shield ? ` + ${data.armor.shield}` : "")} className={ac.total !== data.armorClass ? "border-sky-300/50" : undefined} />
         <Stat label="Initiative" value={signed(data.initiative)} />
-        <Stat label="Speed" value={`${speed} ft`} sub={[data.speeds.fly && `fly ${data.speeds.fly}`, data.speeds.climb && `climb ${data.speeds.climb}`, data.speeds.swim && `swim ${data.speeds.swim}`].filter(Boolean).join(" · ") || undefined} />
+        <Stat label="Speed" value={u.units === "metric" ? <>{u.distanceNumber(speed)} <span className="normal-case">m</span></> : u.distance(speed)} sub={[data.speeds.fly && `fly ${u.distanceNumber(data.speeds.fly)}`, data.speeds.climb && `climb ${u.distanceNumber(data.speeds.climb)}`, data.speeds.swim && `swim ${u.distanceNumber(data.speeds.swim)}`].filter(Boolean).join(" · ") || undefined} />
         <Stat label="Proficiency" value={signed(data.proficiencyBonus)} />
         <Stat label="Passive Perception" value={data.passivePerception} sub={data.vision.join(", ") || undefined} className={extra} />
         {caster ? <Stat label="Spell save DC" value={caster.saveDc} sub={`${signed(caster.attackBonus)} to hit · ${caster.ability}`} className={extra} /> : <Stat label="Attacks per action" value={data.attacksPerAction} className={extra} />}
@@ -860,6 +862,7 @@ function Hud({
   onNextTurn: () => void;
   conditions: string[];
 }) {
+  const u = useUnits();
   const ratio = maxHp > 0 ? Math.min(1, hp / maxHp) : 0;
   const total = speed * (1 + turn.dashes);
   const left = Math.max(0, total - turn.moved);
@@ -903,8 +906,8 @@ function Hud({
         </span>
         <span className="flex shrink-0 items-center gap-1 text-sm text-foreground" title="Movement left this turn">
           <FootprintsIcon className="size-4 text-muted-foreground" />
-          {left}
-          <span className="text-muted-foreground">ft</span>
+          {u.distanceNumber(left)}
+          <span className="text-muted-foreground">{u.distanceUnit}</span>
         </span>
       </div>
       <div className="mt-2 flex flex-wrap items-center gap-1.5">
@@ -945,6 +948,7 @@ function ActionTab({ value, icon, label, ready }: { value: string; icon: ReactNo
 
 /** What a spell does, for its name's tooltip: level, casting time, range, duration, what the simulator reads from it, its text. */
 function SpellInfo({ spell, effect, spellKey }: { spell: BattleSpell; effect: ReturnType<typeof spellEffect>; spellKey: string | null }) {
+  const u = useUnits();
   const reads = [
     effect.attack && `${effect.attack} spell attack`,
     effect.save && `${effect.save} saving throw${effect.halfOnSave ? ", half damage on a success" : ""}`,
@@ -966,7 +970,7 @@ function SpellInfo({ spell, effect, spellKey }: { spell: BattleSpell; effect: Re
         {(
           [
             ["Casting time", spell.time],
-            ["Range", spell.range],
+            ["Range", u.label(spell.range)],
             ["Duration", spell.duration],
             ["Components", spell.components],
           ] as const
@@ -1008,11 +1012,12 @@ const PROPERTY_TEXT: Record<string, string> = {
 
 /** What a weapon does, for its name's tooltip: range, each property and its mastery in plain words. */
 function WeaponInfo({ weapon, itemKey, mastery }: { weapon: WeaponAttack; itemKey: string | null; mastery: boolean }) {
+  const u = useUnits();
   return (
     <div className="space-y-2 text-sm">
       <p className="font-heading text-base font-semibold">{weapon.name}</p>
       <p>
-        {weapon.melee ? "Melee" : "Ranged"} · {weapon.range} · {formatRoll(weapon.roll)}
+        {weapon.melee ? "Melee" : "Ranged"} · {u.range(weapon.range)} · {formatRoll(weapon.roll)}
       </p>
       {weapon.properties.length > 0 && (
         <ul className="space-y-1">
@@ -1067,6 +1072,7 @@ function TurnBar({
   forcedDisadvantage: boolean;
   d20Penalty: number;
 }) {
+  const u = useUnits();
   const total = speed * (1 + turn.dashes);
   const left = Math.max(0, total - turn.moved);
   const pip = (label: string, used: boolean, field: "action" | "bonus" | "reaction", disabled: boolean) => (
@@ -1096,12 +1102,12 @@ function TurnBar({
         {pip("Reaction", turn.reaction, "reaction", noReactions)}
         <div className="flex items-center gap-1.5 rounded-lg border border-border px-2 py-1.5 text-sm">
           <FootprintsIcon className="size-4 text-muted-foreground" />
-          <span className="font-semibold">{left}</span>
-          <span className="text-muted-foreground">/ {total} ft</span>
-          <Button size="icon" variant="ghost" className="size-6 text-foreground" aria-label="Move 5 feet" onClick={() => setTurn((t) => ({ ...t, moved: Math.min(total, t.moved + 5) }))}>
+          <span className="font-semibold">{u.distanceNumber(left)}</span>
+          <span className="text-muted-foreground">/ {u.distance(total)}</span>
+          <Button size="icon" variant="ghost" className="size-6 text-foreground" aria-label={`Move ${u.distance(5)}`} onClick={() => setTurn((t) => ({ ...t, moved: Math.min(total, t.moved + 5) }))}>
             <MinusIcon />
           </Button>
-          <Button size="icon" variant="ghost" className="size-6 text-foreground" aria-label="Give back 5 feet" onClick={() => setTurn((t) => ({ ...t, moved: Math.max(0, t.moved - 5) }))}>
+          <Button size="icon" variant="ghost" className="size-6 text-foreground" aria-label={`Give back ${u.distance(5)}`} onClick={() => setTurn((t) => ({ ...t, moved: Math.max(0, t.moved - 5) }))}>
             <PlusIcon />
           </Button>
         </div>
@@ -1120,6 +1126,7 @@ function TurnBar({
 // ---- what the character can do
 
 function Choices({ ctx, speed }: { ctx: Ctx; speed: number }) {
+  const u = useUnits();
   const { model, data } = ctx;
   const bySlot = (slot: Slot) => model.features.filter((f) => f.slot === slot);
   const spellsBy = (slot: Slot) => model.spells.filter((s) => s.slot === slot && ctx.castable(s));
@@ -1264,10 +1271,10 @@ function Choices({ ctx, speed }: { ctx: Ctx; speed: number }) {
       <TabsContent value="move" className="space-y-3">
         <Panel title="Movement" icon={<FootprintsIcon className="size-4 text-muted-foreground" />}>
           <ul className="space-y-1 text-sm text-muted-foreground">
-            <li>Walk {speed} ft{data.speeds.fly ? `, fly ${data.speeds.fly} ft` : ""}{data.speeds.climb ? `, climb ${data.speeds.climb} ft` : ""}{data.speeds.swim ? `, swim ${data.speeds.swim} ft` : ""}. You can split it before and after your action.</li>
-            <li>Standing up from prone costs half your speed ({Math.floor(speed / 2)} ft); dropping prone is free.</li>
+            <li>Walk {u.distance(speed)}{data.speeds.fly ? `, fly ${u.distance(data.speeds.fly)}` : ""}{data.speeds.climb ? `, climb ${u.distance(data.speeds.climb)}` : ""}{data.speeds.swim ? `, swim ${u.distance(data.speeds.swim)}` : ""}. You can split it before and after your action.</li>
+            <li>Standing up from prone costs half your speed ({u.distance(Math.floor(speed / 2))}); dropping prone is free.</li>
             <li>Difficult terrain costs 1 extra foot per foot. Climbing or swimming without a speed for it costs the same.</li>
-            <li>The Dash action adds your speed again (+{speed} ft).</li>
+            <li>The Dash action adds your speed again (+{u.distance(speed)}).</li>
           </ul>
         </Panel>
         <Panel title="Free on your turn" icon={<SparklesIcon className="size-4 text-muted-foreground" />}>
@@ -1306,6 +1313,7 @@ function SlotSection({ ctx, features, spells, empty }: { ctx: Ctx; features: Bat
 }
 
 function WeaponCard({ ctx, weapon, slot, attacks }: { ctx: Ctx; weapon: WeaponAttack; slot: Slot; attacks: number }) {
+  const u = useUnits();
   const lookup = useLoreLookup();
   const bonus = weapon.bonus - ctx.d20Penalty + ctx.fx.attackBonus;
   const roll = ctx.rollFor(weapon.melee);
@@ -1347,7 +1355,7 @@ function WeaponCard({ ctx, weapon, slot, attacks }: { ctx: Ctx; weapon: WeaponAt
             </Peek>
             {weapon.mode && <Chip tone={weapon.current ? "gold" : "neutral"}>{weapon.mode}{weapon.current ? " · held now" : ""}</Chip>}
           </div>
-          <div className="text-sm text-muted-foreground">{weapon.range}{weapon.properties.length ? ` · ${weapon.properties.join(", ")}` : ""}</div>
+          <div className="text-sm text-muted-foreground">{u.range(weapon.range)}{weapon.properties.length ? ` · ${weapon.properties.join(", ")}` : ""}</div>
         </div>
         <Button size="sm" variant="secondary" className="h-9 min-w-16 sm:h-7" disabled={(ctx.incapacitated && slot !== "Reaction") || spent} onClick={() => ctx.use(slot)}>
           Use
@@ -1582,6 +1590,7 @@ function SpellList({ ctx, spells, grouped }: { ctx: Ctx; spells: BattleSpell[]; 
 }
 
 function SpellCard({ ctx, spell }: { ctx: Ctx; spell: BattleSpell }) {
+  const u = useUnits();
   const lookup = useLoreLookup();
   const item = ctx.chargedItemOf(spell);
   const chargesLeft = item ? Math.max(0, (item.charges ?? 0) - item.chargesUsed) : 0;
@@ -1619,7 +1628,7 @@ function SpellCard({ ctx, spell }: { ctx: Ctx; spell: BattleSpell }) {
             {spell.ritual && <span title="Ritual" className="ml-1 rounded bg-muted px-1 text-sm text-muted-foreground">R</span>}
           </div>
           <div className="text-sm text-muted-foreground">
-            {[spell.time, spell.range, spell.duration, spell.components].filter(Boolean).join(" · ")}
+            {[spell.time, spell.range && u.label(spell.range), spell.duration, spell.components].filter(Boolean).join(" · ")}
           </div>
           {!ready && (
             <div className="text-sm text-[var(--warning)]">

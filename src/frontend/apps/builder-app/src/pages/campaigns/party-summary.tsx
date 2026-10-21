@@ -7,6 +7,7 @@ import { useSheetData, type SheetData } from "@/lib/api/sheet";
 import { formatCoins } from "@/lib/rules/ledger";
 import { cn } from "@/lib/utils";
 
+import { useUnits } from "@/components/units-provider";
 const signed = (n: number) => (n >= 0 ? `+${n}` : `−${Math.abs(n)}`);
 
 /**
@@ -70,7 +71,8 @@ function skill(s: SheetData, name: string) {
 }
 
 function Details({ s }: { s: SheetData }) {
-  const speeds = [`${s.speeds.walk} ft`, s.speeds.fly && `fly ${s.speeds.fly}`, s.speeds.swim && `swim ${s.speeds.swim}`, s.speeds.climb && `climb ${s.speeds.climb}`].filter(Boolean).join(", ");
+  const u = useUnits();
+  const speeds = [u.distance(s.speeds.walk), s.speeds.fly && `fly ${u.distanceNumber(s.speeds.fly)}`, s.speeds.swim && `swim ${u.distanceNumber(s.speeds.swim)}`, s.speeds.climb && `climb ${u.distanceNumber(s.speeds.climb)}`].filter(Boolean).join(", ");
   const defenses = [
     s.defenses.resistances.length && `Resists ${s.defenses.resistances.join(", ")}`,
     s.defenses.immunities.length && `Immune to ${s.defenses.immunities.join(", ")}`,

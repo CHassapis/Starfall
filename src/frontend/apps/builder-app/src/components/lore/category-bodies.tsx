@@ -6,6 +6,7 @@ import { prerequisiteText } from "@/lib/lore/prereq";
 import type { LoreEntry } from "@/lib/lore/types";
 import { Entries, Entry, Picture, RichText } from "./render";
 
+import { useUnits } from "@/components/units-provider";
 type Obj = Record<string, unknown>;
 const isObj = (v: unknown): v is Obj => typeof v === "object" && v !== null && !Array.isArray(v);
 const asArray = (v: unknown): unknown[] => (Array.isArray(v) ? v : v == null ? [] : [v]);
@@ -202,6 +203,7 @@ function Cards({ cards }: { cards: Obj[] }) {
 
 /** The body of an entry in a category without its own block, or null to show just its text. */
 export function OtherBody({ category, entry }: { category: string; entry: LoreEntry }) {
+  const u = useUnits();
   const prereq = prerequisiteText(entry.prerequisite);
   const prereqLine = prereq ? (
     <p className="text-sm">
@@ -219,9 +221,9 @@ export function OtherBody({ category, entry }: { category: string; entry: LoreEn
             facts={[
               ["Ability scores", abilityText(entry.ability)],
               ["Size", asArray(entry.size).map((s) => ({ T: "Tiny", S: "Small", M: "Medium", L: "Large" } as Record<string, string>)[String(s)] ?? s).join(" or ")],
-              ["Speed", speedOf(entry.speed)],
+              ["Speed", u.label(speedOf(entry.speed))],
               ["Creature type", asArray(entry.creatureTypes).map((t) => cap(String(t))).join(", ")],
-              ["Darkvision", entry.darkvision ? `${String(entry.darkvision)} ft.` : ""],
+              ["Darkvision", entry.darkvision ? (u.units === "metric" ? u.distance(Number(entry.darkvision)) : `${String(entry.darkvision)} ft.`) : ""],
             ]}
           />
           {entry._race ? (

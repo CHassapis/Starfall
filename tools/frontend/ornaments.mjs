@@ -144,7 +144,7 @@ try {
     await page.goto(base + "/characters");
     await page.waitForLoadState("networkidle");
     for (const [name, theme] of [["Midnight", "midnight"], ["Slate", "slate"], ["Porcelain", "porcelain"]]) {
-      await page.getByRole("button", { name: "Choose theme" }).first().click();
+      await page.getByRole("button", { name: "Choose theme and units" }).first().click();
       const dialog = page.getByRole("dialog");
       const corner = await dialog.evaluate((el) => getComputedStyle(el, "::before").backgroundImage);
       assert.ok(corner.includes("/panel-corner.svg"), `dialog corner ${corner}`);

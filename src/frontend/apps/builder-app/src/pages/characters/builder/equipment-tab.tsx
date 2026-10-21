@@ -56,6 +56,7 @@ import { TradeDialog, type TradeItem } from "./trade-dialog";
 
 import { CustomAttacksEditor } from "./custom-attacks-editor";
 
+import { useUnits } from "@/components/units-provider";
 const newId = () => crypto.randomUUID?.() ?? `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
 
 /**
@@ -69,6 +70,7 @@ const newId = () => crypto.randomUUID?.() ?? `${Date.now().toString(36)}-${Math.
  * Build tab's choice row), so they can be made next to the items.
  */
 export function EquipmentTab({ characterId, itemChoices = [], renderChoice }: { characterId: string; itemChoices?: BuilderChoice[]; renderChoice?: (choice: BuilderChoice) => ReactNode }) {
+  const u = useUnits();
   const { data: inventory, isLoading } = useInventory(characterId);
   const save = useSaveInventory(characterId);
   const { data: catalog } = useItemCatalog();
@@ -176,7 +178,7 @@ export function EquipmentTab({ characterId, itemChoices = [], renderChoice }: { 
             <span>
               <span className="block text-xs text-muted-foreground">Carrying</span>
               <span className="tabular-nums">
-                <span className="text-xl font-semibold">{summary.weight.carried}</span> / {summary.weight.capacity} lb
+                <span className="text-xl font-semibold">{u.weightNumber(summary.weight.carried)}</span> / {u.weight(summary.weight.capacity)}
               </span>
             </span>
           </div>
@@ -235,8 +237,8 @@ export function EquipmentTab({ characterId, itemChoices = [], renderChoice }: { 
           icon={<BackpackIcon className="size-4" />}
           note={
             <span className={cn(g.capacity !== null && g.contents > g.capacity && "text-destructive")}>
-              {g.contents}
-              {g.capacity !== null ? ` / ${g.capacity}` : ""} lb inside
+              {u.weightNumber(g.contents)}
+              {g.capacity !== null ? ` / ${u.weightNumber(g.capacity)}` : ""} {u.weightUnit} inside
               {g.container.container?.weightless ? " · weighs nothing to you" : ""}
               {g.away ? " · not with you" : ""}
             </span>
@@ -291,6 +293,7 @@ function Group({ title, icon, note, items, empty, ...row }: RowProps & { title: 
 
 /** A weapon's other ways to attack (two hands, thrown, off hand), the grip in use first and marked. */
 function AttackModes({ modes }: { modes: AttackMode[] }) {
+  const u = useUnits();
   const sorted = [...modes].sort((a, b) => Number(b.current) - Number(a.current));
   return (
     <ul className="flex flex-wrap gap-1.5 text-xs" aria-label="Ways to attack with it">
@@ -302,7 +305,7 @@ function AttackModes({ modes }: { modes: AttackMode[] }) {
         >
           <span className="font-medium">{m.mode}</span>
           {m.action === "Bonus Action" ? " (bonus action)" : ""} {m.attack.replace(" vs AC", "")} · {m.damage}
-          {m.mode === "Thrown" || m.mode === "Ranged" ? ` · ${m.range}` : ""}
+          {m.mode === "Thrown" || m.mode === "Ranged" ? ` · ${u.range(m.range)}` : ""}
           {m.notes.some((n) => /\+2/.test(n) && !/when it is/.test(n)) ? " ✦" : ""}
         </li>
       ))}
@@ -311,6 +314,7 @@ function AttackModes({ modes }: { modes: AttackMode[] }) {
 }
 
 function Row({ r, containers, nextAttack, attackOf, modesOf, onChange, onRemove, onGive }: RowProps & { r: Resolved }) {
+  const u = useUnits();
   const { entry, item } = r;
   const slots = equipSlots(r);
   const attack = attackOf(entry.id);
@@ -371,11 +375,11 @@ function Row({ r, containers, nextAttack, attackOf, modesOf, onChange, onRemove,
           <p className="truncate text-xs text-muted-foreground">
             {attack ? (
               <span className="text-foreground/80">
-                {attack.attack.replace(" vs AC", " to hit")} · {attack.damage} · {attack.range}
+                {attack.attack.replace(" vs AC", " to hit")} · {attack.damage} · {u.range(attack.range)}
                 {!attack.proficient && " · not proficient"}
               </span>
             ) : (
-              [r.categories[0], item?.magic?.rarity, r.weight ? `${r.weight} lb` : null].filter(Boolean).join(" · ")
+              [r.categories[0], item?.magic?.rarity, r.weight ? u.weight(r.weight) : null].filter(Boolean).join(" · ")
             )}
             {charges ? ` · ${charges - (entry.chargesUsed ?? 0)}/${charges} charges` : ""}
           </p>

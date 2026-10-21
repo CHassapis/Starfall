@@ -99,7 +99,7 @@ try {
     await page.goto(base + "/");
     await page.locator("header h1.starfall-brand").waitFor();
     for (const [name, theme] of [["Midnight", "midnight"], ["Slate", "slate"], ["Porcelain", "porcelain"], ["Midnight", "midnight"]]) {
-      await page.getByRole("button", { name: "Choose theme" }).first().click();
+      await page.getByRole("button", { name: "Choose theme and units" }).first().click();
       await page.getByRole("button", { name: new RegExp(`^${name}`) }).click();
       // the preview already shows the emblem of the theme being tried
       await page.waitForFunction((t) => getComputedStyle(document.querySelector(".starfall-emblem")).backgroundImage.includes(`/ornaments/${t}/home-d20-icon.svg`), theme);

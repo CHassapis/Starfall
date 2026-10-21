@@ -21,6 +21,7 @@ import type { LoreEntry, LoreMeta } from "@/lib/lore/types";
 import { cn } from "@/lib/utils";
 import { Entries, Entry, RichText } from "./render";
 
+import { useUnits } from "@/components/units-provider";
 type Obj = Record<string, unknown>;
 const ABILITIES = ["str", "dex", "con", "int", "wis", "cha"] as const;
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
@@ -85,6 +86,7 @@ function shortNameOf(m: LoreEntry): string {
 }
 
 export function StatBlock({ meta, m }: { meta: LoreMeta; m: LoreEntry }) {
+  const u = useUnits();
   const modern = meta.sources[m.source]?.edition === "2024";
   const short = shortNameOf(m);
   const spellcasting = asArray(m.spellcasting) as Obj[];
@@ -104,7 +106,7 @@ export function StatBlock({ meta, m }: { meta: LoreMeta; m: LoreEntry }) {
         {modern && <Line label="Initiative">{signed(initiativeBonus(m))} ({10 + initiativeBonus(m)})</Line>}
         <Line label="HP">{hpText(m.hp)}</Line>
         <Line label="Speed">
-          <RichText text={speedText(m.speed)} />
+          <RichText text={u.label(speedText(m.speed))} />
         </Line>
       </div>
 
@@ -157,7 +159,7 @@ export function StatBlock({ meta, m }: { meta: LoreMeta; m: LoreEntry }) {
           </Line>
         )}
         <Line label="Senses">
-          <RichText text={[...asArray(m.senses).map(String), `${modern ? "Passive Perception" : "passive Perception"} ${String(m.passive ?? 10)}`].join(modern ? "; " : ", ")} />
+          <RichText text={[...asArray(m.senses).map((s) => u.label(String(s))), `${modern ? "Passive Perception" : "passive Perception"} ${String(m.passive ?? 10)}`].join(modern ? "; " : ", ")} />
         </Line>
         <Line label="Languages">
           <RichText text={asArray(m.languages).map(String).join(", ") || "—"} />
