@@ -28,6 +28,7 @@ import { Vitals, Status, RestDialog } from "@/pages/battle/battle-page";
 import { MagicTab } from "../builder/magic-tab";
 import { EquipmentTab } from "../builder/equipment-tab";
 
+import { useUnits } from "@/components/units-provider";
 function Section({ id, title, children, open, onToggle }: { id: string; title: string; children: ReactNode; open: boolean; onToggle: (open: boolean) => void }) {
   return (
     <section id={id} className="surface p-4 sm:p-5">
@@ -41,6 +42,7 @@ function Section({ id, title, children, open, onToggle }: { id: string; title: s
 
 /** Same character, inventory, magic and combat state as the builder and simulator; PDF remains a separate route. */
 export function InteractiveSheetPage() {
+  const u = useUnits();
   const { id = "" } = useParams();
   const sheet = useSheetData(id);
   const combat = useCombat(id);
@@ -221,7 +223,7 @@ export function InteractiveSheetPage() {
                     {a.attack} · {a.damage}
                   </span>
                 </summary>
-                <p className="mt-2 text-sm">{a.range}</p>
+                <p className="mt-2 text-sm">{u.range(a.range)}</p>
                 <RichText text={a.description} />
               </details>
             ))}

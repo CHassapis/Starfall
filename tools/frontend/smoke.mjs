@@ -78,11 +78,11 @@ try {
       await page.goto(`${base}/battle/${CHARACTER_ID}`);
       await page.getByRole("heading", { name: /^Mira Vale$/i }).waitFor();
       await shot("battle");
-      await page.getByRole("button", { name: "Choose theme", exact: true }).click();
+      await page.getByRole("button", { name: "Choose theme and units", exact: true }).click();
       await page.getByRole("button", { name: /^Slate Slate blue/ }).click();
       await page.getByRole("button", { name: "Cancel", exact: true }).click();
       assert.equal(await page.locator("html").getAttribute("data-theme"), theme, "Cancel restores saved theme");
-      await page.getByRole("button", { name: "Choose theme", exact: true }).click();
+      await page.getByRole("button", { name: "Choose theme and units", exact: true }).click();
       await page.getByRole("button", { name: /^Midnight Deep navy/ }).click();
       await page.getByRole("button", { name: "Save theme", exact: true }).click();
       await page.reload();

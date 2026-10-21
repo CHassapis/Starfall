@@ -2,6 +2,7 @@
 import { RichText } from "@/components/rich-text";
 import { ABILITY_KEYS, signedMod, type HomebrewMonster } from "@/lib/rules/homebrew";
 
+import { useUnits } from "@/components/units-provider";
 const SECTIONS: [keyof HomebrewMonster, string][] = [
   ["traits", "Traits"],
   ["actions", "Actions"],
@@ -11,11 +12,12 @@ const SECTIONS: [keyof HomebrewMonster, string][] = [
 ];
 
 export function HomebrewStatBlock({ monster: m }: { monster: HomebrewMonster }) {
+  const u = useUnits();
   const lines: [string, string | undefined][] = [
     ["Saves", m.saves],
     ["Skills", m.skills],
     ["Defenses", m.defenses],
-    ["Senses", m.senses],
+    ["Senses", m.senses && u.label(m.senses)],
     ["Languages", m.languages],
   ];
   return (
@@ -36,7 +38,7 @@ export function HomebrewStatBlock({ monster: m }: { monster: HomebrewMonster }) 
           {m.hpFormula ? ` (${m.hpFormula})` : ""}
         </span>
         <span>
-          <strong>Speed</strong> {m.speed}
+          <strong>Speed</strong> {u.label(m.speed)}
         </span>
       </div>
       <div className="grid grid-cols-6 overflow-hidden rounded-md border text-center text-xs">

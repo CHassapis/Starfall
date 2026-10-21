@@ -26,6 +26,7 @@ import {
 } from "@/lib/rules/monster-actions";
 import { cn } from "@/lib/utils";
 
+import { useUnits } from "@/components/units-provider";
 /** Loads the monster's stat block (once opened) and shows its actions. */
 export function MonsterPanel({ c, homebrew, party, update }: { c: Combatant; homebrew?: HomebrewMonster; party: Combatant[]; update: (patch: Partial<Combatant>) => void }) {
   const meta = useLoreMeta();
@@ -166,6 +167,7 @@ function Actions({ c, kit, party, update }: { c: Combatant; kit: MonsterKit; par
 }
 
 function ActionRow({ a, kit, c, ac, advantage, result, onRun }: { a: MonsterAction; kit: MonsterKit; c: Combatant; ac: number; advantage: Advantage; result?: string; onRun: () => void }) {
+  const u = useUnits();
   const [open, setOpen] = useState(false);
   const usable = canUse(a, { used: c.used, recharging: c.recharging, legendarySpent: c.legendarySpent }, kit.legendaryActions);
   const runnable = !!a.attack || a.damage.length > 0 || !!a.recharge || !!a.perDay || a.section === "legendary";
@@ -179,7 +181,7 @@ function ActionRow({ a, kit, c, ac, advantage, result, onRun }: { a: MonsterActi
         {a.attack && (
           <span className="text-xs text-muted-foreground">
             {signed(a.attack.bonus)} {a.attack.kind}
-            {a.attack.reach ? `, ${a.attack.reach}` : ""} · {percent(chance!)} vs AC {ac}
+            {a.attack.reach ? `, ${u.label(a.attack.reach)}` : ""} · {percent(chance!)} vs AC {ac}
           </span>
         )}
         {a.save && (

@@ -13,11 +13,11 @@ try{
  await page.goto(`${base}/characters/${CHARACTER_ID}/play`);await page.getByRole('heading',{name:/^Mira Vale$/i}).waitFor();
  const nav=page.getByRole('link',{name:'Spellcasting',exact:true});await nav.focus();await page.keyboard.press('Enter');
  assert.equal(await page.locator('#spellcasting > details').getAttribute('open'),'','Keyboard navigation opens collapsed section');
- await page.getByRole('button',{name:'Choose theme',exact:true}).focus();await page.keyboard.press('Enter');
+ await page.getByRole('button',{name:'Choose theme and units',exact:true}).focus();await page.keyboard.press('Enter');
  await page.getByRole('dialog').waitFor();await page.getByRole('button',{name:/^Midnight Deep navy/}).focus();await page.keyboard.press('Enter');
  assert.equal(await page.locator('html').getAttribute('data-theme'),'midnight');await page.keyboard.press('Escape');
  assert.equal(await page.locator('html').getAttribute('data-theme'),'porcelain','Escape cancels preview');
- await page.waitForFunction(()=>document.activeElement?.getAttribute('aria-label')==='Choose theme');
+ await page.waitForFunction(()=>document.activeElement?.getAttribute('aria-label')==='Choose theme and units');
  failSave=true;const before=data.combat.damage;
  await page.getByRole('textbox',{name:'Amount',exact:true}).fill('2');await page.getByRole('button',{name:'Heal',exact:true}).click();
  await page.getByText('A change could not be saved. Check your connection and try again.',{exact:true}).waitFor();assert.equal(data.combat.damage,before,'Failed save did not persist');

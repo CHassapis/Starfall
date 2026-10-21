@@ -4,6 +4,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { RouterProvider, createBrowserRouter } from "react-router-dom";
 import { ThemeProvider } from "./components/theme-provider.tsx";
+import { UnitsProvider } from "./components/units-provider.tsx";
 import "./index.css";
 import AboutPage from "./pages/about/Index.tsx";
 import CharactersPage from "./pages/characters/Index.tsx";
@@ -126,9 +127,11 @@ createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
       <ThemeProvider defaultTheme="porcelain" storageKey="starlights-ui-theme">
-        <PlayerProvider>
-          <RouterProvider router={router} />
-        </PlayerProvider>
+        <UnitsProvider>
+          <PlayerProvider>
+            <RouterProvider router={router} />
+          </PlayerProvider>
+        </UnitsProvider>
         {/* <ReactQueryDevtools initialIsOpen={false} buttonPosition="bottom-left" /> */}
         <Toaster />
       </ThemeProvider>

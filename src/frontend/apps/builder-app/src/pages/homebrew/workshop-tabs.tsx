@@ -28,6 +28,7 @@ import { cn } from "@/lib/utils";
 import { area, select } from "./form-styles";
 import { Field } from "./homebrew-tabs";
 
+import { useUnits } from "@/components/units-provider";
 const SCHOOLS = ["Abjuration", "Conjuration", "Divination", "Enchantment", "Evocation", "Illusion", "Necromancy", "Transmutation"];
 const ABILITIES = ["Strength", "Dexterity", "Constitution", "Intelligence", "Wisdom", "Charisma"];
 const SKILLS = ["Acrobatics", "Animal Handling", "Arcana", "Athletics", "Deception", "History", "Insight", "Intimidation", "Investigation", "Medicine", "Nature", "Perception", "Performance", "Persuasion", "Religion", "Sleight of Hand", "Stealth", "Survival"];
@@ -204,6 +205,7 @@ export function HomebrewSpells({ startNew }: { startNew?: boolean }) {
 }
 
 function SpellDialog({ spell, lists, busy, onClose, onSave }: { spell: HomebrewSpell; lists: string[]; busy: boolean; onClose: () => void; onSave: (s: HomebrewSpell) => void }) {
+  const u = useUnits();
   const [f, setF] = useState<HomebrewSpell>(spell);
   const set = (patch: Partial<HomebrewSpell>) => setF((x) => ({ ...x, ...patch }));
   return (
@@ -239,7 +241,7 @@ function SpellDialog({ spell, lists, busy, onClose, onSave }: { spell: HomebrewS
           <Field label="Casting time" hint="e.g. 1 action, 1 bonus action, 1 reaction, 1 minute">
             <Input value={f.castingTime} onChange={(e) => set({ castingTime: e.target.value })} maxLength={100} />
           </Field>
-          <Field label="Range" hint="e.g. Self, Touch, 60 feet">
+          <Field label="Range" hint={`e.g. Self, Touch, 60 feet${u.units === "metric" ? " (in feet: shown in metres)" : ""}`}>
             <Input value={f.range} onChange={(e) => set({ range: e.target.value })} maxLength={100} />
           </Field>
           <Field label="Duration" hint="e.g. Instantaneous, Concentration, up to 1 minute">

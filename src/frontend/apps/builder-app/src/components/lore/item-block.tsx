@@ -4,19 +4,21 @@ import { valueText } from "@/lib/lore/item-text";
 import type { LoreEntry } from "@/lib/lore/types";
 import { Entries, RichText } from "./render";
 
+import { useUnits } from "@/components/units-provider";
 type Obj = Record<string, unknown>;
 const DMG: Record<string, string> = { A: "acid", B: "bludgeoning", C: "cold", F: "fire", O: "force", L: "lightning", N: "necrotic", P: "piercing", I: "poison", Y: "psychic", R: "radiant", S: "slashing", T: "thunder" };
 
 export function ItemBlock({ entry }: { entry: LoreEntry }) {
+  const u = useUnits();
   const stats: [string, string][] = [];
   if (entry.dmg1) stats.push(["Damage", `${String(entry.dmg1)} ${DMG[String(entry.dmgType)] ?? ""}${entry.dmg2 ? ` (versatile ${String(entry.dmg2)})` : ""}`]);
-  if (entry.range) stats.push(["Range", `${String(entry.range)} ft.`]);
+  if (entry.range) stats.push(["Range", u.units === "metric" ? u.range(String(entry.range)) : `${String(entry.range)} ft.`]);
   if (entry.ac !== undefined) stats.push(["Armor class", `${String(entry.ac)}${entry.type && String(entry.type).startsWith("LA") ? " + Dex" : entry.type && String(entry.type).startsWith("MA") ? " + Dex (max 2)" : ""}${entry.bonusAc ? ` (${String(entry.bonusAc)})` : ""}`]);
   if (entry.strength) stats.push(["Strength", String(entry.strength)]);
   if (entry.stealth) stats.push(["Stealth", "Disadvantage"]);
   if (entry.bonusWeapon) stats.push(["Bonus", `${String(entry.bonusWeapon)} to attack and damage`]);
   if (Array.isArray(entry._props) && entry._props.length) stats.push(["Properties", (entry._props as string[]).join(", ")]);
-  if (entry.weight) stats.push(["Weight", `${String(entry.weight)} lb.`]);
+  if (entry.weight) stats.push(["Weight", u.units === "metric" ? u.weight(Number(entry.weight)) : `${String(entry.weight)} lb.`]);
   const value = valueText(entry.value);
   if (value) stats.push(["Cost", value]);
   const mastery = (entry._mastery as { name: string; entries: unknown[] }[] | undefined) ?? [];

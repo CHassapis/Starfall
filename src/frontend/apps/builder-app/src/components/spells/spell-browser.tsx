@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ordinal } from "@/lib/rules/magic";
 
+import { useUnits } from "@/components/units-provider";
 export interface SpellEntry {
   id: string;
   name: string;
@@ -19,6 +20,7 @@ export interface SpellEntry {
 
 /** Shared accessible spell presentation; fetching descriptions waits until the player expands a row. */
 export function SpellCard({ entry }: { entry: SpellEntry }) {
+  const u = useUnits();
   const [expanded, setExpanded] = useState(false);
   const f = entry.figures;
   return (
@@ -38,7 +40,7 @@ export function SpellCard({ entry }: { entry: SpellEntry }) {
         {f?.concentration && <span>Concentration</span>}
         {f?.ritual && <span>Ritual</span>}
         {f?.castingTime && <span>{f.castingTime}</span>}
-        {f?.range && <span>{f.range}</span>}
+        {f?.range && <span>{u.label(f.range)}</span>}
       </div>
       {entry.source && <p className="mt-1 text-sm text-muted-foreground">{entry.source}</p>}
       {entry.requirement && <p className="mt-2 text-sm text-[var(--warning)]">{entry.requirement}</p>}

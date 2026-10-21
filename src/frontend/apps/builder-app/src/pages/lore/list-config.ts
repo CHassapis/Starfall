@@ -14,7 +14,8 @@ export interface SortOption<Row> {
 export interface ListConfig<Row extends IndexRow> {
   facets: Facet<Row>[];
   /** the short line under the name */
-  summary: (row: Row) => string;
+  /** the list row's second line; `label` converts distances in short labels to the reader's units */
+  summary: (row: Row, label?: (text: string) => string) => string;
   sorts: SortOption<Row>[];
 }
 
@@ -26,7 +27,7 @@ const LEVEL = ["Cantrip", "1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th"
 
 const spells: ListConfig<SpellRow> = {
   facets: SPELL_FACETS,
-  summary: (r) => [r.lvl === 0 ? `${SCHOOLS[r.school] ?? r.school} cantrip` : `${LEVEL[r.lvl]}-level ${(SCHOOLS[r.school] ?? r.school).toLowerCase()}`, r.time, r.range, r.conc ? "concentration" : "", r.ritual ? "ritual" : ""].filter(Boolean).join(" · "),
+  summary: (r, label = (t) => t) => [r.lvl === 0 ? `${SCHOOLS[r.school] ?? r.school} cantrip` : `${LEVEL[r.lvl]}-level ${(SCHOOLS[r.school] ?? r.school).toLowerCase()}`, r.time, label(r.range), r.conc ? "concentration" : "", r.ritual ? "ritual" : ""].filter(Boolean).join(" · "),
   sorts: [NAME_SORT, { id: "level", label: "Level", compare: (a, b) => a.lvl - b.lvl || byName(a, b) }, SOURCE_SORT],
 };
 
