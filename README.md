@@ -166,7 +166,9 @@ private network and gives the server an https address with a real certificate, r
    can take a few seconds while the certificate is issued. The machine's name appears in public certificate logs.
 4. Everyone opens `https://<server-name>.<your-tailnet>.ts.net`, and can install it from there.
 
-Don't use Tailscale **Funnel** for Starfall: it publishes the site on the internet.
+Don't use Tailscale **Funnel**, or anything else that puts Starfall on the open internet: an install made by
+`setup.sh` has no site-wide password. (The project's own server publishes one only behind a site password, on a
+separate door of the web container; that is not part of this setup.)
 
 **Your own reverse proxy** (Caddy, nginx, Traefik) also works, if its certificate is one your devices trust (a domain
 you own with a certificate from Let's Encrypt through a DNS challenge works without opening any port). Send
