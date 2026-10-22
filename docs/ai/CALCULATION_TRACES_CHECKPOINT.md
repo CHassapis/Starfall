@@ -1,27 +1,29 @@
 # Calculation traces: checkpoint
 
-Branch `feature/calculation-traces` from `aurora-server` 6dbade3, worktree `~/starfall-calc-traces`. Not pushed yet;
-publish to `mine` and open a PR to `aurora-server` (rulesets block direct pushes). Updated 2026-10-22.
+Branch `feature/calculation-traces` from `aurora-server` 6dbade3, worktree `~/starfall-calc-traces`. Publish to
+`mine` and open a PR to `aurora-server` (rulesets block direct pushes). Updated 2026-10-22.
 
-## Done (commits)
-- db3df0e reference characters: synthetic content `reference-characters/content`, ten hand-worked specs.
-- 9e1c4d7 server reference suite (`Tests/Calculation/ReferenceCharacterTests.cs`, SqlServer category).
+## Stage 1 (done, in this order)
+- db3df0e, 9e1c4d7 reference characters: synthetic content, ten hand-worked specs, server suite (SqlServer category).
 - b9f731a fix: `:half` variants no longer remove an ability's `:score:set` (regression test).
 - e43721e fix: equal same-kind bonuses: the registration made first counts, whatever the load order (test).
-- e3fab4b statistics calculator records how it works (`StatisticsTraceRecorder`, `CalculationTraceBuilder`).
+- e3fab4b the statistics calculator records how it works (`StatisticsTraceRecorder`, `CalculationTraceBuilder`).
 - 170741e `GET /api/characters/{id}/calculation/trace`, contract v1, endpoint/access/no-mutation tests, OpenAPI.
+- 84cb314 web contract types generated from `docs/api/openapi.json` (drift test), real worked example.
+- a2f1f23 web tracer (`lib/rules/trace.ts`) through armor class, attacks, hit points, speeds; `lib/sheet-figures.ts`.
+- 5ebbd19 fix: the sheet's spell attack/DC are the server's (item bonuses were missing on sheet, battle, texts).
+- 77002e9, 77ac625 web reference suite: sheet, PDF fields, battle view, spell slots, traces vs. hand figures.
+- 18f5230 API guide section. Then: "Why this value?" on the interactive sheet + `tools/frontend/calculation-traces.mjs`.
 
-## Checks so far
-Characters unit tests 341 passed; trace endpoint + access 24 passed; reference suite 12/12 on a disposable SQL
-Server. Baseline before the branch: backend 824 passed / 35 skipped, web 262 passed / 5 skipped.
+## Checks (2026-10-22)
+Characters unit tests 341; trace endpoint + access 24; server reference suite 12/12 (disposable SQL Server); web
+288 passed / 5 skipped (baseline 262 / 5); tsc clean; eslint 38 errors / 1 warning (= baseline, none in new code);
+browser: calculation-traces 36 checks (desktop popover, 360px bottom sheet). Full backend + Docker build: see PR.
 
-## Stage 1 remaining, in order
-1. Web: contract types generated from `docs/api/openapi.json` (drift test); `lib/rules/trace.ts`; tracer passed
-   through armor class, attacks, hit points, speeds; pure sheet figures used by `useSheetData`; spell attack/DC
-   from the server's casters (item bonuses were missing on the sheet, battle and placeholders) with a test.
-2. Web reference suite `src/lib/reference-characters.test.ts`: spec figures, sheet/PDF/battle agreement, traces.
-3. "Why this value?" on the interactive sheet (popover; drawer on phones); baseline vs. effects stated.
-4. Docs (API README trace section + worked example), handoff Coordination note, full gates, publish checks, PR.
+## Known limits
+- The import's DOM reading of an Aurora file is not run in tests (no DOM in vitest); its mapping is.
+- Battle view: a spell outside a class spellcasting uses proficiency + modifier, without `spellcasting:attack|dc`.
+- Requirements and "while wearing" conditions are applied before calculation; traces show their result.
 
 ## Later stages (after the Stage 1 PR)
 2: import diagnostics (Aurora, 5etools, homebrew) + homebrew edit impact preview. 3: structured homebrew spell

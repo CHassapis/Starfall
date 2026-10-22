@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { armorClass, sheetAttacks, type Catalog, type CharacterFacts, type ItemInfo } from "./items";
-import { replay, TraceBuilder, TraceRecorder, traceKeyOf } from "./trace";
+import { isWebTraceKey, replay, slugOf, TraceBuilder, TraceRecorder, traceKeyOf } from "./trace";
 
 const catalog: Catalog = new Map<string, ItemInfo>([
   ["scale", { id: "scale", name: "Scale Mail", categories: ["Armor"], armor: { kind: "Medium", armorClass: 14 } } as ItemInfo],
@@ -38,6 +38,12 @@ describe("calculation traces of the web app's figures", () => {
       "statistic:ac:misc",
       "statistic:innate-speed",
     ]);
+  });
+
+  it("tells the web app's keys from the server's, as the server does", () => {
+    expect(["armor-class", "speed:climb", "attack:4b0e7a10-5c1d-4f2e-9a3b-000000000c10:to-hit"].every(isWebTraceKey)).toBe(true);
+    expect(["skill:stealth", "statistic:ac:misc", "attack:custom:bite:to-hit", "speed:burrow"].some(isWebTraceKey)).toBe(false);
+    expect(["Sleight of Hand", "Ref Bard"].map(slugOf)).toEqual(["sleight-of-hand", "ref-bard"]);
   });
 
   it("recording changes no figure", () => {

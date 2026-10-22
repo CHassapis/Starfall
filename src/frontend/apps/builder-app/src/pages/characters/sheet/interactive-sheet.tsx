@@ -3,6 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { RichText } from "@/components/rich-text";
+import { WhyValue } from "@/components/why-value";
 import { Spinner } from "@/components/ui/spinner";
 import { useSheetData } from "@/lib/api/sheet";
 import { useCombat, useSaveCombat } from "@/lib/api/combat";
@@ -24,11 +25,19 @@ import {
   type CombatState,
 } from "@/lib/rules/battle";
 import { pactSlots } from "@/lib/rules/magic";
+import { slugOf } from "@/lib/rules/trace";
 import { Vitals, Status, RestDialog } from "@/pages/battle/battle-page";
 import { MagicTab } from "../builder/magic-tab";
 import { EquipmentTab } from "../builder/equipment-tab";
 
 import { useUnits } from "@/components/units-provider";
+
+// saving-throw keys name the ability ("saving-throw:dexterity")
+const ABILITY_NAME: Record<string, string> = { STR: "strength", DEX: "dexterity", CON: "constitution", INT: "intelligence", WIS: "wisdom", CHA: "charisma" };
+const toHitOf = (attack: string) => {
+  const n = attack.replace(/−/g, "-").match(/[+-]?\d+/)?.[0];
+  return n === undefined ? null : Number(n);
+};
 function Section({ id, title, children, open, onToggle }: { id: string; title: string; children: ReactNode; open: boolean; onToggle: (open: boolean) => void }) {
   return (
     <section id={id} className="surface p-4 sm:p-5">
@@ -75,6 +84,7 @@ export function InteractiveSheetPage() {
       </div>
     );
   const data = sheet.data;
+  const explain = sheet.explain;
   const state = combat.data;
   const model = buildBattleModel(data);
   const effectCtx = { edition: model.edition, mod: model.mod, proficiencyBonus: data.proficiencyBonus, rageDamage: data.rageDamage ?? 0 };
@@ -90,6 +100,19 @@ export function InteractiveSheetPage() {
     exhaustion.speedZero || CONDITIONS.some((c) => state.conditions.includes(c.name) && c.speedZero)
       ? 0
       : effectiveSpeed(Math.max(0, (exhaustion.speedHalved ? Math.floor(data.speeds.walk / 2) : data.speeds.walk) - exhaustion.speedPenalty), effects);
+  // what play adds to the sheet's figures; "Why this value?" explains the sheet's figure and names these
+  const hpChanges = [
+    ...effects.filter((e) => e.maxHpBonus).map((e) => `${e.name} ${signed(e.maxHpBonus ?? 0)}`),
+    ...(maxHitPoints(data.hitPoints ?? 0, state, model.edition) !== (data.hitPoints ?? 0) ? [`exhaustion ${state.exhaustion}`] : []),
+  ];
+  const speedChanges = [
+    ...effects.filter((e) => e.speedBonus || e.speedMultiplier).map((e) => e.name),
+    ...(state.exhaustion > 0 && (exhaustion.speedHalved || exhaustion.speedPenalty || exhaustion.speedZero) ? [`exhaustion ${state.exhaustion}`] : []),
+    ...CONDITIONS.filter((c) => state.conditions.includes(c.name) && c.speedZero).map((c) => c.name),
+  ];
+  const why = (traceKey: string, label: string, shown: number | null, changes?: string[]) => (
+    <WhyValue characterId={id} traceKey={traceKey} label={label} explain={explain} shown={shown} effects={changes} />
+  );
   const failed = (e: Error) => toast.error("Could not save character state", { description: e.message });
   const updateCombat = (change: (s: CombatState) => CombatState) => saveCombat.update(change, failed);
   const ctx = {
@@ -156,6 +179,12 @@ export function InteractiveSheetPage() {
           onHeal={(n) => updateCombat((c) => heal(c, n))}
           onTemp={(n) => updateCombat((c) => gainTemporary(c, n))}
         />
+        <p className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
+          <span>Why these values:</span>
+          <span className="inline-flex items-center">Armor class {why("armor-class", "Armor class", ac.total, ac.changes)}</span>
+          <span className="inline-flex items-center">Hit point maximum {why("hit-points", "Hit point maximum", maxHp, hpChanges)}</span>
+          <span className="inline-flex items-center">Speed {why("speed:walk", "Walking speed", speed, speedChanges)}</span>
+        </p>
         <Status data={data} state={state} edition={data.edition} exhaustionText={exhaustion.text} updateCombat={updateCombat} hp={hp} />
         {effects.length > 0 && (
           <p className="rounded-lg bg-muted p-3 text-sm">
@@ -168,13 +197,18 @@ export function InteractiveSheetPage() {
         <div className="grid items-start gap-5 lg:grid-cols-2">
           <Section {...sectionProps("abilities")} id="abilities" title="Abilities & saving throws">
             <p className="mb-3 text-sm">
-              Proficiency bonus <strong>{signed(data.proficiencyBonus)}</strong> · Initiative <strong>{signed(data.initiative)}</strong>
+              Proficiency bonus <strong>{signed(data.proficiencyBonus)}</strong>
+              {why("proficiency-bonus", "Proficiency bonus", data.proficiencyBonus)} · Initiative <strong>{signed(data.initiative)}</strong>
+              {why("initiative", "Initiative", data.initiative)}
             </p>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
               {data.abilities.map((a) => (
                 <div key={a.abilityScoreId} className="rounded-lg bg-muted p-3 text-center">
                   <p className="text-sm">{a.name}</p>
-                  <p className="text-2xl font-semibold">{signed(a.calculatedModifier)}</p>
+                  <p className="text-2xl font-semibold">
+                    {signed(a.calculatedModifier)}
+                    {why(`ability-modifier:${slugOf(a.name)}`, `${a.name} modifier`, a.calculatedModifier)}
+                  </p>
                   <p className="text-sm text-muted-foreground">Score {a.calculatedScore}</p>
                 </div>
               ))}
@@ -186,7 +220,10 @@ export function InteractiveSheetPage() {
                     {s.name}
                     {s.proficiency !== "none" ? " · Proficient" : ""}
                   </dt>
-                  <dd className="font-semibold">{signed(s.calculatedBonus)}</dd>
+                  <dd className="font-semibold">
+                    {signed(s.calculatedBonus)}
+                    {why(`saving-throw:${ABILITY_NAME[s.abilityScoreAbbreviation] ?? slugOf(s.name)}`, /saving throw/i.test(s.name) ? s.name : `${s.name} saving throw`, s.calculatedBonus)}
+                  </dd>
                 </div>
               ))}
             </dl>
@@ -203,12 +240,16 @@ export function InteractiveSheetPage() {
                       {s.proficiency !== "none" ? ` · ${s.proficiency}` : ""}
                     </span>
                   </dt>
-                  <dd className="font-semibold">{signed(s.calculatedBonus)}</dd>
+                  <dd className="font-semibold">
+                    {signed(s.calculatedBonus)}
+                    {why(`skill:${slugOf(s.name)}`, s.name, s.calculatedBonus)}
+                  </dd>
                 </div>
               ))}
             </dl>
             <p className="mt-4 text-sm">
-              Passive Perception {data.passivePerception} · {data.vision.join(", ") || "Normal vision"}
+              Passive Perception {data.passivePerception}
+              {why("passive-perception", "Passive Perception", data.passivePerception)} · {data.vision.join(", ") || "Normal vision"}
             </p>
             <p className="mt-2 text-sm text-muted-foreground">Languages: {data.languages.join(", ") || "None selected"}</p>
           </Section>
@@ -224,6 +265,12 @@ export function InteractiveSheetPage() {
                   </span>
                 </summary>
                 <p className="mt-2 text-sm">{u.range(a.range)}</p>
+                {a.traceId && (
+                  <p className="text-sm text-muted-foreground">
+                    Attack bonus {why(`attack:${a.traceId}:to-hit`, `${a.name} attack bonus`, toHitOf(a.attack))} · Damage
+                    bonus {why(`attack:${a.traceId}:damage`, `${a.name} damage bonus`, null)}
+                  </p>
+                )}
                 <RichText text={a.description} />
               </details>
             ))}
@@ -238,6 +285,18 @@ export function InteractiveSheetPage() {
           </p>
         </Section>
         <Section {...sectionProps("spellcasting")} id="spellcasting" title="Spellcasting">
+          {data.spellcasting.length > 0 && (
+            <p className="mb-3 text-sm">
+              {data.spellcasting.map((c, i) => (
+                <span key={c.name} className="inline-flex flex-wrap items-center">
+                  {i > 0 && <span className="mx-2">·</span>}
+                  {c.name}: spell attack <strong className="ml-1">{signed(c.attackBonus)}</strong>
+                  {why(`spell-attack:${slugOf(c.name)}`, `${c.name} spell attack`, c.attackBonus)}, save DC <strong className="ml-1">{c.saveDc}</strong>
+                  {why(`spell-save-dc:${slugOf(c.name)}`, `${c.name} spell save DC`, c.saveDc)}
+                </span>
+              ))}
+            </p>
+          )}
           <MagicTab characterId={id} />
         </Section>
         <Section {...sectionProps("inventory")} id="inventory" title="Inventory">

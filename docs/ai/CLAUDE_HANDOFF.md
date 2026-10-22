@@ -1,25 +1,17 @@
 # Claude handoff
 
-Updated 2026-10-21 (polish session 33d95646). Keep under ~80 lines; replace stale lines.
+Updated 2026-10-22 (calculation traces session 52b845c7). Keep under ~80 lines; replace stale lines.
 
-## Task (merged #22–#27; web live b5492d6 since 2026-10-21 18:17): polish & release readiness
-Owner's mission + three packs (D20 refinement, universal UI assets, PWA home-screen kit). Worktree
-`~/starfall-polish`, branches stacked from `aurora-server` `1f47f91`; merge **in order** #22 → #23 → #24 → #26 → docs PR:
-1. #22 `feature/polish-brand-responsive`: D20 redrawn as a true icosahedron (`tools/frontend/d20-emblem.mjs`), the
-   kit's app icons in `public/icons` (`tools/frontend/app-icons.py`), `3xl`/`4xl` breakpoints + type step for
-   1440p/4K/ultrawide.
-2. #23 `feature/polish-ornament`: shared ornament rules (title marker, corners, empty-state accent, sprig, book rule).
-3. #24 `feature/polish-units`: Imperial/Metric display preference (`lib/units.ts`, `useUnits()`), no data change.
-4. #26 `feature/polish-pwa`: manifest, install dialog/menu (`lib/install.ts`), no service worker; `deploy/nginx.conf`
-   opens manifest + `/icons/` on the gated door (needs owner review before deploy).
-5. `feature/polish-docs`: README rewritten as the entry point (13 sections, HTTPS via Tailscale Serve), user guide
-   moved to `docs/using-starfall.md`, new synthetic screenshots.
-Checks per stage in each PR; `tools/frontend/{units,pwa}.mjs` new. Evidence: `~/.cache/starlights-test/polish/`.
-#25 (another session, `fix/backup-outside-compose`) edits `deploy/maintenance` + `docs/maintenance.md`: untouched here.
-After go-live an iPhone kept the old D20 (unversioned `/ornaments/` file, no Cache-Control, Safari reused it):
-`fix/ornament-cache` versions the emblem URL (`?v=2`) and serves `/ornaments/` + `/icons/` with `no-cache`.
+## Task (open, feature/calculation-traces): calculation traces, reference characters, engine contracts
+Worktree `~/starfall-calc-traces`, PR to `aurora-server`. Status, commits, checks and next steps:
+[CALCULATION_TRACES_CHECKPOINT.md](CALCULATION_TRACES_CHECKPOINT.md). Trace endpoint and contract: docs/api/README.md
+"Calculation traces"; reference characters: `src/frontend/apps/builder-app/reference-characters/README.md`.
 
-## Previous task (merged; web live 1f47f91 since 2026-10-21 15:08): visual fidelity
+## Previous task (merged #22–#27; web live b5492d6 since 2026-10-21 18:17): polish & release readiness
+D20 icosahedron, shared ornaments, Imperial/Metric units, PWA kit, README rewrite; `fix/ornament-cache` versions the
+emblem URL. Details in the PRs and git history.
+
+## Earlier task (merged; web live 1f47f91 since 2026-10-21 15:08): visual fidelity
 [VISUAL_FIDELITY_REPORT.md](VISUAL_FIDELITY_REPORT.md): one page frame, mockup homepage, dark Slate.
 
 ## Earlier work
@@ -41,6 +33,11 @@ Mk2 stabilization, v0.11.0 (2026-10-20, [MK2_VERIFICATION_REPORT.md](MK2_VERIFIC
 - Character files exported before #18 can't move between servers; export again (#18 is live since 2026-10-20).
 
 ## Coordination (shared files touched)
+- Calculation traces: `pages/characters/sheet/interactive-sheet.tsx` (Codex's): "Why this value?" buttons
+  (`components/why-value.tsx`) beside figures, a "Why these values" row under `Vitals` (Vitals itself unchanged),
+  and the spellcasting's attack and DC above the Magic tab. `tools/frontend/fixtures.mjs`: answers
+  `…/calculation/trace` (synthetic). `lib/api/sheet.ts`: pure figures moved to `lib/sheet-figures.ts`; spell attack/DC
+  now the server's. `lib/rules/items.ts`, `lib/sheet-model.ts`: optional trace recorder (figures unchanged).
 - #15: `pages/battle/battle-page.tsx` (`UsePips`: `role="img"`), `pages/compendium/Index.tsx` (two `aria-label`s).
 - Docs PR: `tools/frontend/custom-attacks.mjs` (builder route `/characters/:id`), `workflows.mjs` (waits for the
   builder session before editing), `accessibility.mjs` (`FRONTEND_URL` override). Codex's other tools unchanged.
