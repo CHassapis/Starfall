@@ -1,5 +1,6 @@
 import { armorClass, attunementMax, displayName, resolve, sheetAttacks, weight, type Catalog, type CharacterFacts, type Inventory, type Resolved } from "@/lib/rules/items";
 import { preparedIds, spellSlots, type Caster, type KnownSpell, type MagicState, type Spellcasting } from "@/lib/rules/magic";
+import type { TraceRecorder } from "@/lib/rules/trace";
 
 /*
  * What Aurora's sheet shows of a character's equipment and spellcasting, worked out from Starfall's inventory,
@@ -64,6 +65,8 @@ export interface SheetArmor {
 }
 
 export interface SheetAttackLine {
+  /** the id its traces are kept under (attack:<id>:to-hit): the inventory entry's, or the custom attack's own */
+  traceId?: string;
   name: string;
   range: string;
   attack: string;
@@ -101,8 +104,8 @@ export function generatedName(r: Resolved): string {
  * The armor box: the armor's name, or without armor the calculation that wins, as Aurora writes it: the feature
  * that gives it with its class and the AC ("Draconic Resilience (Sorcerer) (17)"), else "Unarmored (13)".
  */
-export function sheetArmor(inventory: Inventory, catalog: Catalog, facts: CharacterFacts, featureOf: (statistic: string) => string | undefined): SheetArmor {
-  const ac = armorClass(inventory, catalog, facts);
+export function sheetArmor(inventory: Inventory, catalog: Catalog, facts: CharacterFacts, featureOf: (statistic: string) => string | undefined, trace?: TraceRecorder): SheetArmor {
+  const ac = armorClass(inventory, catalog, facts, trace);
   const unarmored = ac.parts[0]?.value ?? 10;
   // every unarmored feature feeds ac:calculation, so its own source names it rather than a lookup by statistic
   const feature = ac.calculationSource ?? (ac.calculation ? featureOf(ac.calculation) : undefined);
@@ -117,8 +120,9 @@ export function sheetArmor(inventory: Inventory, catalog: Catalog, facts: Charac
   };
 }
 
-export function sheetAttackLines(inventory: Inventory, catalog: Catalog, facts: CharacterFacts): SheetAttackLine[] {
-  return sheetAttacks(inventory, catalog, facts).map((a) => ({
+export function sheetAttackLines(inventory: Inventory, catalog: Catalog, facts: CharacterFacts, trace?: TraceRecorder): SheetAttackLine[] {
+  return sheetAttacks(inventory, catalog, facts, trace).map((a) => ({
+    traceId: a.entryId.replace(/^custom:/, ""),
     name: a.name,
     range: a.range,
     attack: a.attack,

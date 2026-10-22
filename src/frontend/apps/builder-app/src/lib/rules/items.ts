@@ -1,3 +1,5 @@
+import { abilityModifier, attackKey, calculated, fixed, fromContent, TraceBuilder, userSupplied, type TraceRecorder } from "./trace";
+
 /*
  * Inventory rules: pure functions over the item catalog (GET /api/elements/items) and a character's inventory,
  * with no React or network, so they are unit tested (items.test.ts). Aurora is the reference: an item's figures
@@ -390,8 +392,9 @@ const NOT_A_CALCULATION = /^ac:(misc|shield|calculation|armored)(:|$)/;
  * heavy none) or the best unarmored calculation (10 + DEX, or a feature's own, such as ac:draconic-resilience;
  * monk-style ones need no shield either), plus the shield, plus magic from active items through the statistics
  * (ac:armored:enhancement for magic armor, ac:shield for a magic shield, ac:misc for a Cloak of Protection).
+ * With a recorder, it writes down the "armor-class" trace: the calculations weighed and left out with it.
  */
-export function armorClass(inventory: Inventory, catalog: Catalog, c: CharacterFacts): ArmorClass {
+export function armorClass(inventory: Inventory, catalog: Catalog, c: CharacterFacts, trace?: TraceRecorder): ArmorClass {
   const resolved = inventory.items.map((e) => resolve(e, catalog));
   const armor = resolved.find((r) => r.entry.equipped === "Armor" && r.armor && r.armor.kind !== "Shield");
   const shield = resolved.find((r) => r.entry.equipped && r.armor?.kind === "Shield");
@@ -399,45 +402,79 @@ export function armorClass(inventory: Inventory, catalog: Catalog, c: CharacterF
   const parts: { label: string; value: number }[] = [];
   let calculation: string | undefined;
   let calculationSource: string | undefined;
+  const t = trace?.begin("armor-class", "Armor class");
 
   if (armor?.armor) {
     parts.push({ label: armor.name, value: armor.armor.armorClass });
+    t?.start(armor.armor.armorClass, armor.name, fromContent(armor.name, "Armor", armor.base?.id ?? armor.item?.id));
     const cap = armor.armor.kind === "Heavy" ? 0 : armor.armor.kind === "Medium" ? (c.stat("ac:armored:dexterity:cap") ?? 2) : Infinity;
     const fromDex = Math.min(dex, cap);
     if (armor.armor.kind !== "Heavy") parts.push({ label: cap === Infinity ? "Dexterity" : `Dexterity (max ${cap})`, value: fromDex });
+    if (armor.armor.kind === "Heavy") t?.note(`${armor.name} is heavy armor: Dexterity does not count.`);
+    else if (cap === Infinity) t?.add(fromDex, "Dexterity", abilityModifier("DEX"));
+    else
+      t?.add(
+        fromDex,
+        `Dexterity (max ${cap})`,
+        undefined,
+        new TraceBuilder("armor-class:dexterity", `Dexterity (max ${cap})`)
+          .start(dex, "Dexterity modifier", abilityModifier("DEX"))
+          .minimum(cap, `${armor.armor.kind} armor counts at most +${cap}`, c.stat("ac:armored:dexterity:cap") !== undefined ? calculated("ac:armored:dexterity:cap") : fixed("Medium armor"))
+          .finish(fromDex),
+      );
     const enhancement = c.stat("ac:armored:enhancement") ?? 0;
     if (enhancement) parts.push({ label: "Magic armor", value: enhancement });
+    if (enhancement) t?.add(enhancement, "Magic armor", calculated("ac:armored:enhancement"));
   } else {
-    const options = c.statNames
-      .filter((n) => n.startsWith("ac:") && !NOT_A_CALCULATION.test(n))
+    const label = (n: string) => n.slice(3).replace(/-/g, " ").replace(/^\w/, (x) => x.toUpperCase());
+    const calculations = c.statNames.filter((n) => n.startsWith("ac:") && !NOT_A_CALCULATION.test(n));
+    // a monk's or bladesinger's defense needs no shield
+    for (const n of calculations.filter((n) => shield && /monk|dazzling/.test(n)))
+      t?.exclude("condition-not-met", c.stat(n) ?? 0, label(n), `It needs no shield, and ${shield!.name} is held.`, calculated(n));
+    const options = calculations
       .filter((n) => !shield || !/monk|dazzling/.test(n))
-      .map((n) => ({ label: n.slice(3).replace(/-/g, " ").replace(/^\w/, (x) => x.toUpperCase()), value: c.stat(n) ?? 0, statistic: n as string | undefined, source: undefined as string | undefined }));
+      .map((n) => ({ label: label(n), value: c.stat(n) ?? 0, statistic: n as string | undefined, source: undefined as string | undefined }));
     // Aurora's ac:calculation: the best of the calculations the character's rules name, whatever their statistic is
     // called ("armor-casing:ac" of an autognome, a tortle's or loxodon's natural armor); the server applies their
     // conditions (no armor, no shield). Last, so a calculation already listed by name keeps its name on a tie.
-    const calculated = c.stat("ac:calculation");
-    if (calculated !== undefined) {
+    const acCalculation = c.stat("ac:calculation");
+    if (acCalculation !== undefined) {
       const source = c.statSource?.("ac:calculation")?.replace(/^Level \d+:\s*/, "");
-      options.push({ label: source ?? "Natural armor", value: calculated, statistic: "ac:calculation", source: source ?? "Natural armor" });
+      options.push({ label: source ?? "Natural armor", value: acCalculation, statistic: "ac:calculation", source: source ?? "Natural armor" });
     }
-    const best = options.reduce((a, b) => (b.value > a.value ? b : a), { label: "Unarmored (10 + Dexterity)", value: 10 + dex, statistic: undefined as string | undefined, source: undefined as string | undefined });
+    const unarmored = { label: "Unarmored (10 + Dexterity)", value: 10 + dex, statistic: undefined as string | undefined, source: undefined as string | undefined };
+    const best = options.reduce((a, b) => (b.value > a.value ? b : a), unarmored);
     parts.push({ label: best.label, value: best.value });
     calculation = best.statistic;
     calculationSource = best.source;
+    if (best === unarmored)
+      t?.start(best.value, best.label, undefined, new TraceBuilder("armor-class:unarmored", best.label).start(10, "Unarmored", fixed("Unarmored")).add(dex, "Dexterity modifier", abilityModifier("DEX")).finish(best.value));
+    else t?.start(best.value, best.label, calculated(best.statistic!));
+    // the calculations weighed: a lower one is left out; an equal one (ac:calculation is the best of the named ones,
+    // so it often names the winner again) is the same figure, not an alternative
+    for (const o of [unarmored, ...options].filter((o) => o !== best)) {
+      if (o.value < best.value) t?.exclude("lower-alternative", o.value, o.label, `${best.label} gives ${best.value}.`, o.statistic ? calculated(o.statistic) : fixed("Unarmored"));
+      else t?.note(`${o.label} gives the same ${o.value}.`);
+    }
   }
   if (shield?.armor) {
     parts.push({ label: shield.name, value: shield.armor.armorClass });
+    t?.add(shield.armor.armorClass, shield.name, fromContent(shield.name, "Armor", shield.base?.id ?? shield.item?.id));
     // a whole magic shield's own rule puts its +2 in ac:shield too, so only what is above it is magic; a magic
     // shield made from a base shield ("Shield, +1") registers only its magic (+1), the base's +2 coming from here
     const total = c.stat("ac:shield");
     const magic = total === undefined ? 0 : shield.base ? total : total - shield.armor.armorClass;
     if (magic > 0) parts.push({ label: "Magic shield", value: magic });
+    if (magic > 0) t?.add(magic, shield.base ? "Magic shield" : `Magic shield (ac:shield ${total} less the shield's own ${shield.armor.armorClass})`, calculated("ac:shield"));
   }
   const misc = c.stat("ac:misc") ?? 0;
   if (misc) parts.push({ label: "Other bonuses", value: misc });
+  if (misc) t?.add(misc, "Other bonuses", calculated("ac:misc"));
 
+  const total = parts.reduce((n, p) => n + p.value, 0);
+  t?.finish(total);
   return {
-    total: parts.reduce((n, p) => n + p.value, 0),
+    total,
     parts,
     armor,
     shield,
@@ -505,7 +542,7 @@ interface WeaponLineOptions {
  * group; a magic weapon's +N on both; and the bonuses the character's elements give, as Aurora names them:
  * "ranged:attack" (Archery), "melee:damage", and per weapon "longsword:attack", "longbow:damage".
  */
-function weaponLine(r: Resolved, c: CharacterFacts, o: WeaponLineOptions) {
+function weaponLine(r: Resolved, c: CharacterFacts, o: WeaponLineOptions, trace?: TraceRecorder) {
   const w = r.weapon!;
   const properties = w.properties ?? [];
   const finesse = properties.includes("Finesse");
@@ -521,6 +558,7 @@ function weaponLine(r: Resolved, c: CharacterFacts, o: WeaponLineOptions) {
   const statBonus = (what: "attack" | "damage") => (c.stat(`${kind}:${what}`) ?? 0) + (weaponName ? (c.stat(`${weaponName}:${what}`) ?? 0) : 0);
   const toHit = ability + (proficient ? c.proficiencyBonus : 0) + enhancement + statBonus("attack");
   const damageBonus = (o.noAbilityDamage && ability > 0 ? 0 : ability) + enhancement + statBonus("damage") + (o.extraDamage ?? 0);
+  if (trace) recordWeaponLine(trace, r, c, o, { ability, proficient, enhancement, kind, weaponName, toHit, damageBonus });
   return {
     entryId: r.entry.id,
     name: r.name,
@@ -534,13 +572,60 @@ function weaponLine(r: Resolved, c: CharacterFacts, o: WeaponLineOptions) {
   };
 }
 
+/** Writes down how weaponLine worked out an attack's to-hit and damage bonus, from the figures it used. */
+function recordWeaponLine(
+  trace: TraceRecorder,
+  r: Resolved,
+  c: CharacterFacts,
+  o: WeaponLineOptions,
+  f: { ability: number; proficient: boolean; enhancement: number; kind: string; weaponName: string; toHit: number; damageBonus: number },
+) {
+  const w = r.weapon!;
+  const finesse = !w.ranged && (w.properties ?? []).includes("Finesse");
+  const [str, dex] = [c.mod("STR"), c.mod("DEX")];
+  const used = w.ranged || (finesse && dex > str) ? "DEX" : "STR";
+  const name = { STR: "Strength", DEX: "Dexterity" };
+  const ability = (b: TraceBuilder) => {
+    b.start(f.ability, `${name[used]} modifier`, abilityModifier(used));
+    const other = used === "DEX" ? "STR" : "DEX";
+    if (finesse && str !== dex)
+      b.exclude("lower-alternative", c.mod(other), `${name[other]} modifier`, `Finesse: the better of Strength (${sign(str)}) and Dexterity (${sign(dex)}) counts.`, abilityModifier(other));
+    else if (finesse) b.note(`Finesse: Strength and Dexterity are both ${sign(str)}.`);
+  };
+  const bonuses = (b: TraceBuilder, what: "attack" | "damage") => {
+    for (const statistic of [`${f.kind}:${what}`, ...(f.weaponName ? [`${f.weaponName}:${what}`] : [])]) {
+      const value = c.stat(statistic);
+      if (value) b.add(value, c.statSource?.(statistic) ?? `Bonus (${statistic})`, calculated(statistic));
+    }
+  };
+  const magic = (b: TraceBuilder) => f.enhancement && b.add(f.enhancement, `${r.item?.name ?? r.name} (magic weapon)`, fromContent(r.item?.name ?? r.name, "Magic Item", r.item?.id));
+
+  const hit = trace.begin(attackKey(r.entry.id, "to-hit"), `${r.name} attack bonus`);
+  ability(hit);
+  if (f.proficient) hit.add(c.proficiencyBonus, "Proficiency", calculated("proficiency"));
+  else hit.exclude("condition-not-met", c.proficiencyBonus, "Proficiency", `Not proficient with ${r.name} or ${w.martial ? "martial" : "simple"} weapons.`, calculated("proficiency"));
+  magic(hit);
+  bonuses(hit, "attack");
+  hit.finish(f.toHit);
+
+  const damage = trace.begin(attackKey(r.entry.id, "damage"), `${r.name} damage bonus`);
+  if (o.noAbilityDamage && f.ability > 0)
+    damage.start(0, "No ability modifier", fixed("Light weapon's extra attack")).exclude("condition-not-met", f.ability, `${name[used]} modifier`, "The extra attack of a Light weapon adds no positive ability modifier.");
+  else ability(damage);
+  magic(damage);
+  bonuses(damage, "damage");
+  if (o.extraDamage) damage.add(o.extraDamage, "Fighting style", fixed("Fighting style"));
+  damage.note(`Plus the damage dice, ${o.dice}${w.damageType ? ` ${w.damageType}` : ""}.`);
+  damage.finish(f.damageBonus);
+}
+
 const reachOf = (r: Resolved) => ((r.weapon?.properties ?? []).includes("Reach") ? "10 ft" : "5 ft");
 
 /**
  * Attack lines for the weapons as they are held now, equipped ones first (Aurora's sheet: versatile dice when
  * wielded two-handed; the damage always shows its modifier, "1d8+0"; an off-hand weapon its full one).
  */
-export function attacks(inventory: Inventory, catalog: Catalog, c: CharacterFacts): Attack[] {
+export function attacks(inventory: Inventory, catalog: Catalog, c: CharacterFacts, trace?: TraceRecorder): Attack[] {
   const entries = new Map(inventory.items.map((e) => [e.id, resolve(e, catalog)]));
   const resolved = [...entries.values()].filter((r) => r.weapon && isCarried(r.entry, entries));
   resolved.sort((a, b) => Number(!!b.entry.equipped) - Number(!!a.entry.equipped));
@@ -551,7 +636,7 @@ export function attacks(inventory: Inventory, catalog: Catalog, c: CharacterFact
       dice: r.entry.equipped === "Two-Handed" && w.versatile ? w.versatile : w.damage,
       ranged: !!w.ranged,
       range: w.ranged || properties.includes("Thrown") ? (w.range ?? reachOf(r)) : reachOf(r),
-    });
+    }, trace);
   });
 }
 
@@ -652,9 +737,18 @@ export function attackModes(inventory: Inventory, catalog: Catalog, c: Character
   return out;
 }
 
-/** A custom attack as an attack row, its figures as written. */
-export function customAttackRow(a: CustomAttack): Attack {
+/** A custom attack as an attack row, its figures as written (a recorder writes them down as entered by the player). */
+export function customAttackRow(a: CustomAttack, trace?: TraceRecorder): Attack {
   const toHit = (a.toHit ?? "").replace(/−/g, "-").match(/[+-]?\d+/);
+  const damage = (a.damage ?? "").replace(/−/g, "-").match(/^\s*\d*d\d+\s*(?:([+-])\s*(\d+))?/i);
+  const written = (part: "to-hit" | "damage", value: number, text: string) =>
+    trace
+      ?.begin(attackKey(a.id, part), `${a.name} ${part === "to-hit" ? "attack" : "damage"} bonus`)
+      .start(value, `As written: "${text}"`, userSupplied(a.name))
+      .note("Written by hand: shown as entered, not worked out.")
+      .finish(value);
+  if (toHit) written("to-hit", Number(toHit[0]), a.toHit!);
+  if (damage) written("damage", damage[2] ? Number(`${damage[1]}${damage[2]}`) : 0, a.damage!);
   return {
     entryId: `custom:${a.id}`,
     name: a.name,
@@ -673,14 +767,14 @@ export function customAttackRow(a: CustomAttack): Attack {
  * custom attacks, in the list's order; when nothing has a place, the equipped weapons (each name once), then the
  * custom attacks. Weapons are worked out from the item; custom attacks keep their written figures.
  */
-export function sheetAttacks(inventory: Inventory, catalog: Catalog, c: CharacterFacts): Attack[] {
-  const all = new Map(attacks(inventory, catalog, c).map((a) => [a.entryId, a]));
+export function sheetAttacks(inventory: Inventory, catalog: Catalog, c: CharacterFacts, trace?: TraceRecorder): Attack[] {
+  const all = new Map(attacks(inventory, catalog, c, trace).map((a) => [a.entryId, a]));
   const custom = inventory.customAttacks ?? [];
   const listed = inventory.items.filter((e) => e.attack);
   if (listed.length > 0 || custom.some((a) => a.place)) {
     const placed = [
       ...listed.map((e) => ({ place: e.attack!, row: all.get(e.id) })),
-      ...custom.map((a) => ({ place: a.place ?? Number.MAX_SAFE_INTEGER, row: customAttackRow(a) })),
+      ...custom.map((a) => ({ place: a.place ?? Number.MAX_SAFE_INTEGER, row: customAttackRow(a, trace) })),
     ];
     return placed.sort((a, b) => a.place - b.place).map((p) => p.row).filter((a): a is Attack => !!a);
   }
@@ -689,7 +783,7 @@ export function sheetAttacks(inventory: Inventory, catalog: Catalog, c: Characte
     .filter((e) => e.equipped)
     .map((e) => all.get(e.id))
     .filter((a): a is Attack => !!a && !seen.has(a.name) && !!seen.add(a.name));
-  return [...equipped, ...custom.map(customAttackRow)];
+  return [...equipped, ...custom.map((a) => customAttackRow(a, trace))];
 }
 
 /** An `<attack>` of an Aurora character file (build > input > attacks), as read from its attributes. */
