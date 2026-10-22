@@ -20,7 +20,7 @@ export function ImportDiagnostics({ diagnostics, title, compact, className }: { 
     <section
       role={blocking ? "alert" : "status"}
       className={cn(
-        compact ? "text-xs text-muted-foreground" : "rounded-md border p-3 text-sm",
+        "min-w-0", compact ? "text-xs text-muted-foreground" : "rounded-md border p-3 text-sm",
         !compact && (blocking ? "border-destructive/40 bg-destructive/5" : "border-amber-500/50 bg-amber-500/5"),
         className,
       )}
@@ -36,7 +36,7 @@ export function ImportDiagnostics({ diagnostics, title, compact, className }: { 
             return (
               <li key={`${d.code}-${d.file}-${d.elementId}-${d.detail}-${i}`} className="flex gap-2">
                 <Icon className={cn("mt-0.5 size-4 shrink-0", tone)} aria-hidden />
-                <div className="min-w-0 break-words">
+                <div className="min-w-0 [overflow-wrap:anywhere]">
                   <p className={cn(compact ? "" : "text-foreground")}>
                     <span className="sr-only">{label}: </span>
                     {d.message}

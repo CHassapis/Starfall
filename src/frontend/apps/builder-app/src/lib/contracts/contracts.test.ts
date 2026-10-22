@@ -3,6 +3,7 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { checkShape, contractTypes, type OpenApiDocument } from "./openapi-contract";
 import { CALCULATION_TRACE_HEADER, CALCULATION_TRACE_SCHEMAS } from "./calculation-trace-schemas";
+import { HOMEBREW_PREVIEW_HEADER, HOMEBREW_PREVIEW_SCHEMAS } from "./homebrew-preview-schemas";
 import { IMPORT_DIAGNOSTIC_HEADER, IMPORT_DIAGNOSTIC_SCHEMAS } from "./import-diagnostic-schemas";
 
 // the API description the server's tests write (OpenApiDocumentTests), from the repository root
@@ -70,5 +71,27 @@ describe("the import diagnostics contract", () => {
       "ImportDiagnostic.message: missing",
       'ImportDiagnostic.severity: "fatal" is not one of error, warning, info',
     ]);
+  });
+});
+
+describe("the homebrew edit preview contract", () => {
+  it("is the types the API description gives (regenerate with STARLIGHTS_UPDATE_CONTRACTS=1)", () => {
+    const file = new URL("./homebrew-preview.ts", import.meta.url);
+    const generated = contractTypes(document, HOMEBREW_PREVIEW_SCHEMAS, HOMEBREW_PREVIEW_HEADER);
+    if (process.env.STARLIGHTS_UPDATE_CONTRACTS === "1") writeFileSync(file, generated);
+    expect(readFileSync(file, "utf8")).toBe(generated);
+  });
+
+  it("a save may send the revision it read, and a stale one answers with a preview", () => {
+    const schemas = document.components.schemas;
+    for (const model of ["HomebrewSpellModel", "HomebrewSubclassModel", "HomebrewClassModel"]) {
+      expect(Object.keys(schemas[model].properties ?? {})).toEqual(expect.arrayContaining(["revision", "expectedRevision"]));
+    }
+    expect(schemas.HomebrewElementChangeKind.enum).toEqual(["added", "changed", "removed"]);
+    const paths = (document as unknown as { paths: Record<string, Record<string, { responses: Record<string, unknown> }>> }).paths;
+    for (const kind of ["spells", "subclasses", "classes"]) {
+      expect(Object.keys(paths[`/api/elements/homebrew/${kind}/preview`].post.responses)).toEqual(["200"]);
+      expect(Object.keys(paths[`/api/elements/homebrew/${kind}`].put.responses)).toEqual(expect.arrayContaining(["200", "409"]));
+    }
   });
 });
