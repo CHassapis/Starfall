@@ -29,8 +29,10 @@ public static class StatisticValuesGroupCollectionExtensions
     {
         var originGroup = collection.GetGroup(groupName);
 
-        // remove existing variants
-        var variants = collection.Where(g => g.GroupName.StartsWith($"{originGroup.GroupName}:")).ToList();
+        // remove existing variants: the two halves only (other statistics can share the prefix: strength:score:set,
+        // the value an item sets Strength to, was removed with them once Strength had been worked out)
+        var variants = collection.Where(g => g.GroupName.Equals($"{originGroup.GroupName}:half", StringComparison.OrdinalIgnoreCase)
+            || g.GroupName.Equals($"{originGroup.GroupName}:half:up", StringComparison.OrdinalIgnoreCase)).ToList();
 
         foreach (var variant in variants)
         {

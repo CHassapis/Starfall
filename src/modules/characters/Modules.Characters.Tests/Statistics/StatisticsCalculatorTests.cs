@@ -185,6 +185,27 @@ public sealed class StatisticsCalculatorTests
         character.GetRequiredComponent<AbilitiesComponent>().AbilityScores.Single().CalculatedScore.Should().Be(expected);
     }
 
+    [TestMethod]
+    public void Calculate_WithAScoreSetByAnItem_KeepsTheStatisticOfTheSetValue()
+    {
+        // Arrange: making Strength's halves removed every statistic named strength:score:…, the item's
+        // strength:score:set among them, once Strength had been worked out
+        var character = CreateTestCharacter();
+        AddAbilityScore(character, "Strength", "STR", 8);
+        var registrations = new List<Registration>
+        {
+            CreateRegistrationWithStatisticRule(character, "Gauntlets of Ogre Power", "Magic Item", "strength:score:set", "19"),
+        };
+
+        // Act
+        var result = _calculator.Calculate(character, registrations);
+
+        // Assert
+        result.Statistics.GetValue("strength:score:set").Should().Be(19);
+        result.Statistics.GetValue("strength:score:half").Should().Be(9);
+        result.Statistics.GetValue("strength:score:half:up").Should().Be(10);
+    }
+
     #region Character Level Tests
 
     [TestMethod]
