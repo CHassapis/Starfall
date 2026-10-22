@@ -26,9 +26,11 @@ import {
   resourceTraceKey,
   usesKeyOf,
 } from "@/lib/rules/battle";
+import { removeFavoriteRoll, saveFavoriteRoll } from "@/lib/rules/favorite-rolls";
 import { pactSlots } from "@/lib/rules/magic";
 import { slugOf } from "@/lib/rules/trace";
 import { Vitals, Status, RestDialog, type RestKind } from "@/pages/battle/battle-page";
+import { FavoriteRolls } from "@/pages/battle/favorite-rolls";
 import { MagicTab } from "../builder/magic-tab";
 import { EquipmentTab } from "../builder/equipment-tab";
 
@@ -361,6 +363,8 @@ export function InteractiveSheetPage() {
                 );
               })}
           </div>
+          <h3 className="mt-5 mb-2 font-medium">Favorite rolls</h3>
+          <FavoriteRolls rolls={state.favoriteRolls ?? []} onSave={(r) => updateCombat((c) => saveFavoriteRoll(c, r))} onRemove={(rollId) => updateCombat((c) => removeFavoriteRoll(c, rollId))} />
           <Button variant="link" asChild>
             <Link to={`/battle/${id}`}>Use features and resources in battle</Link>
           </Button>

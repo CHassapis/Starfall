@@ -5,12 +5,12 @@
  */
 import { Fragment, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
-import { toast } from "sonner";
 import { TAG_CATEGORY } from "@/lib/lore/categories";
 import { imageUrl, tagKey } from "@/lib/lore/data";
-import { describeRoll, parseDice, roll } from "@/lib/lore/dice";
+import { parseDice, roll } from "@/lib/lore/dice";
 import { parseTags, plainTagText, displayText, type TagNode } from "@/lib/lore/tags";
 import { cn } from "@/lib/utils";
+import { showRoll } from "./dice-toast";
 import { LoreLink } from "./lore-link";
 import { EmbeddedEntry } from "./embedded-entry";
 import { RenderContext, useLoreRender, type LoreRenderContext } from "./render-context";
@@ -41,10 +41,7 @@ function DiceTag({ expression, label, title }: { expression: string; label: Reac
       type="button"
       className="rounded-sm font-medium text-primary-text underline decoration-primary-text/40 decoration-dotted underline-offset-2 hover:decoration-solid focus-visible:outline-2 focus-visible:outline-ring"
       title={`Roll ${expression}`}
-      onClick={() => {
-        const r = roll(parsed);
-        toast(`${title}: ${r.total}`, { description: `${expression.replace(/\s+/g, " ")} → ${describeRoll(r)}` });
-      }}
+      onClick={() => showRoll(title, expression, roll(parsed))}
     >
       {label}
     </button>

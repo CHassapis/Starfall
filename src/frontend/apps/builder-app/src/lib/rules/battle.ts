@@ -6,6 +6,7 @@
  * bonuses, damage, save DCs and slots come from the sheet.
  */
 import { calculated, fixed, fromContent, slugOf, userSupplied, type TraceRecorder } from "./trace";
+import type { FavoriteRoll } from "./favorite-rolls";
 
 // ---- dice
 
@@ -702,6 +703,8 @@ export interface CombatState {
   effects: string[];
   /** resources the player added by hand; null or missing: none (a save without them keeps the stored ones) */
   resources?: CustomResource[] | null;
+  /** dice the player named to roll with one press; null or missing: none (a save without them keeps the stored ones) */
+  favoriteRolls?: FavoriteRoll[] | null;
   /** how many times a party member changed this state (a potion they gave): kept by the server, sent back as loaded */
   received?: number;
 }
