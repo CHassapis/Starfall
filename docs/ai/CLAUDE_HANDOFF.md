@@ -1,11 +1,12 @@
 # Claude handoff
 
-Updated 2026-10-22 (calculation traces session 52b845c7). Keep under ~80 lines; replace stale lines.
+Updated 2026-10-22 (calculation traces / import diagnostics session 52b845c7). Keep under ~80 lines; replace stale lines.
 
-## Task (open, feature/calculation-traces): calculation traces, reference characters, engine contracts
-Worktree `~/starfall-calc-traces`, PR to `aurora-server`. Status, commits, checks and next steps:
-[CALCULATION_TRACES_CHECKPOINT.md](CALCULATION_TRACES_CHECKPOINT.md). Trace endpoint and contract: docs/api/README.md
-"Calculation traces"; reference characters: `src/frontend/apps/builder-app/reference-characters/README.md`.
+## Task (open): calculation traces (stage 1), import diagnostics + homebrew preview (stage 2), stages 3–4 to do
+Stage 1: `feature/calculation-traces` (`~/starfall-calc-traces`, PR #29). Stage 2: `feature/import-diagnostics`
+(`~/starfall-import-diagnostics`, built on stage 1). Status, commits, checks and next steps:
+[CALCULATION_TRACES_CHECKPOINT.md](CALCULATION_TRACES_CHECKPOINT.md). Contracts: docs/api/README.md "Calculation
+traces", "Imports and homebrew"; reference characters: `src/frontend/apps/builder-app/reference-characters/README.md`.
 
 ## Previous task (merged #22–#27; web live b5492d6 since 2026-10-21 18:17): polish & release readiness
 D20 icosahedron, shared ornaments, Imperial/Metric units, PWA kit, README rewrite; `fix/ornament-cache` versions the

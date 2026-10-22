@@ -184,6 +184,43 @@ Changing the build (classes, choices, ability scores) goes through the builder s
 (`/api/characters/{id}/builder/session` with save and discard), as the web app's builder does. Plan on reading
 there.
 
+## Imports and homebrew (admin)
+
+These need the admin key (`X-Admin-Key`) or the admin token, like every write under `/api/elements`.
+
+**What an import ran into.** The Aurora import (`POST /api/elements/import-aurora`), a homebrew file's upload and
+removal (`POST`/`DELETE /api/elements/homebrew`), and the content update's job status
+(`GET /api/admin/content-sources`, its `job`) carry `diagnostics`. They use the same `ImportDiagnostic` shape:
+
+```json
+{ "severity": "warning", "code": "grant-unresolved", "importer": "homebrew", "file": "homebrew/my-feats.xml",
+  "elementId": "ID_BREW_FEAT", "elementName": "Brew Feat", "detail": "ID_GONE",
+  "message": "Brew Feat grants ID_GONE, which is not in the content; that grant was left out." }
+```
+
+- `severity`: `error` (nothing was saved), `warning` or `info`.
+- `importer`: `aurora`, `5etools`, `homebrew` or `aurora-character`.
+- `code`: `unreadable-file`, `index-entry-missing`, `append-target-missing`, `grant-unresolved`,
+  `class-feature-missing`, `subclass-class-missing`, `invalid-value`, `replaces-existing` or `stale-revision`.
+  The web app's Aurora character import also uses `element-missing` and `choice-unmatched`.
+- New codes can appear; show an unknown one by its `message`.
+- Only what the import itself ran into is listed. They come sorted, at most 50 of a code; the last one listed says in
+  `omitted` how many more there were.
+- The text `warnings` and the counts are still there, as before.
+
+**Homebrew page edits: preview, then save.** Reads of spells, subclasses and classes
+(`GET /api/elements/homebrew/{spells,subclasses,classes}`) give each record a `revision`.
+
+- `POST …/{kind}/preview` with the form as the `PUT` would send it saves nothing. It answers with what the save would
+  do:
+  - `changes`: each field, before and after;
+  - `elements`: elements added, changed or removed;
+  - `characters`: who uses the record (`uses`), and what each would lose (`loses`);
+  - `diagnostics`: the save's own checks.
+- `PUT` with `expectedRevision` set to the revision you read or previewed is refused with `409` and a fresh preview
+  (`stale-revision`) when the record changed or was removed since. Without `expectedRevision`, the save works as
+  before.
+
 ## Examples
 
 ```bash
@@ -218,6 +255,10 @@ Generated clients: `npx openapi-typescript docs/api/openapi.json -o starlights.d
   of a calculation trace) are not in `openapi.json`; this guide names them.
 - **Calculation traces** cover what the server calculates; the sheet's own figures are traced by the web app, not
   the API (see [Calculation traces](#calculation-traces)).
+- **Import diagnostics** report what the importers can see: a 5etools data file that is not valid JSON still stops
+  the import as an error (skipping it could re-create generated classes without their features), and
+  `skippedConditionalRules` is always 0 (conditions are kept as requirements), so it has no diagnostic. Which characters use a homebrew record is found from their
+  build choices and prepared spells; a preview loads every character to look at the prepared spells.
 - **Content administration** (`/api/elements` writes, `/api/admin`) is in the description for completeness but needs
   the admin key. Some of those endpoints answer `201 Created` where the description says `200`.
 - The API has no versioning beyond this repository: a new Starfall version can add fields. Ignore fields you don't
