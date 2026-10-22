@@ -54,7 +54,26 @@ workshop delete has no preview; the in-memory test provider cannot save a homebr
 a spell's invalidated pick matches the spellcasting by the list's name; a class's new subclass key is checked against
 the Homebrew page's subclasses only; the Aurora character import's DOM reading is not run in tests.
 
+## Stage 3 (done): branch `feature/structured-mechanics` from 238b571, worktree `~/starfall-structured-mechanics`
+- 193ee7a homebrew spell mechanics (roll, save + half, damage terms, healing, modifier, cantrip tiers, slot dice) as
+  `starlights-spell-*` setters, only when a roll is set; preview and save refuse the same; second 400 message.
+- 02f78a6 battle view reads mechanics instead of the text (never both); `spellEffect` adds the damage bonus and
+  records `spell:<slug>:<level>:dice|bonus`; "Why?" on spell cards; Homebrew form "What it rolls";
+  `tools/frontend/spell-mechanics.mjs`.
+- ae5837e `CharacterCombat.Resources` (nullable: a save without it keeps them), caps, SQL Server tests (row lock).
+- 223f5b5 server's web-key list knows `spell:` and `resource:` keys.
+- 0b8e9e9 own resources merged into `buildBattleModel(data, resources)` for sheet and battle; `usesKeyOf`
+  (`custom:<id>`); derived maximum traced (`resource:<id>:max`); pools via `findPool`; effects `custom:<id>` via
+  `effectFor`; `dawn`/`never` recharges, "1/Day" now dawn (one test expectation changed on purpose); "Dawn" in both
+  views; `tools/frontend/custom-resources.mjs`.
+
+Checks: see the Stage 3 PR (full backend with SQL Server, web, tsc, eslint baseline, browser checks, Docker build).
+
+Limits: mechanics only for Homebrew page spells (Aurora/5etools spells still read from text); a spell with mechanics
+is not read from its text at all; resource effects cover armor class, speed, attack rolls and weapon damage (not
+saving throws, which the views do not read); rests switch resource effects off like other effects; item charges still
+come back by hand (not at dawn); a resource's maximum is worked out by the web app, the server only checks bounds.
+
 ## Later stages
-3: structured homebrew spell mechanics in traces; custom resources shared by sheet and battle (no parallel engine).
-4: PDF main-thread investigation; favourite rolls with the existing dice evaluator. Each on a branch built on the
-previous one, with its own PR to `aurora-server`.
+4: PDF main-thread investigation; favourite rolls with the existing dice evaluator. On a branch built on Stage 3,
+with its own PR to `aurora-server`.

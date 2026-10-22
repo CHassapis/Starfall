@@ -161,7 +161,8 @@ export const SPELL_SETTERS = {
 /**
  * What a spell says it rolls, so its numbers never depend on how its text is worded. The term that grows (cantrip
  * tiers, higher slots) and takes the spellcasting modifier is the first damage term, or the healing when it does no
- * damage.
+ * damage. The fields follow Forge Character Builder's custom spell mechanics (github.com/tommyruin/forge-character-builder,
+ * MIT); the code is this app's own.
  */
 export interface SpellMechanics {
   roll: "none" | "melee-attack" | "ranged-attack" | "save";

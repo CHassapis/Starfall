@@ -65,7 +65,7 @@ All take `{characterId}` (a GUID from the list). Read-only unless marked.
 | `GET …/inventory` / `PUT` | items, coins, treasure, **custom attacks** (below) |
 | `GET …/spellcasting` | each spellcasting: ability, attack bonus, save DC, slots, the spells it knows and prepares |
 | `GET …/magic` / `PUT` | the player's choices: prepared spells, spent slots |
-| `GET …/combat` / `PUT` | play state: damage taken, temporary HP, hit dice spent, conditions, exhaustion, death saves, uses of features and items |
+| `GET …/combat` / `PUT` | play state: damage taken, temporary HP, hit dice spent, conditions, exhaustion, death saves, uses of features and items, the player's own resources (see [Resources of the player's own](#resources-of-the-players-own)) |
 | `GET …/story` | the story fields (appearance, backstory, …) |
 | `GET …/export` | the whole character as one Starfall character file (see [character portability](../character-portability.md)) |
 | `GET …/calculation/trace?value=<key>` | how one figure was worked out, step by step (see [Calculation traces](#calculation-traces)) |
@@ -105,6 +105,29 @@ sets `edited: true` on manual edits and reordered rows, which then take preceden
 are remembered in inventory `removedAttackIds`, so reimports do not resurrect them. They stay through builder saves, level-ups,
 trades, character export and import.
 
+## Resources of the player's own
+
+`resources` in the combat state (`GET`/`PUT …/combat`) are resources a player adds by hand: a homebrew feature's
+uses, a pool of points other features spend from, a switch with an effect. Each has:
+
+- `id`: stable for its life (letters, digits, `-`, `_`; at most 64). What was spent of it is kept in `uses` under
+  `custom:<id>`, and its effect while switched on in `effects` as `custom:<id>`, so renaming it keeps both.
+- `name` (at most 60), `notes` (at most 500).
+- `max`: `from` `number` (`value`), `proficiency`, `level`, `class-level` (`className`) or `ability` (`ability`:
+  `STR` … `CHA`, its modifier); then `times` (1–100), `plus` (−99–999), `atLeast` (0–999). The web app works the
+  number out from the character and traces it (key `resource:<id>:max`).
+- `recharge`: `turn`, `short` (a short or a long rest), `long`, `dawn` (a new day, which no rest is) or `never`
+  (only undone by hand).
+- `pool` and `cost` (1–99): spends from another resource instead, a feature's or another resource's name.
+- `effect` (optional): `armorClass`, `attackRolls` (−20–20), `speed` (−120–120 feet), `damage` on weapon hits
+  (`"1d6 fire"`, `"1d4+1"`, `"2"`).
+
+At most 30. `resources` may be left out of a `PUT` (or sent as `null`): the stored ones are kept, so a client that
+does not know them cannot delete them. `[]` removes them all. A `PUT` with values out of bounds is refused with
+`400` and changes nothing. Access is the character's (a locked player's character needs `X-Player-Token`).
+
+Usage lines of the content that say "Day" or "Dawn" (`1/Day`) are recharged at dawn by the web app, not by a rest.
+
 ## Calculation traces
 
 `GET /api/characters/{id}/calculation/trace?value=<key>&version=1` answers how one of the character's figures was
@@ -121,8 +144,9 @@ player's character needs `X-Player-Token`).
 
 The web app works out armor class, hit points, initiative, speeds, passive Perception and attacks itself (from these
 figures and the inventory; see [Attacks](#attacks)). For their keys (`armor-class`, `hit-points`, `initiative`,
-`passive-perception`, `speed:walk|fly|climb|swim`, `attack:<inventory or custom attack id>:to-hit|damage`) the
-server answers `"status": "unsupported"` rather than a trace of its own; the web app traces them in the same shape
+`passive-perception`, `speed:walk|fly|climb|swim`, `attack:<inventory or custom attack id>:to-hit|damage`, a spell's
+dice and flat bonus at the level it is cast at `spell:<name slug>:<level>:dice|bonus`, and a resource's maximum
+`resource:<id>:max`) the server answers `"status": "unsupported"` rather than a trace of its own; the web app traces them in the same shape
 (`src/frontend/apps/builder-app/src/lib/sheet-figures.ts`), and its "Why this value?" buttons on the interactive
 sheet show both.
 
@@ -235,6 +259,22 @@ removal (`POST`/`DELETE /api/elements/homebrew`), and the content update's job s
   (`stale-revision`) when the record changed or was removed since. Without `expectedRevision`, the save works as
   before.
 
+**Homebrew spell mechanics.** A homebrew spell can say what it rolls instead of leaving it to its text (all optional,
+and only read when `roll` is set):
+
+- `roll`: `melee-attack`, `ranged-attack`, `save` or `none` (nothing to roll: healing, a utility spell);
+- `saveAbility` and `halfOnSave`: a `save` spell's ability (`Strength` … `Charisma`) and whether a success takes half
+  the damage;
+- `damage`: up to four terms with a type, `"2d6 fire; 1d6 radiant"`; `healing`: dice, `"2d8"`;
+- `addsModifier`: the spellcasting ability modifier joins the first damage term, or the healing;
+- `cantripScaling` (cantrips): from a character level on, the first damage term or the healing rolls these dice,
+  `"5:2d10; 11:3d10; 17:4d10"`; `slotScaling` (leveled spells): the dice each slot level above adds, `"1d6"`.
+
+They are written as setters of their own (`starlights-spell-roll`, `-save`, `-save-success`, `-damage`, `-healing`,
+`-modifier`, `-cantrip-scaling`, `-slot-scaling`), so a spell without them is written as before. The battle view reads
+a spell's mechanics instead of its text, never both. The save and the preview refuse the same mistakes; a `400` names
+what the mechanics need in a message of its own, and the old message is unchanged.
+
 ## Examples
 
 ```bash
@@ -277,6 +317,11 @@ Generated clients: `npx openapi-typescript docs/api/openapi.json -o starlights.d
   name is not matched), and a class's new subclass key is checked against the Homebrew page's subclasses only (not
   uploaded files'). `text-only` is decided by the element alone: a feature whose effect another element's rules
   carry is still reported.
+- **Homebrew spell mechanics** are the Homebrew page's: spells from Aurora or 5etools files are still read from their
+  text. A spell with mechanics is not read from its text at all, so riders the mechanics cannot say (a second
+  effect, a condition) are only in its description.
+- **Resources of the player's own** are counted by the web app; the server keeps them and checks their bounds, but
+  does not work out their maximum. An item's charges still come back by hand, not at dawn.
 - **Content administration** (`/api/elements` writes, `/api/admin`) is in the description for completeness but needs
   the admin key. Some of those endpoints answer `201 Created` where the description says `200`.
 - The API has no versioning beyond this repository: a new Starfall version can add fields. Ignore fields you don't

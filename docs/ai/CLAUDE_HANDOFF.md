@@ -42,6 +42,13 @@ Mk2 stabilization, v0.11.0 (2026-10-20, [MK2_VERIFICATION_REPORT.md](MK2_VERIFIC
 - #15: `pages/battle/battle-page.tsx` (`UsePips`: `role="img"`), `pages/compendium/Index.tsx` (two `aria-label`s).
 - Docs PR: `tools/frontend/custom-attacks.mjs` (builder route `/characters/:id`), `workflows.mjs` (waits for the
   builder session before editing), `accessibility.mjs` (`FRONTEND_URL` override). Codex's other tools unchanged.
+- Stage 3 (spell mechanics, own resources): `pages/battle/battle-page.tsx` (Codex's): one `spellEffect` call with the
+  damage bonus (`withBonus` gone) and a "Why?" beside a spell's dice; "Dawn" beside the rests and a dawn branch in
+  `RestDialog` (`RestKind`); the model takes `state.resources`; uses go through `usesKeyOf`; resource controls from the
+  new `pages/battle/custom-resources.tsx`. `pages/characters/sheet/interactive-sheet.tsx`: the same model input, a
+  "Dawn" button, resource counts by `usesKeyOf` with "Why?" for a resource's maximum. `pages/homebrew/workshop-tabs.tsx`:
+  "What it rolls" section. `lib/api/sheet.ts`: `SheetSpell.mechanics`, `SheetData.classLevels`. Tools:
+  `spell-mechanics.mjs`, `custom-resources.mjs` (new); fixtures unchanged.
 - Visual fidelity: `styles/themes.css` (all three palettes; Slate dark), `lib/themes.ts` (`isDarkTheme`),
   `theme-provider.tsx`, `ui/sonner.tsx`, `index.html` (pre-paint theme), `default-layout.tsx` (header text/padding),
   `App.tsx`, `ornaments.tsx`, `ornament.css`, landing, `lore-home.tsx` banner, `campaigns-page.tsx` cards,

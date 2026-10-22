@@ -38,6 +38,7 @@ public sealed record HomebrewSpellModel
     public string? HigherLevels { get; init; }
 
     // ---- what it rolls, said outright (optional): read instead of the text, so the numbers never depend on wording ----
+    // (the fields follow Forge Character Builder's custom spell mechanics, github.com/tommyruin/forge-character-builder, MIT)
 
     /// <summary>
     /// What it rolls: "melee-attack", "ranged-attack", "save", or "none" (nothing to roll: healing, a utility spell).
