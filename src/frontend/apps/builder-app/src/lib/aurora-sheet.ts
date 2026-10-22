@@ -1,8 +1,8 @@
 import fontkit from "@pdf-lib/fontkit";
 import { PDFCheckBox, PDFDocument, PDFTextField, StandardFonts, rgb, type Color, type PDFEmbeddedPage, type PDFFont, type PDFPage } from "pdf-lib";
 import type { SheetData, SheetFeature, SheetSpell } from "@/lib/api/sheet";
-import { spellLevelLine } from "@/lib/api/sheet";
-import { canvasJpeg, loadPicture, renderFramed } from "@/lib/portrait-render";
+import { spellLevelLine } from "@/lib/spell-level-line";
+import { canvasJpeg, context2d, loadPicture, newCanvas, renderFramed } from "@/lib/portrait-render";
 import { parseFrame } from "@/lib/rules/portrait-frame";
 
 /*
@@ -74,19 +74,25 @@ interface Run {
 }
 type Paragraph = Run[];
 
+/** HTML texts read into paragraphs beforehand, by text: where the sheet is made without an HTML parser (a worker). */
+export type SheetParagraphs = Record<string, Paragraph[]>;
+
 class SheetBuilder {
   private readonly templates = new Map<string, Promise<Template>>();
   private readonly partials = new Map<string, Promise<PDFEmbeddedPage>>();
 
   readonly doc: PDFDocument;
   readonly fonts: Fonts;
+  /** an HTML text's paragraphs: read beforehand when given, else here */
+  readonly read: (html: string) => Paragraph[];
 
-  private constructor(doc: PDFDocument, fonts: Fonts) {
+  private constructor(doc: PDFDocument, fonts: Fonts, read: (html: string) => Paragraph[]) {
     this.doc = doc;
     this.fonts = fonts;
+    this.read = read;
   }
 
-  static async create(): Promise<SheetBuilder> {
+  static async create(paragraphs?: SheetParagraphs): Promise<SheetBuilder> {
     const doc = await PDFDocument.create();
     doc.registerFontkit(fontkit);
     doc.setTitle("Character Sheet");
@@ -106,7 +112,7 @@ class SheetBuilder {
       boldItalic: await doc.embedFont(boldItalic, plain),
       dingbats: await doc.embedFont(StandardFonts.ZapfDingbats),
     };
-    return new SheetBuilder(doc, fonts);
+    return new SheetBuilder(doc, fonts, (html) => paragraphs?.[html] ?? htmlParagraphs(html));
   }
 
   /** A full-page template: the page drawing plus where its form fields are. */
@@ -557,15 +563,14 @@ async function portraitPage(b: SheetBuilder, data: SheetData) {
 async function toJpeg(url: string): Promise<ArrayBuffer> {
   const blob = await (await fetch(url)).blob();
   const bitmap = await createImageBitmap(blob);
-  const canvas = document.createElement("canvas");
+  const canvas = newCanvas();
   canvas.width = bitmap.width;
   canvas.height = bitmap.height;
-  const context = canvas.getContext("2d")!;
+  const context = context2d(canvas);
   context.fillStyle = "#fff";
   context.fillRect(0, 0, canvas.width, canvas.height);
   context.drawImage(bitmap, 0, 0);
-  const jpeg = await new Promise<Blob>((resolve, reject) => canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("no image"))), "image/jpeg", 0.9));
-  return jpeg.arrayBuffer();
+  return canvasJpeg(canvas);
 }
 
 /** Returns the backstory text that did not fit, for the notes page. */
@@ -657,7 +662,7 @@ async function equipmentPage(b: SheetBuilder, data: SheetData) {
   text(
     "equipment_page_magic_items",
     e.descriptions.flatMap((d, i) => {
-      const [first, ...rest] = htmlParagraphs(d.html);
+      const [first, ...rest] = b.read(d.html);
       const lead: Paragraph = [{ text: `${clean(d.title)}.`, font: "boldItalic" }, ...(first ?? []).map((r, k) => (k === 0 ? { ...r, text: ` ${r.text}` } : r))];
       return [...(i > 0 ? [blank] : []), lead, ...rest];
     }),
@@ -794,7 +799,7 @@ async function spellCards(b: SheetBuilder, data: SheetData) {
       p.drawText(text, { x: x0 + 53.5, y: baseline, size, font: b.fonts.regular });
     });
 
-    drawParagraphs(p, { x: x0 + 3, y: y0 + 14, w: 174, h: 240 - 79 - 14 }, htmlParagraphs(spell.description), b.fonts, { size: 6, minSize: 3.5, paragraphGap: 0, lineHeight: 1.0 });
+    drawParagraphs(p, { x: x0 + 3, y: y0 + 14, w: 174, h: 240 - 79 - 14 }, b.read(spell.description), b.fonts, { size: 6, minSize: 3.5, paragraphGap: 0, lineHeight: 1.0 });
     p.drawText(clean(spell.origin), { x: x0 + 6, y: y0 + 6.4, size: 6, font: b.fonts.italic });
     const source = clean(spell.source);
     p.drawText(source, { x: x0 + 174 - widthOf(source, b.fonts.italic, 6), y: y0 + 6.4, size: 6, font: b.fonts.italic });
@@ -823,7 +828,7 @@ async function itemCards(b: SheetBuilder, data: SheetData) {
     // positions inside the card from Aurora's generic card page (title box 8,224 168x14; subtitle 11,212 160x9)
     centered(clean(item.title), b.fonts.regular, 10, 227.5, 160);
     centered(clean(item.subtitle), b.fonts.italic, 6, 214.5, 156);
-    drawParagraphs(p, { x: x0 + 4, y: y0 + 20, w: 172, h: 186 }, htmlParagraphs(item.html), b.fonts, { size: 7, minSize: 3.5, paragraphGap: 0, lineHeight: 1.1 });
+    drawParagraphs(p, { x: x0 + 4, y: y0 + 20, w: 172, h: 186 }, b.read(item.html), b.fonts, { size: 7, minSize: 3.5, paragraphGap: 0, lineHeight: 1.1 });
     p.drawText(clean(item.weight), { x: x0 + 6, y: y0 + 6.4, size: 6, font: b.fonts.regular });
     const source = clean(item.source);
     p.drawText(source, { x: x0 + 174 - widthOf(source, b.fonts.regular, 6), y: y0 + 6.4, size: 6, font: b.fonts.regular });
@@ -834,8 +839,15 @@ async function itemCards(b: SheetBuilder, data: SheetData) {
  * The whole sheet as PDF bytes: details, background, equipment and notes pages, then spellcasting pages and spell
  * cards for casters.
  */
-export async function buildAuroraSheet(data: SheetData): Promise<Uint8Array> {
-  const b = await SheetBuilder.create();
+/** Every HTML text the sheet lays out, read into paragraphs here (on the page) for a worker to make the sheet with. */
+export function sheetParagraphs(data: SheetData): SheetParagraphs {
+  const html = [...data.equipment.descriptions.map((d) => d.html), ...data.cardSpells.map((s) => s.description), ...data.itemCards.map((c) => c.html)];
+  return Object.fromEntries(html.map((h) => [h, htmlParagraphs(h)]));
+}
+
+/** `paragraphs`: the HTML texts read beforehand (sheetParagraphs), where there is no HTML parser. */
+export async function buildAuroraSheet(data: SheetData, paragraphs?: SheetParagraphs): Promise<Uint8Array> {
+  const b = await SheetBuilder.create(paragraphs);
   await detailsPage(b, data);
   const overflow = await backgroundPage(b, data);
   await equipmentPage(b, data);

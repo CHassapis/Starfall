@@ -1,4 +1,5 @@
-import { buildAuroraSheet, defenseLines, detailsValues, equipmentValues } from "@/lib/aurora-sheet";
+import { defenseLines, detailsValues, equipmentValues } from "@/lib/aurora-sheet";
+import { makeSheetPdf } from "@/lib/aurora-sheet-client";
 import { ArrowLeftIcon, DownloadIcon, FileTextIcon, PrinterIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
@@ -28,7 +29,8 @@ export function CharacterSheetPage() {
   useEffect(() => {
     if (!data || pdf?.signature === signature) return;
     let current = true;
-    buildAuroraSheet(data).then(
+    // made in a worker, so the page can still be used meanwhile (lib/aurora-sheet-client)
+    makeSheetPdf(data).then(
       (bytes) => current && setPdf({ signature, bytes }),
       (e: Error) => current && setPdf({ signature, error: e.message }),
     );

@@ -74,6 +74,14 @@ is not read from its text at all; resource effects cover armor class, speed, att
 saving throws, which the views do not read); rests switch resource effects off like other effects; item charges still
 come back by hand (not at dawn); a resource's maximum is worked out by the web app, the server only checks bounds.
 
-## Later stages
-4: PDF main-thread investigation; favourite rolls with the existing dice evaluator. On a branch built on Stage 3,
-with its own PR to `aurora-server`.
+## Stage 4 (in progress): branch `feature/pdf-worker-favourite-rolls` from 0814b1a, worktree `~/starfall-sheet-rolls`
+Stage 3 PR: #31 (full backend with SQL Server 936: 912 passed, 24 skipped, 0 failed).
+
+PDF baseline before any change (`tools/frontend/sheet-performance.mjs`, `fixture({ large: true })`: 72 spells, 40
+features with long made-up texts, 12 pages; desktop Chromium, 3 runs): making the PDF ran as one task of 2247 / 2308 /
+2274 ms on the page's thread; the page did not answer for 3312 / 3253 / 3960 ms (a 20 ms timer's longest wait);
+"Download PDF" ready after 6.8–7.4 s. Drawing the pages with pdf.js afterwards: longest task 71–101 ms.
+
+Plan: (a) the PDF made in a module worker (Forge's sheet-render-worker pattern), pictures through OffscreenCanvas,
+fallback on the page when a worker cannot start; page images compared with the fallback's; (b) named favourite rolls
+with `lib/lore/dice.ts`, kept per character with the existing state and access.
