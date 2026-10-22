@@ -2,7 +2,7 @@
 import { ApiError } from "@starlights/api-client";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { stalePreviewOf, StaleHomebrewError } from "@/lib/api/homebrew";
+import { fittingSpellMechanics, stalePreviewOf, StaleHomebrewError, type HomebrewSpell } from "@/lib/api/homebrew";
 import { EditPreview } from "@/pages/homebrew/edit-preview";
 import { canSave, expectedRevisionOf, fieldLabel, previewSummary, revisionToSend, type HomebrewEditPreview } from "./homebrew-preview";
 
@@ -60,6 +60,18 @@ describe("a homebrew edit's preview", () => {
 
   it("names fields as the form does", () => {
     expect(["castingTime", "lists", "asiLevels", "someNewField"].map(fieldLabel)).toEqual(["Casting time", "Class spell lists", "Ability Score Improvement levels", "Some New Field"]);
+    expect(["roll", "halfOnSave", "slotScaling"].map(fieldLabel)).toEqual(["What it rolls", "Half damage on a successful save", "Dice for each slot level above"]);
+  });
+
+  it("a spell form sends only the mechanics that fit its roll and level", () => {
+    const base: HomebrewSpell = { name: "Test Spark", level: 0, school: "Evocation", castingTime: "1 action", range: "60 feet", duration: "Instantaneous", verbal: true, somatic: true, material: false, concentration: false, ritual: false, lists: [], description: "A mote." };
+    const filled = { ...base, roll: "ranged-attack", saveAbility: "Dexterity", halfOnSave: true, damage: "1d10 fire", healing: null, addsModifier: false, cantripScaling: "5:2d10", slotScaling: "1d10" } as const;
+    // an attack has no saving throw; a cantrip has no slot levels
+    expect(fittingSpellMechanics(filled)).toEqual({ ...filled, saveAbility: null, halfOnSave: false, slotScaling: null });
+    // a leveled save spell keeps both, and its dice per slot level, not cantrip tiers
+    expect(fittingSpellMechanics({ ...filled, level: 3, roll: "save" })).toEqual({ ...filled, level: 3, roll: "save", cantripScaling: null });
+    // "not said": nothing of them is sent, so the spell is saved as before
+    expect(fittingSpellMechanics({ ...filled, roll: null })).toEqual({ ...base, roll: null, saveAbility: null, halfOnSave: false, damage: null, healing: null, addsModifier: false, cantripScaling: null, slotScaling: null });
   });
 
   it("saves with the revision the form was opened on, the fresh one only after a refusal, and not when refused anyway", () => {

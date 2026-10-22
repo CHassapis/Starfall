@@ -41,8 +41,8 @@ describe("calculation traces of the web app's figures", () => {
   });
 
   it("tells the web app's keys from the server's, as the server does", () => {
-    expect(["armor-class", "speed:climb", "attack:4b0e7a10-5c1d-4f2e-9a3b-000000000c10:to-hit"].every(isWebTraceKey)).toBe(true);
-    expect(["skill:stealth", "statistic:ac:misc", "attack:custom:bite:to-hit", "speed:burrow"].some(isWebTraceKey)).toBe(false);
+    expect(["armor-class", "speed:climb", "attack:4b0e7a10-5c1d-4f2e-9a3b-000000000c10:to-hit", "spell:test-spark:0:dice", "spell:test-salve:3:bonus"].every(isWebTraceKey)).toBe(true);
+    expect(["skill:stealth", "statistic:ac:misc", "attack:custom:bite:to-hit", "speed:burrow", "spell:test spark:0:dice", "spell:test-spark:10:dice", "spell:test-spark:0:range"].some(isWebTraceKey)).toBe(false);
     expect(["Sleight of Hand", "Ref Bard"].map(slugOf)).toEqual(["sleight-of-hand", "ref-bard"]);
   });
 

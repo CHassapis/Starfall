@@ -156,7 +156,8 @@ export function traceKeyOf(refers: string): string {
 }
 
 /** A value the web app works out and traces itself (the server answers "unsupported" for these). */
-export const isWebTraceKey = (key: string) => /^(armor-class|hit-points|initiative|passive-perception)$|^speed:(walk|fly|climb|swim)$|^attack:[A-Za-z0-9_-]{1,64}:(to-hit|damage)$/.test(key);
+export const isWebTraceKey = (key: string) =>
+  /^(armor-class|hit-points|initiative|passive-perception)$|^speed:(walk|fly|climb|swim)$|^attack:[A-Za-z0-9_-]{1,64}:(to-hit|damage)$|^spell:[^:\s]{1,100}:\d:(dice|bonus)$/.test(key);
 
 /** A name as the server's keys write it ("Sleight of Hand" -> "sleight-of-hand", "Ref Bard" -> "ref-bard"). */
 export const slugOf = (name: string) => name.trim().toLowerCase().replace(/ /g, "-");

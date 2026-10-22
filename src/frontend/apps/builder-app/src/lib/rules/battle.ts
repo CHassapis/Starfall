@@ -1,9 +1,11 @@
 /**
  * Rules for the Battle Action Simulator: pure functions over the character sheet (lib/api/sheet) and the
  * character's state in a fight (GET/PUT /characters/{id}/combat). Dice and averages, the chance to hit an Armor
- * Class, what a spell does at a slot level (read from its text), limited uses and what a short or long rest gives
- * back. Nothing here keeps a second copy of the rules: attack bonuses, damage, save DCs and slots come from the sheet.
+ * Class, what a spell does at a slot level (from the mechanics a homebrew spell states, else read from its text),
+ * limited uses and what a short or long rest gives back. Nothing here keeps a second copy of the rules: attack
+ * bonuses, damage, save DCs and slots come from the sheet.
  */
+import { fixed, fromContent, slugOf, type TraceRecorder } from "./trace";
 
 // ---- dice
 
@@ -138,6 +140,126 @@ export interface SpellEffect {
   upcastHealing: DiceTerm[];
   /** "At Higher Levels" text that is not extra dice (more targets, longer duration) */
   upcastNote: string | null;
+  /** where it was read: the mechanics a homebrew spell states (never its text as well), or the spell's text */
+  from: "mechanics" | "text";
+}
+
+// ---- what a homebrew spell says it rolls
+
+/** The setters a Homebrew page spell states its mechanics in (the server's HomebrewWorkshopXml.SpellSetters). */
+export const SPELL_SETTERS = {
+  roll: "starlights-spell-roll",
+  save: "starlights-spell-save",
+  saveSuccess: "starlights-spell-save-success",
+  damage: "starlights-spell-damage",
+  healing: "starlights-spell-healing",
+  modifier: "starlights-spell-modifier",
+  cantripScaling: "starlights-spell-cantrip-scaling",
+  slotScaling: "starlights-spell-slot-scaling",
+} as const;
+
+/**
+ * What a spell says it rolls, so its numbers never depend on how its text is worded. The term that grows (cantrip
+ * tiers, higher slots) and takes the spellcasting modifier is the first damage term, or the healing when it does no
+ * damage.
+ */
+export interface SpellMechanics {
+  roll: "none" | "melee-attack" | "ranged-attack" | "save";
+  saveAbility: string | null;
+  halfOnSave: boolean;
+  damage: Roll[];
+  healing: Roll | null;
+  addsModifier: boolean;
+  /** a cantrip: from a character level on, the growing term rolls these dice ("5:2d10; 11:3d10") */
+  cantripTiers: { level: number; dice: DiceTerm[] }[];
+  /** a leveled spell: the dice each slot level above its own adds to the growing term */
+  slotDice: DiceTerm[];
+}
+
+const ROLLS = ["none", "melee-attack", "ranged-attack", "save"] as const;
+
+/** A spell's mechanics from its setters (a compendium entry's); null when it states none and its text is read. */
+export function spellMechanicsOf(setters: Record<string, string | undefined> | null | undefined): SpellMechanics | null {
+  const roll = setters?.[SPELL_SETTERS.roll]?.trim() as SpellMechanics["roll"] | undefined;
+  if (!setters || !roll || !ROLLS.includes(roll)) return null;
+  const terms = (value: string | undefined) => (value ?? "").split(";").map((t) => t.trim()).filter(Boolean);
+  const cantripTiers = terms(setters[SPELL_SETTERS.cantripScaling])
+    .flatMap((t) => {
+      const m = t.match(/^(\d+)\s*:\s*(.+)$/);
+      const r = m ? parseRoll(m[2]) : null;
+      return m && r ? [{ level: Number(m[1]), dice: r.dice }] : [];
+    })
+    .sort((a, b) => a.level - b.level);
+  const healing = setters[SPELL_SETTERS.healing]?.trim();
+  return {
+    roll,
+    saveAbility: roll === "save" ? (setters[SPELL_SETTERS.save]?.trim() ?? null) : null,
+    halfOnSave: roll === "save" && setters[SPELL_SETTERS.saveSuccess] === "half",
+    damage: terms(setters[SPELL_SETTERS.damage]).map((t) => parseRoll(t)).filter((r): r is Roll => r !== null),
+    healing: healing ? parseRoll(`${healing} healing`) : null,
+    addsModifier: setters[SPELL_SETTERS.modifier] === "true",
+    cantripTiers,
+    slotDice: parseRoll(setters[SPELL_SETTERS.slotScaling] ?? "")?.dice ?? [],
+  };
+}
+
+type TraceSourceOf = ReturnType<typeof fixed>;
+/** How the growing term's dice and flat bonus came about, step by step, for the spell's traces. */
+interface SpellSteps {
+  dice: ["start" | "add" | "multiply", number, string, TraceSourceOf][];
+  bonus: ["start" | "add", number, string, TraceSourceOf][];
+}
+
+const diceCount = (dice: DiceTerm[]) => dice.reduce((n, d) => n + d.count, 0);
+const diceText = (dice: DiceTerm[]) => dice.map((d) => `${d.count}d${d.sides}`).join(" + ");
+const ordinalOf = (n: number) => `${n}${n % 100 >= 11 && n % 100 <= 13 ? "th" : (["th", "st", "nd", "rd"][n % 10] ?? "th")}`;
+
+/** The keys of a spell's traces at the level it is cast at: the growing term's dice, and its flat bonus. */
+export const spellTraceKey = (name: string, castAt: number, part: "dice" | "bonus") => `spell:${slugOf(name)}:${castAt}:${part}`;
+
+/** What the spell's mechanics say it does at the level it is cast at (its text is not read at all). */
+function structuredSpellEffect(level: number, name: string, m: SpellMechanics, castAt: number, characterLevel: number, modifier: number, steps: SpellSteps): SpellEffect {
+  const damage = m.damage.map((r) => ({ ...r, dice: r.dice.map((d) => ({ ...d })) }));
+  let healing = m.healing ? { ...m.healing, dice: m.healing.dice.map((d) => ({ ...d })) } : null;
+  const growing = () => damage[0] ?? healing;
+  const grow = (change: (r: Roll) => Roll) => {
+    if (damage.length) damage[0] = change(damage[0]);
+    else if (healing) healing = change(healing);
+  };
+  const own = fromContent(name, "Spell");
+  const start = growing();
+  if (start) {
+    steps.dice.push(["start", diceCount(start.dice), `${diceText(start.dice)}${start.type && start.type !== "healing" ? ` ${start.type}` : ""}, as its mechanics say`, own]);
+    steps.bonus.push(["start", start.bonus, "As its mechanics say", own]);
+  }
+  const tier = level === 0 ? [...m.cantripTiers].reverse().find((t) => t.level <= characterLevel) : undefined;
+  if (tier && start) {
+    steps.dice.push(["add", diceCount(tier.dice) - diceCount(start.dice), `From character level ${tier.level} it rolls ${diceText(tier.dice)} (level ${characterLevel})`, own]);
+    grow((r) => ({ ...r, dice: tier.dice.map((d) => ({ ...d })) }));
+  }
+  const above = level > 0 ? Math.max(0, castAt - level) : 0;
+  const upcast = m.slotDice.map((d) => ({ ...d, count: d.count * above })).filter((d) => d.count > 0);
+  if (upcast.length && start) {
+    steps.dice.push(["add", diceCount(upcast), `Cast with a ${ordinalOf(castAt)}-level slot: ${diceText(m.slotDice)} for each of ${above} slot level${above === 1 ? "" : "s"} above ${ordinalOf(level)}`, own]);
+    grow((r) => addDice(r, upcast));
+  }
+  if (m.addsModifier && start) {
+    steps.bonus.push(["add", modifier, "Spellcasting ability modifier", fixed("spellcasting ability modifier")]);
+    grow((r) => ({ ...r, bonus: r.bonus + modifier }));
+  }
+  return {
+    attack: m.roll === "melee-attack" ? "melee" : m.roll === "ranged-attack" ? "ranged" : null,
+    save: m.roll === "save" ? m.saveAbility : null,
+    halfOnSave: m.roll === "save" && m.halfOnSave,
+    damage,
+    healing,
+    temporary: null,
+    beams: 1,
+    upcastDice: damage.length ? upcast : [],
+    upcastHealing: damage.length ? [] : upcast,
+    upcastNote: null,
+    from: "mechanics",
+  };
 }
 
 /** Plain text of a spell's HTML description. */
@@ -154,10 +276,44 @@ export function cantripTier(characterLevel: number): number {
 }
 
 /**
- * What a spell does, read from its text: a spell attack or a saving throw, its damage (by type) or healing, and
- * what casting it with a higher slot adds. `modifier` is the spellcasting ability modifier (healing spells add it).
+ * What a spell does at the level it is cast at: a spell attack or a saving throw, its damage (by type) or healing, and
+ * what casting it with a higher slot adds. A homebrew spell that states its mechanics is read from them alone; any other
+ * from its text. `modifier` is the spellcasting ability modifier (healing spells add it); `damageBonus` a feature's
+ * bonus to the first damage roll (Agonizing Blast, each beam's). With a recorder and a name, it writes down the growing
+ * term's traces (spellTraceKey): its dice and its flat bonus.
  */
-export function spellEffect(spell: { level: number; description: string }, castAt: number, characterLevel: number, modifier: number): SpellEffect {
+export function spellEffect(
+  spell: { name?: string; level: number; description: string; mechanics?: SpellMechanics | null },
+  castAt: number,
+  characterLevel: number,
+  modifier: number,
+  options: { damageBonus?: number; damageBonusFrom?: string | null; trace?: TraceRecorder } = {},
+): SpellEffect {
+  const steps: SpellSteps = { dice: [], bonus: [] };
+  const effect = spell.mechanics
+    ? structuredSpellEffect(spell.level, spell.name ?? "", spell.mechanics, castAt, characterLevel, modifier, steps)
+    : textSpellEffect(spell, castAt, characterLevel, modifier, steps);
+  if (options.damageBonus && effect.damage.length) {
+    effect.damage[0] = { ...effect.damage[0], bonus: effect.damage[0].bonus + options.damageBonus };
+    steps.bonus.push(["add", options.damageBonus, options.damageBonusFrom ?? "A feature's bonus", fixed(options.damageBonusFrom ?? "feature")]);
+  }
+  const term = effect.damage[0] ?? effect.healing;
+  if (options.trace && spell.name && term && steps.dice.length) {
+    const at = spell.level === 0 ? "" : ` at ${ordinalOf(castAt)} level`;
+    const dice = options.trace.begin(spellTraceKey(spell.name, castAt, "dice"), `${spell.name} ${effect.damage.length ? "damage" : "healing"} dice${at}`);
+    for (const [op, value, label, source] of steps.dice) dice[op](value, label, source);
+    if (effect.beams > 1) dice.note(`${effect.beams} beams, darts or rays, each rolling these dice.`);
+    dice.finish(diceCount(term.dice));
+    const bonus = options.trace.begin(spellTraceKey(spell.name, castAt, "bonus"), `${spell.name} ${effect.damage.length ? "damage" : "healing"} bonus${at}`);
+    for (const [op, value, label, source] of steps.bonus) bonus[op](value, label, source);
+    bonus.note(`Plus the dice, ${diceText(term.dice)}${term.type && term.type !== "healing" ? ` ${term.type}` : ""}.`);
+    bonus.finish(term.bonus);
+  }
+  return effect;
+}
+
+/** What a spell does, read from its text (a book spell, or a homebrew one that states no mechanics). */
+function textSpellEffect(spell: { level: number; description: string }, castAt: number, characterLevel: number, modifier: number, steps: SpellSteps): SpellEffect {
   const text = plainSpellText(spell.description);
   const [main, higher = ""] = text.split(HIGHER);
   const body = main.split(CANTRIP_UPGRADE)[0];
@@ -210,13 +366,23 @@ export function spellEffect(spell: { level: number; description: string }, castA
   const temp = body.match(/gains? (\d+d\d+(?:\s*\+\s*\d+)?|\d+) temporary hit points/i);
   const temporary = temp ? parseRoll(`${temp[1]} temporary`) : null;
 
+  const read = fixed("the spell's text");
+  const base = damage[0] ?? healing;
+  if (base) {
+    steps.dice.push(["start", diceCount(base.dice), `${diceText(base.dice)}${base.type && base.type !== "healing" ? ` ${base.type}` : ""}, read from the spell's text`, read]);
+    steps.bonus.push(["start", base.bonus, "Read from the spell's text (with the spellcasting modifier when the text adds it)", read]);
+  }
+
   // cantrips grow at levels 5, 11 and 17: more dice ("increases by 1d10 when you reach 5th level (2d10)"), or more
   // beams, each its own attack (Eldritch Blast)
   let beams = 1;
   if (spell.level === 0 && /\b(?:5th level|level 5|levels 5)\b/i.test(text)) {
     const tier = cantripTier(characterLevel);
     if (/\bbeams?\b/i.test(text)) beams = tier;
-    else for (const r of damage) r.dice = r.dice.map((d) => ({ ...d, count: d.count * tier }));
+    else {
+      for (const r of damage) r.dice = r.dice.map((d) => ({ ...d, count: d.count * tier }));
+      if (damage.length && tier > 1) steps.dice.push(["multiply", tier, `A cantrip at character level ${characterLevel}: ${tier} times the dice`, fixed("cantrip damage")]);
+    }
   }
 
   // "the damage increases by 1d6 for each slot level above 3rd" / "for every two slot levels above 2nd"
@@ -231,8 +397,15 @@ export function spellEffect(spell: { level: number; description: string }, castA
   };
   const upcastDice = spell.level > 0 ? per("damage") : [];
   const upcastHealing = spell.level > 0 ? per("healing") : [];
-  if (upcastDice.length && damage.length) damage[0] = addDice(damage[0], upcastDice);
-  if (upcastHealing.length && healing) healing = addDice(healing, upcastHealing);
+  const slot = `Cast with a ${ordinalOf(castAt)}-level slot, as its text says`;
+  if (upcastDice.length && damage.length) {
+    damage[0] = addDice(damage[0], upcastDice);
+    steps.dice.push(["add", diceCount(upcastDice), slot, read]);
+  }
+  if (upcastHealing.length && healing) {
+    healing = addDice(healing, upcastHealing);
+    if (!damage.length) steps.dice.push(["add", diceCount(upcastHealing), slot, read]);
+  }
   // several darts or rays, each doing the damage, and one more for each slot level above (Magic Missile, Scorching Ray)
   const NUMBERS: Record<string, number> = { two: 2, three: 3, four: 4, five: 5 };
   const many = body.match(/\b(two|three|four|five) (?:glowing |fiery )?(darts|rays|beams|bolts)\b/i);
@@ -242,7 +415,7 @@ export function spellEffect(spell: { level: number; description: string }, castA
   }
   const upcastNote = spell.level > 0 && higher && !upcastDice.length && !upcastHealing.length && !(many && beams > 1) ? higher.slice(0, 300) : null;
 
-  return { attack, save, halfOnSave, damage, healing, temporary, beams, upcastDice, upcastHealing, upcastNote };
+  return { attack, save, halfOnSave, damage, healing, temporary, beams, upcastDice, upcastHealing, upcastNote, from: "text" };
 }
 
 /** The action a spell's casting time takes: "Action", "Bonus Action", "Reaction" or "Other" (minutes, rituals). */

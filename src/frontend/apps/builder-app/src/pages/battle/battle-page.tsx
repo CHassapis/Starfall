@@ -46,10 +46,13 @@ import { useSheetData, type SheetData } from "@/lib/api/sheet";
 import { buildBattleModel, type BattleFeature, type BattleModel, type BattleSpell, type Slot, type WeaponAttack } from "@/lib/battle-model";
 import { useLoreLookup } from "@/lib/lore/lookup";
 import { attackRoll, failChanceWith, inOrder, MARKS, targetSave, type AttackRoll, type Combatant, type FightCondition } from "@/lib/rules/encounter";
+import { WhyValue } from "@/components/why-value";
+import { TraceRecorder } from "@/lib/rules/trace";
 import {
   average,
   averageGreatWeapon,
   effectFor,
+  spellTraceKey,
   effectiveArmorClass,
   effectiveSpeed,
   hitChanceWithDie,
@@ -347,7 +350,7 @@ export function CharacterBattlePage() {
         slots: slotTotals,
         pact,
         spells: model.spells.map((sp) => {
-          const e = withBonus(spellEffect(sp, sp.level, data.level, sp.modifier), sp.damageBonus);
+          const e = spellEffect(sp, sp.level, data.level, sp.modifier, { damageBonus: sp.damageBonus, damageBonusFrom: sp.damageBonusFrom });
           return {
             name: sp.name,
             level: sp.level,
@@ -383,7 +386,7 @@ export function CharacterBattlePage() {
 
   const applyToAlly = async (target: PartyMemberChoice, kind: "heal" | "tempHp", amount: number) =>
     (await itemEffect.mutateAsync({ campaignId: target.campaignId, toCharacterId: target.characterId, kind, amount })).name;
-  const ctx: Ctx = { data, model, state, targetAc: usedAc, rollFor, targetSaveFor, d20Penalty, turn, incapacitated, noReactions, use: markUsed, spendFeature, cast, castable, castAnyway, casters, magicState, slotsLeft, slotTotals, pact, pactLeft, updateMagic, updateCombat, setCharges, consume, chargedItemOf, fx, effects, setEffect, effectCtx, party: party.choices, applyToAlly };
+  const ctx: Ctx = { characterId: id, data, model, state, targetAc: usedAc, rollFor, targetSaveFor, d20Penalty, turn, incapacitated, noReactions, use: markUsed, spendFeature, cast, castable, castAnyway, casters, magicState, slotsLeft, slotTotals, pact, pactLeft, updateMagic, updateCombat, setCharges, consume, chargedItemOf, fx, effects, setEffect, effectCtx, party: party.choices, applyToAlly };
 
   return (
     <Shell>
@@ -441,6 +444,7 @@ interface Fx {
 }
 
 interface Ctx {
+  characterId: string;
   data: SheetData;
   model: BattleModel;
   state: CombatState;
@@ -983,7 +987,12 @@ function SpellInfo({ spell, effect, spellKey }: { spell: BattleSpell; effect: Re
             </div>
           ))}
       </dl>
-      {reads.length > 0 && <p className="rounded-md bg-muted px-2 py-1 text-sm">In a fight: {reads.join(" · ")}</p>}
+      {reads.length > 0 && (
+        <p className="rounded-md bg-muted px-2 py-1 text-sm">
+          In a fight: {reads.join(" · ")}
+          <span className="block text-xs text-muted-foreground">{effect.from === "mechanics" ? "From the spell's mechanics." : "Read from the spell's text."}</span>
+        </p>
+      )}
       <p className="whitespace-pre-line text-sm leading-relaxed">{plainSpellText(spell.description)}</p>
       {spellKey && (
         <p className="text-sm">
@@ -1604,7 +1613,15 @@ function SpellCard({ ctx, spell }: { ctx: Ctx; spell: BattleSpell }) {
   const [choice, setChoice] = useState<string>(spell.item ? String(spell.item.level) : pactUsable && ctx.pactLeft > 0 ? "pact" : String(firstFree ?? spell.level));
   const usePact = choice === "pact";
   const castAt = usePact && ctx.pact ? ctx.pact.level : Number(choice);
-  const effect = withBonus(spellEffect(spell, castAt, ctx.data.level, spell.modifier), spell.damageBonus);
+  const cast = { damageBonus: spell.damageBonus, damageBonusFrom: spell.damageBonusFrom };
+  const effect = spellEffect(spell, castAt, ctx.data.level, spell.modifier, cast);
+  // how the spell's growing term is worked out at this level, written down when asked for
+  const explain = (key: string) => {
+    const trace = new TraceRecorder();
+    spellEffect(spell, castAt, ctx.data.level, spell.modifier, { ...cast, trace });
+    return trace.get(key);
+  };
+  const traced = effect.damage[0] ?? effect.healing;
   const key = lookup("spells", spell.name, ctx.model.edition);
   const ready = ctx.castable(spell);
   const field = SLOT_FIELD[spell.slot];
@@ -1689,6 +1706,15 @@ function SpellCard({ ctx, spell }: { ctx: Ctx; spell: BattleSpell }) {
         ))}
         {effect.beams > 1 && effect.damage[0] && <Chip>{(effect.beams * average(effect.damage[0])).toFixed(1)} if all hit</Chip>}
         {effect.healing && <Chip tone="green">Heals {formatRoll(effect.healing, false)} ({average(effect.healing)} avg)</Chip>}
+        {traced && (
+          <WhyValue
+            characterId={ctx.characterId}
+            traceKey={spellTraceKey(spell.name, castAt, "dice")}
+            label={`${spell.name} ${effect.damage.length ? "damage" : "healing"} dice`}
+            explain={explain}
+            shown={traced.dice.reduce((n, d) => n + d.count, 0)}
+          />
+        )}
         {effect.temporary && <Chip tone="blue">{formatRoll(effect.temporary, false)} temporary hit points</Chip>}
         {castAt > spell.level && spell.level > 0 && (effect.upcastDice.length > 0 || effect.upcastHealing.length > 0) && <Chip tone="blue">upcast +{castAt - spell.level} level{castAt - spell.level > 1 ? "s" : ""}</Chip>}
         {spell.damageBonusFrom && <Chip tone="gold">+{spell.damageBonus} {spell.damageBonusFrom}</Chip>}
@@ -1715,12 +1741,6 @@ function itemLevels(spell: BattleSpell, chargesLeft: number): number[] {
   if (!it.upcast || it.level === 0) return [it.level];
   const most = Math.max(it.cost, Math.min(it.maxCost ?? Infinity, chargesLeft));
   return Array.from({ length: Math.min(9, it.level + most - it.cost) - it.level + 1 }, (_, i) => it.level + i);
-}
-
-/** A feature's bonus to a spell's damage, added to its first damage roll (each beam's, for Eldritch Blast). */
-function withBonus(effect: ReturnType<typeof spellEffect>, bonus: number) {
-  if (!bonus || effect.damage.length === 0) return effect;
-  return { ...effect, damage: [{ ...effect.damage[0], bonus: effect.damage[0].bonus + bonus }, ...effect.damage.slice(1)] };
 }
 
 // ---- rests
