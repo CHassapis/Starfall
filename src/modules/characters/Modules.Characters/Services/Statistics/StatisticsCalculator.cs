@@ -31,8 +31,15 @@ public class StatisticsCalculator
         var sw = Stopwatch.StartNew();
         var context = new StatisticsProcessorContext(character, registrations);
 
-        // get all statistic rules from registrations
-        var characterStatisticRules = registrations.SelectMany(r => r.StatisticRules).ToList();
+        // get all statistic rules from registrations, in a fixed order: the registrations as they were made, each
+        // one's rules as they were made (ids are time-ordered). The database returns them in no particular order,
+        // and the order decides which of two equal bonuses of the same kind counts, and so the name the sheet shows
+        // for it (two unarmored defenses of the same armor class)
+        var characterStatisticRules = registrations
+            .SelectMany(r => r.StatisticRules)
+            .OrderBy(r => r.ParentRegistrationId.Value.ToString("N"), StringComparer.Ordinal)
+            .ThenBy(r => r.Id.Value.ToString("N"), StringComparer.Ordinal)
+            .ToList();
 
         // seed the character level statistic for use in other calculations
         foreach (var processor in _initializers)
