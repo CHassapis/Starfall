@@ -1,5 +1,3 @@
-using System.Security.Cryptography;
-using System.Text;
 using System.Text.RegularExpressions;
 using System.Transactions;
 using System.Xml;
@@ -57,8 +55,6 @@ internal sealed class AuroraImporter : IAuroraImporter
 
     // namespace for the deterministic (UUIDv5) element ids derived from Aurora ids, so grants
     // across files resolve to the same element and re-running an import does not duplicate anything
-    private static readonly Guid IdNamespace = new("8a4c4f1e-2b7d-4d52-9d0e-6f3b2a9c7e11");
-
     // written on every element's stored XML: an update re-creates an element whose XML changed, so raising this when
     // the importer makes something new of the same XML (2: appends and every element's prerequisites) re-creates them
     // all once, with no --replace needed
@@ -844,14 +840,7 @@ internal sealed class AuroraImporter : IAuroraImporter
 
     internal static ElementId ToElementId(string auroraId) => new(ToGuid(auroraId));
 
-    private static Guid ToGuid(string name)
-    {
-        byte[] input = [.. IdNamespace.ToByteArray(bigEndian: true), .. Encoding.UTF8.GetBytes(name)];
-        var hash = SHA1.HashData(input);
-        hash[6] = (byte)((hash[6] & 0x0F) | 0x50); // version 5
-        hash[8] = (byte)((hash[8] & 0x3F) | 0x80); // RFC 4122 variant
-        return new Guid(hash.AsSpan(0, 16), bigEndian: true);
-    }
+    private static Guid ToGuid(string name) => AuroraIds.ToGuid(name);
 
     private static readonly string[] AbilityNames = ["Strength", "Dexterity", "Constitution", "Intelligence", "Wisdom", "Charisma"];
 

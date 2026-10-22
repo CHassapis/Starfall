@@ -36,6 +36,11 @@ public sealed record HomebrewSpellModel
     /// <summary>What it does: plain text, paragraphs separated by blank lines.</summary>
     public string Description { get; init; } = string.Empty;
     public string? HigherLevels { get; init; }
+    /// <summary>Set when read: the record as saved. A save that sends it back as <see cref="ExpectedRevision"/> is refused if the record changed since.</summary>
+    public string? Revision { get; init; }
+
+    /// <summary>On a save: the revision the edit started from (a preview's); a record changed or removed since is refused (409).</summary>
+    public string? ExpectedRevision { get; init; }
 }
 
 /// <summary>A homebrew subclass: which class's subclass choice it answers, and its features.</summary>
@@ -50,6 +55,11 @@ public sealed record HomebrewSubclassModel
     public string ClassName { get; init; } = string.Empty;
     public string Description { get; init; } = string.Empty;
     public List<HomebrewFeatureModel> Features { get; init; } = [];
+    /// <summary>Set when read: the record as saved. A save that sends it back as <see cref="ExpectedRevision"/> is refused if the record changed since.</summary>
+    public string? Revision { get; init; }
+
+    /// <summary>On a save: the revision the edit started from (a preview's); a record changed or removed since is refused (409).</summary>
+    public string? ExpectedRevision { get; init; }
 }
 
 /// <summary>A homebrew class.</summary>
@@ -90,6 +100,11 @@ public sealed record HomebrewClassModel
     public int Cantrips { get; init; } = 3;
     /// <summary>Its spell list's name; set when the class is made and kept when it is renamed.</summary>
     public string? SpellListName { get; init; }
+    /// <summary>Set when read: the record as saved. A save that sends it back as <see cref="ExpectedRevision"/> is refused if the record changed since.</summary>
+    public string? Revision { get; init; }
+
+    /// <summary>On a save: the revision the edit started from (a preview's); a record changed or removed since is refused (409).</summary>
+    public string? ExpectedRevision { get; init; }
 }
 
 /// <summary>A class whose subclass choice a homebrew subclass can join.</summary>

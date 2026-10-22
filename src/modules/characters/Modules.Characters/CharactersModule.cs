@@ -7,6 +7,8 @@ using Starlights.Modules.Characters.Services.Processing.Behaviors;
 using Starlights.Modules.Characters.Services.Statistics;
 using Starlights.Modules.Characters.Services.Statistics.Initializers;
 using Starlights.Modules.Characters.Services.Statistics.Processors;
+using Starlights.Modules.Characters.Services.Usage;
+using Starlights.Modules.Elements.Integration;
 using Starlights.Platform.Eventing.EventPublisher;
 using Starlights.Platform.Hosting;
 
@@ -19,6 +21,8 @@ internal class CharactersModule : IPlatformServiceComponent
     public void ConfigureServices(IHostApplicationBuilder builder)
     {
         builder.Services.AddScoped<IRegistrationProcessor, RegistrationProcessor>();
+        // the elements module asks who uses an element (a homebrew edit's preview); it does not read characters itself
+        builder.Services.AddScoped<IElementUsage, ElementUsage>();
         builder.Services.AddScoped<PlayerAccess>();
         builder.Services.AddSingleton<UnlockLimiter>();
         builder.Services.AddSingleton(new PlayerAccessOptions(

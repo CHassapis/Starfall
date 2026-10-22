@@ -234,6 +234,16 @@
           "required": true
         },
         "responses": {
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HomebrewEditPreview"
+                }
+              }
+            }
+          },
           "200": {
             "description": "OK",
             "content": {
@@ -282,6 +292,16 @@
           "required": true
         },
         "responses": {
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HomebrewEditPreview"
+                }
+              }
+            }
+          },
           "200": {
             "description": "OK",
             "content": {
@@ -350,12 +370,112 @@
           "required": true
         },
         "responses": {
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HomebrewEditPreview"
+                }
+              }
+            }
+          },
           "200": {
             "description": "OK",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HomebrewClassModel"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/elements/homebrew/spells/preview": {
+      "post": {
+        "tags": [
+          "Elements"
+        ],
+        "operationId": "StarlightsModulesElementsEndpointsInstallationPreviewHomebrewSpellEndpoint",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HomebrewSpellModel"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HomebrewEditPreview"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/elements/homebrew/subclasses/preview": {
+      "post": {
+        "tags": [
+          "Elements"
+        ],
+        "operationId": "StarlightsModulesElementsEndpointsInstallationPreviewHomebrewSubclassEndpoint",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HomebrewSubclassModel"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HomebrewEditPreview"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/elements/homebrew/classes/preview": {
+      "post": {
+        "tags": [
+          "Elements"
+        ],
+        "operationId": "StarlightsModulesElementsEndpointsInstallationPreviewHomebrewClassEndpoint",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HomebrewClassModel"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HomebrewEditPreview"
                 }
               }
             }
@@ -9125,6 +9245,43 @@
           }
         }
       },
+      "HomebrewAffectedCharacter": {
+        "required": [
+          "characterId",
+          "name",
+          "playerName",
+          "uses",
+          "loses"
+        ],
+        "type": "object",
+        "properties": {
+          "characterId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "playerName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "uses": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "loses": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
       "HomebrewClassesResponse": {
         "required": [
           "classes"
@@ -9280,8 +9437,100 @@
               "null",
               "string"
             ]
+          },
+          "revision": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "expectedRevision": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
+      },
+      "HomebrewEditPreview": {
+        "required": [
+          "kind",
+          "id",
+          "isNew",
+          "revision",
+          "changes",
+          "elements",
+          "characters",
+          "diagnostics"
+        ],
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "isNew": {
+            "type": "boolean"
+          },
+          "revision": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "changes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HomebrewFieldChange"
+            }
+          },
+          "elements": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HomebrewElementChange"
+            }
+          },
+          "characters": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HomebrewAffectedCharacter"
+            }
+          },
+          "diagnostics": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ImportDiagnostic"
+            }
+          }
+        }
+      },
+      "HomebrewElementChange": {
+        "required": [
+          "elementId",
+          "name",
+          "change"
+        ],
+        "type": "object",
+        "properties": {
+          "elementId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "change": {
+            "$ref": "#/components/schemas/HomebrewElementChangeKind"
+          }
+        }
+      },
+      "HomebrewElementChangeKind": {
+        "enum": [
+          "added",
+          "changed",
+          "removed"
+        ]
       },
       "HomebrewElementModel": {
         "required": [
@@ -9327,6 +9576,31 @@
           },
           "description": {
             "type": "string"
+          }
+        }
+      },
+      "HomebrewFieldChange": {
+        "required": [
+          "field",
+          "before",
+          "after"
+        ],
+        "type": "object",
+        "properties": {
+          "field": {
+            "type": "string"
+          },
+          "before": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "after": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -9532,6 +9806,18 @@
               "null",
               "string"
             ]
+          },
+          "revision": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "expectedRevision": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -9595,6 +9881,18 @@
             "items": {
               "$ref": "#/components/schemas/HomebrewFeatureModel"
             }
+          },
+          "revision": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "expectedRevision": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
