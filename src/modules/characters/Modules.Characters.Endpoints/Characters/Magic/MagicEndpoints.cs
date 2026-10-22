@@ -46,24 +46,7 @@ public sealed class GetSpellcastingEndpoint : EndpointWithoutRequest<Spellcastin
 
         var registrations = await _persistence.GetRepository<IRegistrationRepository>().GetRegistrationsAsync(character.Id);
         var statistics = _statistics.Calculate(character, [.. registrations]).Statistics;
-        int? Statistic(string name) => statistics.TryGetGroup(name, out var group) && group.IsCompleted ? group.Sum() : null;
-        var abilities = character.GetRequiredComponent<AbilitiesComponent>().AbilityScores;
-        var classes = character.GetRequiredComponent<ClassComponent>();
-
-        var input = new MagicCharacter(
-            registrations.Select(r => new MagicRegistration(
-                r.Id.Value,
-                r.ParentRegistrationId?.Value,
-                r.AssociatedElementId.Value,
-                r.AssociatedElementType,
-                r.AssociatedElementName,
-                r.SelectionRules.Where(s => s.SelectedOption is not null).Select(s => new MagicSelection(s.Name, s.SelectedOption!.Value)).ToList())).ToList(),
-            classes.Classes.Select(c => new MagicClass(c.Registration.Value, c.Name, c.Level)).ToList(),
-            Math.Max(1, classes.CalculateCharacterLevel()),
-            Statistic("proficiency") ?? 2,
-            ability => abilities.FirstOrDefault(a => string.Equals(a.Name, ability, StringComparison.OrdinalIgnoreCase))?.CalculatedModifier ?? 0,
-            Statistic,
-            character.RestrictedSources.ToList());
+        var input = MagicCharacterFactory.Create(character, registrations, statistics);
 
         var magic = await _spells.GetElementMagicAsync(input.Registrations.Select(r => r.ElementId).Distinct().ToList(), ct);
         await Send.OkAsync(SpellcastingFacts.Build(input, magic, await _spells.GetAsync(ct)), ct);

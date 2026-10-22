@@ -34,7 +34,7 @@ internal sealed class ProficiencyGroupProcessor : IStatisticGroupProcessor
 
         var proficiencyGroup = context.Statistics.GetGroup(groupKey);
 
-        context.Statistics.WithGroupVariants(proficiencyGroup.GroupName, proficiencyGroup.DisplayName);
+        context.Statistics.WithGroupVariants(proficiencyGroup.GroupName, proficiencyGroup.DisplayName, context.Trace);
 
         // Validate no remaining proficiency-related rules
         if (pendingGroups.Any(r => r.Key.StartsWith(groupKey)))

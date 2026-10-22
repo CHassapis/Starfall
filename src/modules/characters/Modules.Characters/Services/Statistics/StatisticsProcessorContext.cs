@@ -1,5 +1,6 @@
 using Starlights.Modules.Characters.Domain.Characters;
 using Starlights.Modules.Characters.Domain.Registrations;
+using Starlights.Modules.Characters.Services.Calculation;
 
 namespace Starlights.Modules.Characters.Services.Statistics;
 
@@ -31,6 +32,9 @@ public sealed class StatisticsProcessorContext
     /// The statistics collection being built, modified, and processed.
     /// </summary>
     public StatisticValuesGroupCollection Statistics { get; } = [];
+
+    /// <summary>Where the calculation writes down how it worked each value out; null when nobody asked.</summary>
+    public StatisticsTraceRecorder? Trace { get; init; }
 
     /// <summary>
     /// A lookup dictionary mapping registration IDs to their associated element names use for display purpose.

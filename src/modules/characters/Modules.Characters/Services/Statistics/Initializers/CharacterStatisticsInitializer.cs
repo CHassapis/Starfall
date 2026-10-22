@@ -1,4 +1,5 @@
 using Starlights.Modules.Characters.Domain.Progression;
+using Starlights.Modules.Characters.Services.Calculation;
 
 namespace Starlights.Modules.Characters.Services.Statistics.Initializers;
 
@@ -22,6 +23,7 @@ internal sealed class CharacterStatisticsInitializer : IStatisticsCalculationIni
             group.Complete();
         });
 
-        context.Statistics.WithGroupVariants(levelGroup.GroupName, levelGroup.DisplayName);
+        context.Trace?.Value(levelGroup.GroupName, new RecordedValue(progression.CharacterLevel, "Character", TraceSourceKind.Character));
+        context.Statistics.WithGroupVariants(levelGroup.GroupName, levelGroup.DisplayName, context.Trace);
     }
 }

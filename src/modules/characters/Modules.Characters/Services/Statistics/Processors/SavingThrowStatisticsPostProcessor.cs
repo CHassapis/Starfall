@@ -1,5 +1,6 @@
 using Starlights.Modules.Characters.Domain.Abilities;
 using Starlights.Modules.Characters.Domain.SavingThrows;
+using Starlights.Modules.Characters.Services.Calculation;
 
 namespace Starlights.Modules.Characters.Services.Statistics.Processors;
 
@@ -28,6 +29,10 @@ internal sealed class SavingThrowStatisticsPostProcessor : IStatisticsPostProces
                 additionalBonus += context.Statistics.GetGroupSum($"{slug}:misc");
 
                 save.UpdateAdditionalBonus(additionalBonus);
+                context.Trace?.Check($"saving-throw:{abilities.AbilityScores.FirstOrDefault(a => a.Id == save.AbilityScoreId)?.Name.ToSlug() ?? slug}",
+                    new RecordedCheck(save.Name, save.AbilityScoreAbbreviation, save.AbilityScoreModifier,
+                        $"{slug}:proficiency", context.Statistics.GetGroupSum($"{slug}:proficiency"),
+                        $"{slug}:misc", context.Statistics.GetGroupSum($"{slug}:misc"), save.CalculatedBonus));
             }
         });
     }

@@ -21,8 +21,8 @@ internal sealed class AbilitiesStatisticsInitializer : IStatisticsCalculationIni
             var scoreGroup = context.Statistics.WithGroup($"{slug}:score");
             var modifierGroup = context.Statistics.WithGroup($"{slug}:modifier");
 
-            context.Statistics.WithGroupVariants(scoreGroup.GroupName, score.Name);
-            context.Statistics.WithGroupVariants(modifierGroup.GroupName, score.Name);
+            context.Statistics.WithGroupVariants(scoreGroup.GroupName, score.Name, context.Trace);
+            context.Statistics.WithGroupVariants(modifierGroup.GroupName, score.Name, context.Trace);
         }
     }
 }

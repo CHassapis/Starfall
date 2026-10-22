@@ -1,3 +1,5 @@
+using Starlights.Modules.Characters.Services.Calculation;
+
 namespace Starlights.Modules.Characters.Services.Statistics;
 
 
@@ -25,7 +27,7 @@ public static class StatisticValuesGroupCollectionExtensions
         return value;
     }
 
-    public static StatisticValuesGroupCollection WithGroupVariants(this StatisticValuesGroupCollection collection, string groupName, string? displayName = null)
+    public static StatisticValuesGroupCollection WithGroupVariants(this StatisticValuesGroupCollection collection, string groupName, string? displayName = null, StatisticsTraceRecorder? trace = null)
     {
         var originGroup = collection.GetGroup(groupName);
 
@@ -61,6 +63,8 @@ public static class StatisticValuesGroupCollectionExtensions
 
         h.Complete();
         hup.Complete();
+        trace?.Variant(h.GroupName, new RecordedVariant(originGroup.GroupName, originGroup.Sum(), RoundUp: false, h.Sum()));
+        trace?.Variant(hup.GroupName, new RecordedVariant(originGroup.GroupName, originGroup.Sum(), RoundUp: true, hup.Sum()));
 
         return collection;
     }

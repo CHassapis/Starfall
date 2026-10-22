@@ -1,5 +1,6 @@
 using Starlights.Modules.Characters.Domain.Abilities;
 using Starlights.Modules.Characters.Domain.Skills;
+using Starlights.Modules.Characters.Services.Calculation;
 
 namespace Starlights.Modules.Characters.Services.Statistics.Processors;
 
@@ -27,6 +28,8 @@ internal sealed class SkillStatisticsPostProcessor : IStatisticsPostProcessor
             var additionalBonus = proficiencyGroup.Sum() + miscGroup.Sum();
 
             skill.UpdateAdditionalBonus(additionalBonus);
+            context.Trace?.Check($"skill:{slug}", new RecordedCheck(skill.Name, skill.AbilityScoreAbbreviation, skill.AbilityScoreModifier,
+                proficiencyGroup.GroupName, proficiencyGroup.Sum(), miscGroup.GroupName, miscGroup.Sum(), skill.CalculatedBonus));
 
             // TODO: passive calculation
             //var passiveGroup = context.Statistics.GetGroup($"{slug}:passive");
