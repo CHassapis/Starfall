@@ -277,7 +277,14 @@ public sealed partial class ReferenceCharacterTests : IntegrationTestBase
                     failures.Add($"[{stage}] trace {key}: {(int)http.StatusCode} {await http.Content.ReadAsStringAsync()}");
                     return null;
                 }
-                traced[key] = response = (await http.Content.ReadFromJsonAsync<CalculationTraceResponse>(Web))!;
+                var body = await http.Content.ReadAsStringAsync();
+                traced[key] = response = JsonSerializer.Deserialize<CalculationTraceResponse>(body, Web)!;
+                // the worked example in the API docs is a real trace:
+                // STARLIGHTS_WRITE_TRACE_EXAMPLE=<repository>/docs/api/examples/calculation-trace.json
+                if (key == "spell-attack:ref-bard" && stage == "built" && Environment.GetEnvironmentVariable("STARLIGHTS_WRITE_TRACE_EXAMPLE") is { Length: > 0 } example)
+                {
+                    await File.WriteAllTextAsync(example, JsonNode.Parse(body)!.ToJsonString(new JsonSerializerOptions { WriteIndented = true }) + "\n");
+                }
             }
             if (response.Status != TraceStatus.Traced)
             {
