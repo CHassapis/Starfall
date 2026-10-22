@@ -1,7 +1,8 @@
 # Calculation traces: checkpoint
 
-Branch `feature/calculation-traces` from `aurora-server` 6dbade3, worktree `~/starfall-calc-traces`. Publish to
-`mine` and open a PR to `aurora-server` (rulesets block direct pushes). Updated 2026-10-22.
+Branch `feature/calculation-traces` from `aurora-server` 6dbade3, worktree `~/starfall-calc-traces`, PR
+https://github.com/CHassapis/Starfall/pull/29 (stage 1). Stages 2–4 go on branches of their own built on it, each
+with its own PR to `aurora-server`. Updated 2026-10-22.
 
 ## Stage 1 (done, in this order)
 - db3df0e, 9e1c4d7 reference characters: synthetic content, ten hand-worked specs, server suite (SqlServer category).
@@ -18,7 +19,8 @@ Branch `feature/calculation-traces` from `aurora-server` 6dbade3, worktree `~/st
 ## Checks (2026-10-22)
 Characters unit tests 341; trace endpoint + access 24; server reference suite 12/12 (disposable SQL Server); web
 288 passed / 5 skipped (baseline 262 / 5); tsc clean; eslint 38 errors / 1 warning (= baseline, none in new code);
-browser: calculation-traces 36 checks (desktop popover, 360px bottom sheet). Full backend + Docker build: see PR.
+browser: calculation-traces 36, smoke 90, ornaments 110, units 17, accessibility pass (qa.mjs stops at a logo removed
+in 8b626cf, as on aurora-server). Full backend with SQL Server 893: 869 passed, 24 skipped. Docker frontend build ok.
 
 ## Known limits
 - The import's DOM reading of an Aurora file is not run in tests (no DOM in vitest); its mapping is.
