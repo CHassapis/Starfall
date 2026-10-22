@@ -51,8 +51,13 @@ export function EditPreview({ preview }: { preview: HomebrewEditPreview }) {
               <li key={c.characterId} className="[overflow-wrap:anywhere]">
                 <span className="font-medium">{c.name}</span>
                 {c.playerName && <span className="text-muted-foreground"> ({c.playerName})</span>}
-                <span className="text-muted-foreground">: {c.uses.map(nameOf).join(", ")}</span>
+                {c.uses.length > 0 && <span className="text-muted-foreground">: {c.uses.map(nameOf).join(", ")}</span>}
                 {c.loses.length > 0 && <span className={cn("block text-destructive")}>Loses {c.loses.map(nameOf).join(", ")} at their next update.</span>}
+                {(c.invalidated ?? []).map((p) => (
+                  <span key={`${p.elementId}|${p.reason}`} className="block text-amber-700 dark:text-amber-400">
+                    {p.name}: {p.reason}
+                  </span>
+                ))}
               </li>
             ))}
           </ul>

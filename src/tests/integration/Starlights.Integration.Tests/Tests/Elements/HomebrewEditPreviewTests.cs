@@ -383,4 +383,90 @@ public sealed class HomebrewEditPreviewTests : IntegrationTestBase
         preview.Characters.Should().ContainSingle().Which.Should().BeEquivalentTo(new { CharacterId = characterId, Uses = new[] { echo }, Loses = new[] { echo } });
         preview.Changes.Should().BeEmpty("the features are listed as elements, not as a field");
     }
+
+    [TestMethod]
+    public async Task ASpellTakenOffAList_SaysWhoHasItPreparedFromThatList()
+    {
+        await _integration.InitializeElements();
+        var saved = await SavedAsync("spells", Spell() with { Lists = ["Wizard", "Sorcerer"] });
+        var spell = AuroraIds.ToGuid(saved.Id!);
+        var wizard = await PreparedAsync("Wizard", spell);
+        var sorcerer = await PreparedAsync("Sorcerer", spell);
+
+        var preview = await PreviewAsync("spells", saved with { Lists = ["Sorcerer"] });
+
+        preview.Characters.Should().HaveCount(2);
+        preview.Characters.Single(c => c.CharacterId == wizard).Invalidated.Should().Equal(new HomebrewInvalidatedPick(saved.Id!, "Test Sparkle",
+            "Prepared as a Wizard spell, but it would no longer be on the Wizard list. It stays prepared until it is changed."));
+        preview.Characters.Single(c => c.CharacterId == sorcerer).Invalidated.Should().BeEmpty("it stays on the Sorcerer list");
+        preview.Characters.Should().OnlyContain(c => c.Loses.Count == 0, "the spell itself stays");
+    }
+
+    [TestMethod]
+    public async Task ASubclassMovedToAnotherClassesChoice_SaysWhoPickedItForTheOldOne()
+    {
+        await _integration.InitializeElements();
+        var warden = await SavedAsync("classes", new HomebrewClassModel { Name = "Test Warden", Source = "Test Homebrew", HitDie = 10, SavingThrows = ["Strength", "Wisdom"] });
+        var keeper = await SavedAsync("classes", new HomebrewClassModel { Name = "Test Keeper", Source = "Test Homebrew", HitDie = 8, SavingThrows = ["Dexterity", "Intelligence"] });
+        warden.SubclassSupports.Should().Be("Test Warden Subclass");
+        keeper.SubclassSupports.Should().Be("Test Keeper Subclass");
+        var subclass = await SavedAsync("subclasses", new HomebrewSubclassModel
+        {
+            Name = "Test Circle", Source = "Test Homebrew", ClassSupports = warden.SubclassSupports!, ClassName = warden.Name, Features = [new() { Level = 3, Name = "Test Ward" }],
+        });
+        // a prepared entry stands in for the builder pick (see ASubclassEdit_ThatDropsAFeature_SaysWhoLosesIt)
+        var characterId = await PreparedAsync("Test", AuroraIds.ToGuid(subclass.Id!));
+
+        var preview = await PreviewAsync("subclasses", subclass with { ClassSupports = keeper.SubclassSupports!, ClassName = keeper.Name });
+
+        preview.Characters.Should().ContainSingle().Which.Should().BeEquivalentTo(new
+        {
+            CharacterId = characterId,
+            Uses = new[] { subclass.Id },
+            Loses = Array.Empty<string>(),
+            Invalidated = new[]
+            {
+                new HomebrewInvalidatedPick(subclass.Id!, "Test Circle",
+                    "Picked for the \"Test Warden Subclass\" choice, but it would answer \"Test Keeper Subclass\" instead. It stays picked, but could not be picked there again."),
+            },
+        });
+    }
+
+    [TestMethod]
+    public async Task AClassWithANewSubclassKey_SaysWhoseSubclassNoLongerFits()
+    {
+        await _integration.InitializeElements();
+        var warden = await SavedAsync("classes", new HomebrewClassModel { Name = "Test Warden", Source = "Test Homebrew", HitDie = 10, SavingThrows = ["Strength", "Wisdom"] });
+        var subclass = await SavedAsync("subclasses", new HomebrewSubclassModel
+        {
+            Name = "Test Circle", Source = "Test Homebrew", ClassSupports = warden.SubclassSupports!, ClassName = warden.Name, Features = [new() { Level = 3, Name = "Test Ward" }],
+        });
+        var characterId = await PreparedAsync("Test", AuroraIds.ToGuid(subclass.Id!));
+
+        var unchanged = await PreviewAsync("classes", warden with { HitDie = 12 });
+        var preview = await PreviewAsync("classes", warden with { SubclassSupports = "Warden Path" });
+
+        unchanged.Characters.Should().BeEmpty("the subclass still answers the class's choice");
+        preview.Characters.Should().ContainSingle().Which.Should().BeEquivalentTo(new
+        {
+            CharacterId = characterId,
+            Uses = Array.Empty<string>(),
+            Loses = Array.Empty<string>(),
+            Invalidated = new[]
+            {
+                new HomebrewInvalidatedPick(subclass.Id!, "Test Circle",
+                    "Picked as a Test Warden subclass, but the class would ask for \"Warden Path\" subclasses instead of \"Test Warden Subclass\". It stays picked, but could not be picked again."),
+            },
+        });
+    }
+
+    /// <summary>A new character with the element prepared under that spellcasting.</summary>
+    private async Task<Guid> PreparedAsync(string casting, Guid element)
+    {
+        var characterId = await _integration.GetDriver<CharacterCreationDriver>().CreateCharacterAsync();
+        using var admin = _integration.CreateAdminClient();
+        var magic = new CharacterMagic { Prepared = new() { [casting] = [element] } };
+        (await admin.PutAsJsonAsync($"/api/characters/{characterId}/magic", magic, _integration.CancellationToken)).StatusCode.Should().Be(HttpStatusCode.OK);
+        return characterId;
+    }
 }

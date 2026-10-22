@@ -349,7 +349,7 @@ public sealed class SaveHomebrewClassEndpoint : Endpoint<HomebrewClassModel, Hom
             {
                 var before = HomebrewWorkshop.Main(document, "Class", id) is { } main ? HomebrewWorkshopXml.ClassFromXml(document.Root!, main) : null;
                 await HttpContext.Response.SendAsync(await HomebrewWorkshopReview.BuildAsync("classes", document, id, before, HomebrewWorkshopXml.ClassFromXml(HomebrewWorkshop.Root(record), record[0]), record,
-                    [HomebrewWorkshopReview.Stale(id, current)], _usage, ct), StatusCodes.Status409Conflict, cancellation: ct);
+                    [HomebrewWorkshopReview.Stale(id, current)], _usage, ct, HomebrewWorkshop.Load(Config, HomebrewWorkshop.SubclassesFile)), StatusCodes.Status409Conflict, cancellation: ct);
                 return;
             }
             await HomebrewWorkshop.SaveAsync(Config, _importer, HomebrewWorkshop.ClassesFile, document, id, record, ct);
@@ -461,8 +461,9 @@ public sealed class PreviewHomebrewClassEndpoint : Endpoint<HomebrewClassModel, 
         }
         HomebrewWorkshopReview.CheckOpened(diagnostics, document, id, req.Revision);
         var record = diagnostics.Any(d => d.Severity == ImportDiagnosticSeverity.Error) ? null : HomebrewWorkshop.ClassRecord(document, req, id).Record;
+        var subclasses = await HomebrewWorkshop.ReadAsync(Config, HomebrewWorkshop.SubclassesFile, ct);
         await Send.OkAsync(await HomebrewWorkshopReview.BuildAsync("classes", document, id, main is null ? null : HomebrewWorkshopXml.ClassFromXml(document.Root!, main),
-            record is null ? null : HomebrewWorkshopXml.ClassFromXml(HomebrewWorkshop.Root(record), record[0]), record, diagnostics, _usage, ct), ct);
+            record is null ? null : HomebrewWorkshopXml.ClassFromXml(HomebrewWorkshop.Root(record), record[0]), record, diagnostics, _usage, ct, subclasses), ct);
     }
 }
 

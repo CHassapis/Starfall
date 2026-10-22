@@ -65,7 +65,7 @@ export function revisionToSend(opened: string | null | undefined, refused?: Home
   return refused ? expectedRevisionOf(refused) : (opened ?? null);
 }
 
-/** One line on what the save does: "2 changes, 1 removed · 3 characters use it, 1 loses something". */
+/** One line on what the save does: "2 changes, 1 removed · 3 characters use it, 1 loses something, 1 has a pick that no longer fits". */
 export function previewSummary(preview: HomebrewEditPreview): string {
   const count = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
   const removed = preview.elements.filter((e) => e.change === "removed").length;
@@ -74,6 +74,15 @@ export function previewSummary(preview: HomebrewEditPreview): string {
   const changes = parts || preview.elements.length;
   const what = preview.isNew ? "New, nothing uses it yet" : changes === 0 ? "No changes" : `${count(changes, "change")}${removed ? `, ${removed} removed` : ""}`;
   const losing = preview.characters.filter((c) => c.loses.length > 0).length;
-  const who = preview.characters.length === 0 ? (preview.isNew ? null : "no character uses it") : `${count(preview.characters.length, "character")} ${preview.characters.length === 1 ? "uses" : "use"} it${losing ? `, ${losing} ${losing === 1 ? "loses" : "lose"} something` : ""}`;
+  const unfit = preview.characters.filter((c) => (c.invalidated ?? []).length > 0).length;
+  // a character whose only link is a pick the edit leaves behind (a class's subclass) does not use the record itself
+  const users = preview.characters.filter((c) => c.uses.length > 0).length;
+  const who = [
+    users === 0 ? (preview.isNew || unfit ? null : "no character uses it") : `${count(users, "character")} ${users === 1 ? "uses" : "use"} it`,
+    losing ? `${losing} ${losing === 1 ? "loses" : "lose"} something` : null,
+    unfit ? `${unfit} ${unfit === 1 ? "has a pick" : "have picks"} that no longer ${unfit === 1 ? "fits" : "fit"}` : null,
+  ]
+    .filter(Boolean)
+    .join(", ");
   return [what, who].filter(Boolean).join(" · ");
 }

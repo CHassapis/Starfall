@@ -12,4 +12,8 @@ public interface IElementUsage
 }
 
 /// <param name="ElementIds">The elements (of those asked about) the character uses.</param>
-public sealed record ElementUser(Guid CharacterId, string CharacterName, string? PlayerName, IReadOnlyList<Guid> ElementIds);
+public sealed record ElementUser(Guid CharacterId, string CharacterName, string? PlayerName, IReadOnlyList<Guid> ElementIds)
+{
+    /// <summary>Of those elements, the ones the character has prepared, each with the spellcastings it is prepared as ("Wizard").</summary>
+    public IReadOnlyDictionary<Guid, IReadOnlyList<string>> PreparedAs { get; init; } = new Dictionary<Guid, IReadOnlyList<string>>();
+}

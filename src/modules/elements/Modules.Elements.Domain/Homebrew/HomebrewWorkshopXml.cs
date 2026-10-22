@@ -374,13 +374,16 @@ public static partial class HomebrewWorkshopXml
     /// <summary>The name a class's statistics use ("Blood Hunter" → "blood-hunter"), as the spell options read them.</summary>
     public static string StatName(string className) => className.Trim().ToLowerInvariant().Replace(' ', '-');
 
+    /// <summary>What the class's subclass choice asks for: the subclasses whose "supports" is this ("Test Warden Subclass" by default).</summary>
+    public static string SubclassKey(HomebrewClassModel m) => string.IsNullOrWhiteSpace(m.SubclassSupports) ? $"{m.Name.Trim()} Subclass" : m.SubclassSupports.Trim();
+
     public static List<XElement> ClassToXml(HomebrewClassModel m, string id)
     {
         var source = Source(m.Source);
         var name = m.Name.Trim();
         var multiclassId = id.Replace("_CLASS_", "_MULTICLASS_", StringComparison.Ordinal);
         var notMulticlass = new XAttribute("requirements", $"!{multiclassId}");
-        var subclassSupports = string.IsNullOrWhiteSpace(m.SubclassSupports) ? $"{name} Subclass" : m.SubclassSupports.Trim();
+        var subclassSupports = SubclassKey(m);
         var listName = string.IsNullOrWhiteSpace(m.SpellListName) ? name : m.SpellListName.Trim();
 
         var rules = new XElement("rules");

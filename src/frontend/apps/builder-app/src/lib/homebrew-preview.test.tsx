@@ -26,6 +26,18 @@ const edit: HomebrewEditPreview = {
   diagnostics: [],
 };
 
+const CLASS = "ID_STARLIGHTS_HOMEBREW_CLASS_TEST_WARDEN";
+const leftBehind = { elementId: SUBCLASS, name: "Test Circle", reason: "It stays picked, but could not be picked there again." };
+// a class whose subclass key changes: Vex picked Test Circle for the old key and does not use the class's own elements here
+const rekeyed: HomebrewEditPreview = {
+  ...edit,
+  kind: "classes",
+  id: CLASS,
+  changes: [{ field: "subclassSupports", before: "Test Warden Subclass", after: "Warden Path" }],
+  elements: [{ elementId: CLASS, name: "Test Warden", change: "changed" }],
+  characters: [{ characterId: "c3", name: "Vex", playerName: null, uses: [], loses: [], invalidated: [leftBehind] }],
+};
+
 const fresh: HomebrewEditPreview = { kind: "spells", id: "ID_STARLIGHTS_HOMEBREW_SPELL_TEST_SPARKLE", isNew: true, revision: null, changes: [], elements: [{ elementId: "ID_STARLIGHTS_HOMEBREW_SPELL_TEST_SPARKLE", name: "Test Sparkle", change: "added" }], characters: [], diagnostics: [] };
 
 describe("a homebrew edit's preview", () => {
@@ -34,6 +46,16 @@ describe("a homebrew edit's preview", () => {
     expect(previewSummary(fresh)).toBe("New, nothing uses it yet");
     expect(previewSummary({ ...edit, changes: [], elements: [], characters: [] })).toBe("No changes · no character uses it");
     expect(previewSummary({ ...edit, changes: [], elements: [edit.elements[0]], characters: [] })).toBe("1 change · no character uses it");
+  });
+
+  it("counts the picks an edit leaves behind apart from what is lost", () => {
+    const orrin = { ...edit.characters[1], invalidated: [leftBehind] };
+    expect(previewSummary({ ...edit, characters: [edit.characters[0], orrin] })).toBe("2 changes, 1 removed · 2 characters use it, 1 loses something, 1 has a pick that no longer fits");
+    expect(previewSummary(rekeyed)).toBe("1 change · 1 has a pick that no longer fits");
+    const html = renderToStaticMarkup(<EditPreview preview={rekeyed} />);
+    expect(html).toContain("Vex");
+    expect(html).toContain("Test Circle: It stays picked, but could not be picked there again.");
+    expect(html).not.toContain(": </span>");
   });
 
   it("names fields as the form does", () => {

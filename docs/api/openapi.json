@@ -9279,6 +9279,12 @@
             "items": {
               "type": "string"
             }
+          },
+          "invalidated": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HomebrewInvalidatedPick"
+            }
           }
         }
       },
@@ -9628,6 +9634,25 @@
             "items": {
               "type": "string"
             }
+          }
+        }
+      },
+      "HomebrewInvalidatedPick": {
+        "required": [
+          "elementId",
+          "name",
+          "reason"
+        ],
+        "type": "object",
+        "properties": {
+          "elementId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
           }
         }
       },

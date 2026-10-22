@@ -2,7 +2,7 @@
  * The Homebrew page's import diagnostics and edit review. Run against a local server of the built app
  * (VITE_API_BASE=""); the homebrew API is answered here, everything else by the synthetic fixture. On a desktop and a
  * 360px touch phone, as the admin: uploading a file lists what the import ran into; editing a spell shows "Review and
- * save" (what changes, who uses it), an edit after the review asks for a new one, the save sends the revision the
+ * save" (what changes, who uses it, a pick it leaves behind), an edit after the review asks for a new one, the save sends the revision the
  * review saw, a save someone overtook comes back with a fresh review saying so, and saving again with the new
  * revision goes through. No horizontal overflow, no page
  * errors.
@@ -29,13 +29,24 @@ const spell = (level, revision) => ({
   id: SPELL_ID, name: "Test Sparkle", source: "Test Homebrew", level, school: "Evocation", castingTime: "1 action", range: "60 feet", duration: "Instantaneous",
   verbal: true, somatic: true, material: false, concentration: false, ritual: false, lists: ["Wizard"], description: "A made-up spell.", revision,
 });
-const preview = (before, after, revision, diagnostics = []) => ({
-  kind: "spells", id: SPELL_ID, isNew: false, revision,
-  changes: before === after ? [] : [{ field: "level", before: String(before), after: String(after) }],
-  elements: before === after ? [] : [{ elementId: SPELL_ID, name: "Test Sparkle", change: "changed" }],
-  characters: [{ characterId: "c0ffee00-0000-4000-8000-000000000001", name: "Mira Vale", playerName: "Test Player", uses: [SPELL_ID], loses: [] }],
-  diagnostics,
-});
+// Mira Vale has it prepared as a Wizard spell: taking it off the Wizard list leaves that behind
+const LEFT_BEHIND = "Prepared as a Wizard spell, but it would no longer be on the Wizard list. It stays prepared until it is changed.";
+const preview = (before, after, revision, diagnostics = [], lists = ["Wizard"]) => {
+  const offWizard = !lists.includes("Wizard");
+  const changes = [
+    ...(before === after ? [] : [{ field: "level", before: String(before), after: String(after) }]),
+    ...(offWizard ? [{ field: "lists", before: "Wizard", after: lists.join(", ") }] : []),
+  ];
+  return {
+    kind: "spells", id: SPELL_ID, isNew: false, revision, changes,
+    elements: changes.length === 0 ? [] : [{ elementId: SPELL_ID, name: "Test Sparkle", change: "changed" }],
+    characters: [{
+      characterId: "c0ffee00-0000-4000-8000-000000000001", name: "Mira Vale", playerName: "Test Player", uses: [SPELL_ID], loses: [],
+      invalidated: offWizard ? [{ elementId: SPELL_ID, name: "Test Sparkle", reason: LEFT_BEHIND }] : [],
+    }],
+    diagnostics,
+  };
+};
 const uploadDiagnostics = [
   { severity: "warning", code: "append-target-missing", importer: "homebrew", message: "The append to ID_NOBODY was not applied: ID_NOBODY is not in the loaded content.", file: "homebrew/test-feats.xml", elementId: "ID_NOBODY" },
   { severity: "warning", code: "grant-unresolved", importer: "homebrew", message: "Brew Feat grants ID_GONE, which is not in the content; that grant was left out.", file: "homebrew/test-feats.xml", elementId: "ID_BREW_FEAT", elementName: "Brew Feat", detail: "ID_GONE" },
@@ -80,13 +91,13 @@ try {
         const opened = body.revision && body.revision !== server.revision
           ? [{ severity: "warning", code: "stale-revision", importer: "homebrew", message: "Someone saved it after you opened it: the changes listed compare with what is saved now. Saving will ask you to confirm once more.", elementId: SPELL_ID }]
           : [];
-        return json(200, preview(server.level, body.level, server.revision, opened));
+        return json(200, preview(server.level, body.level, server.revision, opened, body.lists));
       }
       if (p === "/api/elements/homebrew/spells" && req.method() === "PUT") {
         const body = req.postDataJSON();
         puts.push(body.expectedRevision ?? null);
         if (body.expectedRevision !== server.revision)
-          return json(409, preview(server.level, body.level, server.revision, [{ severity: "error", code: "stale-revision", importer: "homebrew", message: "Someone saved it after you opened it, so it was not saved. Check what changed below, then save again.", elementId: SPELL_ID }]));
+          return json(409, preview(server.level, body.level, server.revision, [{ severity: "error", code: "stale-revision", importer: "homebrew", message: "Someone saved it after you opened it, so it was not saved. Check what changed below, then save again.", elementId: SPELL_ID }], body.lists));
         Object.assign(server, { level: body.level, revision: "rev-3" });
         return json(200, spell(body.level, "rev-3"));
       }
@@ -141,6 +152,22 @@ try {
     await review.scrollIntoViewIfNeeded();
     await noOverflow("review");
     await page.screenshot({ path: `${output}/homebrew-review-${device.name}.png` });
+
+    // taking the spell off the Wizard list: the review names the pick that leaves behind
+    const wizard = dialog.getByRole("group", { name: "Class spell lists" }).getByRole("checkbox", { name: "Wizard" });
+    await dialog.getByRole("button", { name: "Back to editing" }).click();
+    await wizard.uncheck();
+    await dialog.getByRole("button", { name: "Review and save" }).click();
+    await review.waitFor();
+    ok(await review.getByText("2 changes · 1 character uses it, 1 has a pick that no longer fits").isVisible(), "the summary counts the pick left behind");
+    ok(await review.getByText(`Test Sparkle: ${LEFT_BEHIND}`).isVisible(), "the pick left behind, and why");
+    await noOverflow("pick left behind");
+    await page.screenshot({ path: `${output}/homebrew-review-left-behind-${device.name}.png` });
+    await dialog.getByRole("button", { name: "Back to editing" }).click();
+    await wizard.check();
+    await dialog.getByRole("button", { name: "Review and save" }).click();
+    await review.waitFor();
+    ok((await review.getByText(LEFT_BEHIND).count()) === 0, "back on the list, nothing is left behind");
 
     // changing the form after the review asks for a new one, so nothing unreviewed is saved
     await dialog.locator("select").first().selectOption("4");

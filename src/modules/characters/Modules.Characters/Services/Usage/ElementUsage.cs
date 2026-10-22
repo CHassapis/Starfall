@@ -39,17 +39,26 @@ internal sealed class ElementUsage : IElementUsage
             Use(character.Value, element.Value);
         }
         var characters = (await _persistence.GetRepository<ICharactersRepository>().GetCharactersAsync()).ToDictionary(c => c.Id.Value);
+        var prepared = new Dictionary<Guid, Dictionary<Guid, SortedSet<string>>>();
         foreach (var character in characters.Values)
         {
-            foreach (var spell in character.Magic.Prepared.Values.SelectMany(p => p).Where(wanted.Contains))
+            foreach (var (casting, spells) in character.Magic.Prepared)
+            foreach (var spell in spells.Where(wanted.Contains))
             {
                 Use(character.Id.Value, spell);
+                var mine = prepared.TryGetValue(character.Id.Value, out var found) ? found : prepared[character.Id.Value] = [];
+                (mine.TryGetValue(spell, out var castings) ? castings : mine[spell] = new SortedSet<string>(StringComparer.Ordinal)).Add(casting);
             }
         }
 
         return uses
             .Where(u => characters.ContainsKey(u.Key))
-            .Select(u => new ElementUser(u.Key, characters[u.Key].Name, string.IsNullOrWhiteSpace(characters[u.Key].PlayerName) ? null : characters[u.Key].PlayerName, [.. u.Value]))
+            .Select(u => new ElementUser(u.Key, characters[u.Key].Name, string.IsNullOrWhiteSpace(characters[u.Key].PlayerName) ? null : characters[u.Key].PlayerName, [.. u.Value])
+            {
+                PreparedAs = prepared.TryGetValue(u.Key, out var spells)
+                    ? spells.ToDictionary(s => s.Key, s => (IReadOnlyList<string>)[.. s.Value])
+                    : new Dictionary<Guid, IReadOnlyList<string>>(),
+            })
             .OrderBy(u => u.CharacterName, StringComparer.OrdinalIgnoreCase)
             .ThenBy(u => u.CharacterId)
             .ToList();

@@ -34,6 +34,7 @@ export interface HomebrewAffectedCharacter {
   playerName: null | string;
   uses: string[];
   loses: string[];
+  invalidated?: HomebrewInvalidatedPick[];
 }
 
 export interface ImportDiagnostic {
@@ -51,6 +52,12 @@ export interface ImportDiagnostic {
 export type HomebrewElementChangeKind = "added" | "changed" | "removed";
 
 export const HomebrewElementChangeKindValues = ["added", "changed", "removed"] as const satisfies readonly HomebrewElementChangeKind[];
+
+export interface HomebrewInvalidatedPick {
+  elementId: string;
+  name: string;
+  reason: string;
+}
 
 export type ImportDiagnosticSeverity = "error" | "warning" | "info";
 

@@ -47,7 +47,18 @@ public enum HomebrewElementChangeKind
 }
 
 /// <summary>A character that uses the record: the elements it uses, and those of them the save would remove.</summary>
-public sealed record HomebrewAffectedCharacter(Guid CharacterId, string Name, string? PlayerName, IReadOnlyList<string> Uses, IReadOnlyList<string> Loses);
+public sealed record HomebrewAffectedCharacter(Guid CharacterId, string Name, string? PlayerName, IReadOnlyList<string> Uses, IReadOnlyList<string> Loses)
+{
+    /// <summary>Picks the character keeps that would no longer fit (see <see cref="HomebrewInvalidatedPick"/>).</summary>
+    public IReadOnlyList<HomebrewInvalidatedPick> Invalidated { get; init; } = [];
+}
+
+/// <summary>
+/// A pick a character keeps after the save but that would no longer fit: a spell prepared as a class's spell that leaves
+/// that class's list, a subclass that no longer answers its class's subclass choice. Nothing removes it; it simply
+/// could not be picked that way again.
+/// </summary>
+public sealed record HomebrewInvalidatedPick(string ElementId, string Name, string Reason);
 
 internal static class HomebrewWorkshopReview
 {
@@ -226,10 +237,11 @@ internal static class HomebrewWorkshopReview
 
     /// <summary>
     /// The preview. <paramref name="before"/> is the record as saved (null when new), <paramref name="after"/> and
-    /// <paramref name="record"/> what the save would write (null when the checks refuse it).
+    /// <paramref name="record"/> what the save would write (null when the checks refuse it). For a class,
+    /// <paramref name="subclasses"/> is the Homebrew page's subclasses, whose picks a new subclass key leaves behind.
     /// </summary>
     public static async Task<HomebrewEditPreview> BuildAsync<T>(string kind, XDocument document, string id, T? before, T? after, IReadOnlyList<XElement>? record,
-        List<ImportDiagnostic> diagnostics, IElementUsage usage, CancellationToken ct) where T : class
+        List<ImportDiagnostic> diagnostics, IElementUsage usage, CancellationToken ct, XDocument? subclasses = null) where T : class
     {
         var old = Parts(HomebrewWorkshopXml.RecordElements(document.Root!, id));
         var next = record is null ? null : Parts(record);
@@ -252,17 +264,66 @@ internal static class HomebrewWorkshopReview
         }
         var removed = elements.Where(e => e.Change == HomebrewElementChangeKind.Removed).Select(e => e.ElementId).ToHashSet(StringComparer.Ordinal);
 
-        var byGuid = old.Keys.Concat(next?.Keys.AsEnumerable() ?? []).Distinct(StringComparer.Ordinal).ToDictionary(AuroraIds.ToGuid);
+        var parts = old.Keys.Concat(next?.Keys.AsEnumerable() ?? []).ToHashSet(StringComparer.Ordinal);
+        var (others, invalidated) = Invalidations(id, before, after, subclasses);
+        var byGuid = parts.Concat(others.Keys).Distinct(StringComparer.Ordinal).ToDictionary(AuroraIds.ToGuid);
         var characters = (await usage.GetUsersAsync(byGuid.Keys, ct))
             .Select(u =>
             {
-                var uses = u.ElementIds.Select(g => byGuid[g]).Order(StringComparer.Ordinal).ToList();
-                return new HomebrewAffectedCharacter(u.CharacterId, u.CharacterName, u.PlayerName, uses, [.. uses.Where(removed.Contains)]);
+                var uses = u.ElementIds.Select(g => byGuid[g]).Where(parts.Contains).Order(StringComparer.Ordinal).ToList();
+                var picks = invalidated(u, byGuid).OrderBy(p => p.ElementId, StringComparer.Ordinal).ThenBy(p => p.Reason, StringComparer.Ordinal).ToList();
+                return new HomebrewAffectedCharacter(u.CharacterId, u.CharacterName, u.PlayerName, uses, [.. uses.Where(removed.Contains)]) { Invalidated = picks };
             })
+            .Where(c => c.Uses.Count > 0 || c.Invalidated.Count > 0)
             .ToList();
 
         return new HomebrewEditPreview(kind, id, old.Count == 0, Revision(document, id), before is null || after is null ? [] : Fields(before, after),
             [.. elements.OrderBy(e => e.Change).ThenBy(e => e.ElementId, StringComparer.Ordinal)], characters, ImportDiagnostic.Arrange(diagnostics));
+    }
+
+    private delegate IEnumerable<HomebrewInvalidatedPick> Invalidation(ElementUser user, IReadOnlyDictionary<Guid, string> auroraIds);
+
+    /// <summary>
+    /// The picks an edit leaves behind without removing them, as a check of each user; and the elements outside the
+    /// record whose users to check (a class's subclasses, by Aurora id and name):
+    /// a spell taken off a class's list is still prepared as that class's spell; a subclass that answers another
+    /// subclass choice (its class key changed) is still picked for the old one; a class whose subclass choice asks for
+    /// another key leaves the subclasses picked for the old one (the Homebrew page's subclasses).
+    /// </summary>
+    private static (IReadOnlyDictionary<string, string> Others, Invalidation Check) Invalidations<T>(string id, T? before, T? after, XDocument? subclasses) where T : class
+    {
+        static bool Same(string? a, string? b) => string.Equals(a?.Trim(), b?.Trim(), StringComparison.OrdinalIgnoreCase);
+        var none = new Dictionary<string, string>();
+        switch (before, after)
+        {
+            case (HomebrewSpellModel was, HomebrewSpellModel now):
+                var dropped = was.Lists.Where(l => !now.Lists.Any(n => Same(n, l))).ToList();
+                return (none, (u, ids) => u.PreparedAs
+                    .Where(p => ids.GetValueOrDefault(p.Key) == id)
+                    .SelectMany(p => p.Value.Where(casting => dropped.Any(l => Same(l, casting))))
+                    .Select(casting => new HomebrewInvalidatedPick(id, now.Name.Trim(),
+                        $"Prepared as a {casting} spell, but it would no longer be on the {casting} list. It stays prepared until it is changed.")));
+
+            case (HomebrewSubclassModel was, HomebrewSubclassModel now) when !Same(was.ClassSupports, now.ClassSupports):
+                return (none, (u, ids) => u.ElementIds.Any(g => ids.GetValueOrDefault(g) == id)
+                    ? [new HomebrewInvalidatedPick(id, now.Name.Trim(),
+                        $"Picked for the \"{was.ClassSupports.Trim()}\" choice, but it would answer \"{now.ClassSupports.Trim()}\" instead. It stays picked, but could not be picked there again.")]
+                    : []);
+
+            case (HomebrewClassModel was, HomebrewClassModel now) when subclasses?.Root is { } root && HomebrewWorkshopXml.SubclassKey(was) is var oldKey
+                && HomebrewWorkshopXml.SubclassKey(now) is var newKey && !Same(oldKey, newKey):
+                var left = root.Elements("element")
+                    .Where(e => (string?)e.Attribute("type") == "Archetype" && Same(e.Element("supports")?.Value, oldKey) && (string?)e.Attribute("id") is not null)
+                    .ToDictionary(e => (string)e.Attribute("id")!, e => (string?)e.Attribute("name") ?? (string)e.Attribute("id")!, StringComparer.Ordinal);
+                return (left, (u, ids) => u.ElementIds
+                    .Select(g => ids.GetValueOrDefault(g))
+                    .Where(subclass => subclass is not null && left.ContainsKey(subclass))
+                    .Select(subclass => new HomebrewInvalidatedPick(subclass!, left[subclass!],
+                        $"Picked as a {was.Name.Trim()} subclass, but the class would ask for \"{newKey}\" subclasses instead of \"{oldKey}\". It stays picked, but could not be picked again.")));
+
+            default:
+                return (none, (_, _) => []);
+        }
     }
 
     /// <summary>The elements a record imports as, by Aurora id: each element, and a class's multiclass entry (an element of its own once imported).</summary>
