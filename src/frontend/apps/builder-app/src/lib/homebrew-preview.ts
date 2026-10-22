@@ -60,17 +60,17 @@ export function canSave(preview: HomebrewEditPreview): boolean {
   return !preview.diagnostics.some((d) => d.severity === "error" && d.code !== "stale-revision");
 }
 
-/** The record's revision as a preview saw it; none for a new one. */
+/** The reviewed revision; an empty string guards absence, while null remains the legacy unguarded API save. */
 export function expectedRevisionOf(preview: HomebrewEditPreview): string | null {
-  return preview.isNew ? null : preview.revision;
+  return preview.revision ?? "";
 }
 
 /**
  * The revision a save sends: the one the form was opened on, so a save someone made since is not overwritten
  * unseen; once a save was refused and its fresh review shown, that review's.
  */
-export function revisionToSend(opened: string | null | undefined, refused?: HomebrewEditPreview | null): string | null {
-  return refused ? expectedRevisionOf(refused) : (opened ?? null);
+export function revisionToSend(opened: string | null | undefined, refused?: HomebrewEditPreview | null, reviewed?: HomebrewEditPreview | null): string | null {
+  return refused ? expectedRevisionOf(refused) : (opened ?? (reviewed ? expectedRevisionOf(reviewed) : null));
 }
 
 /** One line on what the save does: "2 changes, 1 removed · 3 characters use it, 1 loses something, 1 has a pick that no longer fits". */

@@ -299,14 +299,17 @@ public sealed partial record CharacterFavoriteRoll
         // whole numbers of any length, so "000000001d6" and "99999999999" are read as the web app reads them
         static BigInteger Number(string digits) => BigInteger.Parse(digits, NumberStyles.None, CultureInfo.InvariantCulture);
         var anyDice = false;
-        var bonus = BigInteger.Zero;
+        // JavaScript accumulates flat terms as IEEE-754 numbers, including rounding after each addition.
+        // Exact integer arithmetic disagrees for cancellation beyond 2^53, even within the 100-character limit.
+        var bonus = 0d;
         foreach (Match m in Term().Matches(s))
         {
             var term = m.Groups[2].Value;
             var d = term.IndexOf('d');
             if (d < 0)
             {
-                bonus += m.Groups[1].Value == "-" ? -Number(term) : Number(term);
+                var value = double.Parse(term, NumberStyles.None, CultureInfo.InvariantCulture);
+                bonus += m.Groups[1].Value == "-" ? -value : value;
                 continue;
             }
             var count = d == 0 ? BigInteger.One : Number(term[..d]);
@@ -317,7 +320,7 @@ public sealed partial record CharacterFavoriteRoll
             }
             anyDice = true;
         }
-        return anyDice || !bonus.IsZero;
+        return anyDice || bonus != 0;
     }
 
     public string? Validate() =>

@@ -204,6 +204,30 @@ public sealed class HomebrewEditPreviewTests : IntegrationTestBase
     }
 
     [TestMethod]
+    public async Task SaveExpectingNoRecord_RefusesAConcurrentCreation_AndPreservesIt()
+    {
+        await _integration.InitializeElements();
+        var preview = await PreviewAsync("spells", Spell());
+        preview.Revision.Should().BeNull();
+        var concurrent = await SavedAsync("spells", Spell(level: 3));
+        var file = await File.ReadAllBytesAsync(SpellsFile);
+
+        var response = await SaveAsync("spells", Spell() with { ExpectedRevision = string.Empty });
+
+        response.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        (await File.ReadAllBytesAsync(SpellsFile)).Should().Equal(file);
+        (await SpellsAsync()).Single().Revision.Should().Be(concurrent.Revision);
+    }
+
+    [TestMethod]
+    public async Task SaveExpectingNoRecord_CreatesItWhenStillAbsent()
+    {
+        await _integration.InitializeElements();
+        var saved = await SavedAsync("spells", Spell() with { ExpectedRevision = string.Empty });
+        saved.Revision.Should().NotBeNullOrEmpty();
+    }
+
+    [TestMethod]
     public async Task ASaveBasedOnAnOlderRevision_IsRefused_WithAFreshPreview()
     {
         await _integration.InitializeElements();
