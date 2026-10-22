@@ -49,6 +49,15 @@ Mk2 stabilization, v0.11.0 (2026-10-20, [MK2_VERIFICATION_REPORT.md](MK2_VERIFIC
   "Dawn" button, resource counts by `usesKeyOf` with "Why?" for a resource's maximum. `pages/homebrew/workshop-tabs.tsx`:
   "What it rolls" section. `lib/api/sheet.ts`: `SheetSpell.mechanics`, `SheetData.classLevels`. Tools:
   `spell-mechanics.mjs`, `custom-resources.mjs` (new); fixtures unchanged.
+- Stage 4 (PDF worker, favorite rolls): `pages/characters/sheet/sheet-page.tsx` makes the PDF with `makeSheetPdf`
+  (`lib/aurora-sheet-client.ts`: a module worker, `lib/aurora-sheet.worker.ts`, with the page as fallback);
+  `lib/aurora-sheet.ts` takes pre-read HTML paragraphs and draws pictures through `newCanvas`/`canvasJpeg` in
+  `lib/portrait-render.ts`; `spellLevelLine` moved to `lib/spell-level-line.ts` (`lib/api/sheet.ts` re-exports it).
+  `pages/battle/battle-page.tsx` (Codex's): a "Favorite rolls" panel below the target panel.
+  `pages/characters/sheet/interactive-sheet.tsx`: the same list under "Resources & rests". Both use the new
+  `pages/battle/favorite-rolls.tsx`; the compendium's dice toast is now `components/lore/dice-toast.ts`. Tools:
+  `fixtures.mjs` has `fixture({ large: true })` (the default is unchanged); `sheet-performance.mjs`,
+  `sheet-pdf-worker.mjs`, `favorite-rolls.mjs` (new).
 - Visual fidelity: `styles/themes.css` (all three palettes; Slate dark), `lib/themes.ts` (`isDarkTheme`),
   `theme-provider.tsx`, `ui/sonner.tsx`, `index.html` (pre-paint theme), `default-layout.tsx` (header text/padding),
   `App.tsx`, `ornaments.tsx`, `ornament.css`, landing, `lore-home.tsx` banner, `campaigns-page.tsx` cards,

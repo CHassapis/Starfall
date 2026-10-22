@@ -74,7 +74,7 @@ is not read from its text at all; resource effects cover armor class, speed, att
 saving throws, which the views do not read); rests switch resource effects off like other effects; item charges still
 come back by hand (not at dawn); a resource's maximum is worked out by the web app, the server only checks bounds.
 
-## Stage 4 (in progress): branch `feature/pdf-worker-favourite-rolls` from 0814b1a, worktree `~/starfall-sheet-rolls`
+## Stage 4 (done): branch `feature/pdf-worker-favourite-rolls` from 0814b1a, worktree `~/starfall-sheet-rolls`
 Stage 3 PR: #31 (full backend with SQL Server 936: 912 passed, 24 skipped, 0 failed).
 
 PDF baseline before any change (`tools/frontend/sheet-performance.mjs`, `fixture({ large: true })`: 72 spells, 40
@@ -82,6 +82,27 @@ features with long made-up texts, 12 pages; desktop Chromium, 3 runs): making th
 2274 ms on the page's thread; the page did not answer for 3312 / 3253 / 3960 ms (a 20 ms timer's longest wait);
 "Download PDF" ready after 6.8–7.4 s. Drawing the pages with pdf.js afterwards: longest task 71–101 ms.
 
-Plan: (a) the PDF made in a module worker (Forge's sheet-render-worker pattern), pictures through OffscreenCanvas,
-fallback on the page when a worker cannot start; page images compared with the fallback's; (b) named favourite rolls
-with `lib/lore/dice.ts`, kept per character with the existing state and access.
+Commits:
+1. 1a0122a PDF in a module worker (`lib/aurora-sheet.worker.ts`, `lib/aurora-sheet-client.ts`; Forge's
+   sheet-render-worker pattern): HTML paragraphs read on the page first, pictures through OffscreenCanvas, the page
+   makes it when the worker cannot. After (final code, 3 runs): longest task while the PDF is made 120 / 120 / 114 ms,
+   longest timer wait 147 / 136 / 134 ms, "Download PDF" ready after 5.5 s; drawing the pages: no long task.
+   `sheet-pdf-worker.mjs`: the 13 pages (with a portrait) are the same pictures from the worker and from the page; a
+   template that cannot load gives the same message.
+2. 4d41510 `CharacterCombat.FavoriteRolls` (id, name, formula; at most 40; kept when a save leaves them out).
+   `CharacterFavoriteRoll.IsDice` accepts what `parseDice` does; both sides test `lib/lore/dice-cases.json`. Null
+   entries (and a resource or roll without id, name or maximum) are refused with 400 instead of failing.
+3. 444e6b8 `pages/battle/favorite-rolls.tsx` in the battle view (panel below the target) and the sheet ("Resources &
+   rests"); rolled with `lib/lore/dice.ts`, shown with the compendium's toast (`components/lore/dice-toast.ts`) and a
+   "Last roll" line. The battle view's `parseRoll` is for damage (never below 0, a total only), so it is not used.
+   Flare's pinned rolls credited (idea only, MPL-2.0).
+4. Docs: API guide "Favorite rolls", this checkpoint, handoff Coordination.
+
+Checks: backend with SQL Server 942: 918 passed, 24 skipped, 0 failed; web 356 passed, 5 skipped; TypeScript clean;
+ESLint 38 errors, 1 warning (as before); frontend Docker image builds; browser checks `favorite-rolls` 50,
+`sheet-pdf-worker` 21, `smoke` 90, `calculation-traces` 36, `accessibility`, `custom-resources` 50, `spell-mechanics`
+38, `homebrew-review` 48, `ornaments` 110, `units` 17; `sheet-performance` with `MAX_BLOCK_MS=500` passed.
+
+Limits: the PDF still takes about 5.5 s on the large character (now beside the page); one task of about 120 ms stays
+on the page while it is made; a browser without module workers makes it on the page as before. Favorite rolls are plain
+dice (no advantage, no damage type), results are not saved, and the order is the order added.
