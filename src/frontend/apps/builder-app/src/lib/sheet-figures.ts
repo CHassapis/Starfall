@@ -1,4 +1,5 @@
 import { attackModes, type AttackMode, type Catalog, type CharacterFacts, type Inventory } from "@/lib/rules/items";
+import type { Caster } from "@/lib/rules/magic";
 import { abilityModifier, calculated, fixed, fromContent, TraceBuilder, TraceRecorder, userSupplied } from "@/lib/rules/trace";
 import type { CalculationTrace, TraceSource } from "@/lib/contracts/calculation-trace";
 import { sheetArmor, sheetAttackLines, type SheetArmor, type SheetAttackLine } from "@/lib/sheet-model";
@@ -245,4 +246,14 @@ function recordHitPoints(t: TraceBuilder, classes: { level: number; die: number;
   t.add(constitution.final, "Constitution modifier for each level", undefined, constitution);
   if (bonus) t.add(bonus, "Hit point bonuses", calculated("hp"));
   t.finish(total);
+}
+
+/**
+ * A spellcasting's attack bonus and save DC as the server works them out (with item bonuses such as a rod's,
+ * "<class>:spellcasting:attack" and "spellcasting:dc"), found by the spellcasting's name; proficiency plus the ability
+ * modifier only for a spellcasting the server has not worked out.
+ */
+export function spellcastingFigures(name: string, abilityModifier: number, proficiencyBonus: number, server: readonly Pick<Caster, "name" | "attack" | "dc">[] | undefined): { attackBonus: number; saveDc: number } {
+  const own = server?.find((c) => c.name.toLowerCase() === name.toLowerCase());
+  return own ? { attackBonus: own.attack, saveDc: own.dc } : { attackBonus: proficiencyBonus + abilityModifier, saveDc: 8 + proficiencyBonus + abilityModifier };
 }

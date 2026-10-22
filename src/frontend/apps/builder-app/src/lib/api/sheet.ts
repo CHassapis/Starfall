@@ -8,7 +8,7 @@ import { itemSpells, type ItemSpellRef } from "@/lib/rules/item-spells";
 import { EMPTY_MAGIC, type KnownSpell, type MagicState, type Spellcasting } from "@/lib/rules/magic";
 import { proficiencyLevel, summarizeProficiencies, type Proficiencies, type ProficiencyRegistration } from "@/lib/rules/proficiencies";
 import type { CalculationTrace } from "@/lib/contracts/calculation-trace";
-import { sheetFigures, traceSheetFigure, type SheetFigureInput } from "@/lib/sheet-figures";
+import { sheetFigures, spellcastingFigures, traceSheetFigure, type SheetFigureInput } from "@/lib/sheet-figures";
 import {
   sheetEquipment,
   sheetItemCards,
@@ -394,6 +394,8 @@ export function useSheetData(characterId: string): {
       const name = entry!.spellcasting!.name;
       const slug = statisticName(name);
       const castingMod = mod(entry!.spellcasting!.ability.slice(0, 3).toUpperCase());
+      // the server's figures: they include item bonuses ("<class>:spellcasting:attack", "spellcasting:dc")
+      const figures = spellcastingFigures(name, castingMod, proficiencyBonus, casting.data.casters);
       const slots: Record<number, number> = {};
       for (let l = 1; l <= 9; l++) {
         const n = stat(`${slug}:spellcasting:slots:${l}`);
@@ -404,8 +406,8 @@ export function useSheetData(characterId: string): {
         casting: {
           name,
           ability: entry!.spellcasting!.ability,
-          attackBonus: proficiencyBonus + castingMod,
-          saveDc: 8 + proficiencyBonus + castingMod,
+          attackBonus: figures.attackBonus,
+          saveDc: figures.saveDc,
           prepare: stat(`${slug}:spellcasting:prepare`) ?? null,
           slots,
           spells: [] as SheetSpell[],
