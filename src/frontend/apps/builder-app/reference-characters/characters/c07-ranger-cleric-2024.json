@@ -1,0 +1,75 @@
+{
+  "id": "c07-ranger-cleric-2024",
+  "title": "2024 ranger 3 / cleric 1: multiclass spell slots rounded up",
+  "edition": "2024",
+  "covers": ["multiclassing", "2024 half caster rounds up", "background ability increases", "feat adding proficiency to initiative", "medium magic armor past its Dexterity cap", "ranged weapon with a fighting style"],
+  "steps": [
+    { "abilities": { "Strength": 12, "Dexterity": 15, "Constitution": 13, "Intelligence": 10, "Wisdom": 14, "Charisma": 8 } },
+    { "pick": "Class", "option": "Ref Ranger" },
+    { "pick": "Species", "option": "Ref Wanderer" },
+    { "pick": "Background", "option": "Ref Sentinel" },
+    { "pick": "Skill Proficiency (Ref Ranger)", "option": "Skill Proficiency (Stealth)" },
+    { "pick": "Skill Proficiency (Ref Ranger)", "option": "Skill Proficiency (Survival)" },
+    { "pick": "Skill Proficiency (Ref Ranger)", "option": "Skill Proficiency (Athletics)" },
+    { "level": "Ref Ranger", "to": 3 },
+    { "multiclass": "Ref Cleric" },
+    { "inventory": [
+      { "id": "breastplate-1", "item": "ID_REF_MAGIC_BREASTPLATE_1", "base": "ID_REF_ARMOR_BREASTPLATE", "equipped": "Armor" },
+      { "id": "shortbow", "item": "ID_REF_WEAPON_SHORTBOW", "equipped": "Two-Handed", "attack": 1 }
+    ] }
+  ],
+  "expected": {
+    "level": 4,
+    "proficiencyBonus": { "value": 2, "why": "character level 4 (3 + 1): +2" },
+    "abilities": {
+      "STR": { "score": 12, "modifier": 1, "why": "12 base" },
+      "DEX": { "score": 16, "modifier": 3, "why": "15 base + 1 Ref Sentinel" },
+      "CON": { "score": 13, "modifier": 1, "why": "13 base" },
+      "INT": { "score": 10, "modifier": 0, "why": "10 base" },
+      "WIS": { "score": 16, "modifier": 3, "why": "14 base + 2 Ref Sentinel" },
+      "CHA": { "score": 8, "modifier": -1, "why": "8 base" }
+    },
+    "saves": {
+      "STR": { "value": 3, "why": "Str +1 + proficiency 2 (Ref Ranger)" },
+      "DEX": { "value": 5, "why": "Dex +3 + proficiency 2 (Ref Ranger)" },
+      "CON": { "value": 1, "why": "Con +1" },
+      "INT": { "value": 0, "why": "Int +0" },
+      "WIS": { "value": 3, "why": "Wis +3; Ref Cleric as a second class gives no saving throws" },
+      "CHA": { "value": -1, "why": "Cha -1" }
+    },
+    "skills": {
+      "Stealth": { "value": 5, "why": "Dex +3 + proficiency 2" },
+      "Survival": { "value": 5, "why": "Wis +3 + proficiency 2" },
+      "Athletics": { "value": 3, "why": "Str +1 + proficiency 2" },
+      "Insight": { "value": 5, "why": "Wis +3 + proficiency 2 (Ref Sentinel)" },
+      "Perception": { "value": 5, "why": "Wis +3 + proficiency 2 (Ref Sentinel)" }
+    },
+    "statistics": {
+      "ac:armored:enhancement": { "value": 1, "why": "Ref Breastplate +1" },
+      "ranged:attack": { "value": 2, "why": "Ref Archery Style (ranger level 2)" },
+      "innate-speed": { "value": 30, "why": "Ref Wanderer" },
+      "initiative": { "value": 2, "why": "Ref Alertness: + proficiency bonus (2)" }
+    },
+    "registered": ["ID_PROFICIENCY_WEAPON_PROFICIENCY_SIMPLE_WEAPONS", "ID_PROFICIENCY_WEAPON_PROFICIENCY_MARTIAL_WEAPONS"],
+    "classes": [{ "name": "Ref Ranger", "level": 3, "hitDie": 10 }, { "name": "Ref Cleric", "level": 1, "hitDie": 8 }],
+    "spellcasting": {
+      "Ref Ranger": { "ability": "Wisdom", "attack": 5, "dc": 13, "multiclass": "Half", "classLevel": 3, "edition": "2024", "why": "2 + 3; 8 + 2 + 3" },
+      "Ref Cleric": { "ability": "Wisdom", "attack": 5, "dc": 13, "multiclass": "Full", "classLevel": 1, "edition": "2024", "why": "2 + 3; 8 + 2 + 3" }
+    },
+    "spellSlots": { "value": { "1": 4, "2": 2 }, "why": "multiclass caster level: ranger 3 / 2 rounded up (2024) = 2, + cleric 1 = 3; four 1st, two 2nd (2014 rounding would give level 2: three 1st only)" },
+    "armorClass": { "value": 17, "why": "14 Ref Breastplate + Dex +2 (medium armor allows at most +2 of Dex +3) + 1 magic armor" },
+    "hitPoints": { "value": 31, "why": "Ref Ranger 10 + 2 x 6 = 22; Ref Cleric 1 x 5 = 5; Con +1 x 4 = 4" },
+    "initiative": { "value": 5, "why": "Dex +3 + 2 Ref Alertness" },
+    "speed": { "walk": 30, "why": "Ref Wanderer" },
+    "passivePerception": { "value": 15, "why": "10 + Perception +5" },
+    "attacks": [
+      { "name": "Ref Shortbow", "attack": "+7 vs AC", "damage": "1d6+3 piercing", "why": "Dex +3 + proficiency 2 + 2 Ref Archery Style (attack only); damage d6 + Dex 3" }
+    ],
+    "attacksPerAction": 1,
+    "traces": [
+      { "value": "statistic:initiative", "final": 2, "excluded": [] },
+      { "value": "initiative", "final": 5, "excluded": [] },
+      { "value": "armor-class", "final": 17, "excluded": [], "operations": ["minimum"] }
+    ]
+  }
+}

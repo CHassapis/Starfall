@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- the reference content as an Aurora index; the urls are never fetched (the files sit next to it) -->
+<index>
+  <files>
+    <file name="reference-core.xml" url="https://example.invalid/reference-core.xml" />
+    <file name="reference-2014.xml" url="https://example.invalid/reference-2014.xml" />
+    <file name="reference-2024.xml" url="https://example.invalid/reference-2024.xml" />
+  </files>
+</index>

@@ -1,0 +1,63 @@
+{
+  "id": "c02-fighter-2014-asi",
+  "title": "2014 fighter 4 whose Strength increases pass the maximum",
+  "edition": "2014",
+  "covers": ["ability score improvement through the generated choice", "maximum 20", "HP fixed average", "medium armor below its Dexterity cap", "magic weapon +1 two-handed (versatile)"],
+  "steps": [
+    { "abilities": { "Strength": 17, "Dexterity": 13, "Constitution": 15, "Intelligence": 8, "Wisdom": 10, "Charisma": 10 } },
+    { "pick": "Class", "option": "Ref Fighter" },
+    { "pick": "Species", "option": "Ref Plains Folk" },
+    { "pick": "Skill Proficiency (Ref Fighter)", "option": "Skill Proficiency (Athletics)" },
+    { "pick": "Skill Proficiency (Ref Fighter)", "option": "Skill Proficiency (Perception)" },
+    { "level": "Ref Fighter", "to": 4 },
+    { "pick": "Improvement Option (Ref Fighter 4)", "option": "Ability Score Improvement (Ref Fighter 4)" },
+    { "pick": "Ability Score Improvement (Ref Fighter 4)", "option": "Strength" },
+    { "pick": "Ability Score Improvement (Ref Fighter 4)", "option": "Strength" },
+    { "inventory": [
+      { "id": "breastplate", "item": "ID_REF_ARMOR_BREASTPLATE", "equipped": "Armor" },
+      { "id": "longsword-1", "item": "ID_REF_MAGIC_LONGSWORD_1", "base": "ID_REF_WEAPON_LONGSWORD", "equipped": "Two-Handed", "attack": 1 }
+    ] }
+  ],
+  "expected": {
+    "level": 4,
+    "proficiencyBonus": { "value": 2, "why": "level 4: +2" },
+    "abilities": {
+      "STR": { "score": 20, "modifier": 5, "why": "17 base + 2 Ref Plains Folk + 1 + 1 improvement = 21, above the maximum 20 (strength:max), so 20" },
+      "DEX": { "score": 13, "modifier": 1, "why": "13 base" },
+      "CON": { "score": 15, "modifier": 2, "why": "15 base" },
+      "INT": { "score": 8, "modifier": -1, "why": "8 base" },
+      "WIS": { "score": 10, "modifier": 0, "why": "10 base" },
+      "CHA": { "score": 11, "modifier": 0, "why": "10 base + 1 Ref Plains Folk" }
+    },
+    "saves": {
+      "STR": { "value": 7, "why": "Str +5 + proficiency 2" },
+      "DEX": { "value": 1, "why": "Dex +1" },
+      "CON": { "value": 4, "why": "Con +2 + proficiency 2" },
+      "INT": { "value": -1, "why": "Int -1" },
+      "WIS": { "value": 0, "why": "Wis +0" },
+      "CHA": { "value": 0, "why": "Cha +0" }
+    },
+    "skills": {
+      "Athletics": { "value": 7, "why": "Str +5 + proficiency 2" },
+      "Perception": { "value": 2, "why": "Wis +0 + proficiency 2" }
+    },
+    "statistics": {
+      "ac:misc": { "value": 1, "why": "Ref Defensive Style (wearing armor)" },
+      "innate-speed": { "value": 30, "why": "Ref Plains Folk" }
+    },
+    "registered": ["ID_PROFICIENCY_WEAPON_PROFICIENCY_SIMPLE_WEAPONS", "ID_PROFICIENCY_WEAPON_PROFICIENCY_MARTIAL_WEAPONS"],
+    "classes": [{ "name": "Ref Fighter", "level": 4, "hitDie": 10 }],
+    "armorClass": { "value": 16, "why": "14 Ref Breastplate + Dex +1 (medium armor allows up to +2) + 1 Ref Defensive Style" },
+    "hitPoints": { "value": 36, "why": "10 + 3 x 6 (d10 average) + Con +2 x 4 = 10 + 18 + 8" },
+    "initiative": { "value": 1, "why": "Dex +1" },
+    "speed": { "walk": 30, "why": "Ref Plains Folk" },
+    "passivePerception": { "value": 12, "why": "10 + Perception +2" },
+    "attacks": [
+      { "name": "Ref Longsword +1", "attack": "+8 vs AC", "damage": "1d10+6 slashing", "why": "Str +5 + proficiency 2 + 1 magic; two hands: versatile d10 + Str 5 + 1 magic" }
+    ],
+    "attacksPerAction": 1,
+    "traces": [
+      { "value": "ability-score:strength", "final": 20, "excluded": [], "operations": ["minimum"] }
+    ]
+  }
+}

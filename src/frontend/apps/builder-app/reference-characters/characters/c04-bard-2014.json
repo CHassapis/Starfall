@@ -1,0 +1,95 @@
+{
+  "id": "c04-bard-2014",
+  "title": "2014 bard with half proficiency and an item that improves spells",
+  "edition": "2014",
+  "covers": ["spellcaster", "half proficiency rounded down (skills and initiative)", "spell attack and save DC with an item bonus", "hit point bonus per level from the species", "species speed 25", "removing an attuned item"],
+  "steps": [
+    { "abilities": { "Strength": 8, "Dexterity": 14, "Constitution": 12, "Intelligence": 10, "Wisdom": 10, "Charisma": 16 } },
+    { "pick": "Class", "option": "Ref Bard" },
+    { "pick": "Species", "option": "Ref Hill Folk" },
+    { "pick": "Skill Proficiency (Ref Bard)", "option": "Skill Proficiency (Persuasion)" },
+    { "pick": "Skill Proficiency (Ref Bard)", "option": "Skill Proficiency (Performance)" },
+    { "pick": "Skill Proficiency (Ref Bard)", "option": "Skill Proficiency (Deception)" },
+    { "level": "Ref Bard", "to": 2 },
+    { "inventory": [
+      { "id": "dagger", "item": "ID_REF_WEAPON_DAGGER", "equipped": "Main Hand", "attack": 1 },
+      { "id": "rod", "item": "ID_REF_MAGIC_ROD_OF_FOCUS", "equipped": "Worn", "attuned": true }
+    ] }
+  ],
+  "expected": {
+    "level": 2,
+    "proficiencyBonus": { "value": 2, "why": "level 2: +2" },
+    "abilities": {
+      "STR": { "score": 8, "modifier": -1, "why": "8 base" },
+      "DEX": { "score": 14, "modifier": 2, "why": "14 base" },
+      "CON": { "score": 14, "modifier": 2, "why": "12 base + 2 Ref Hill Folk" },
+      "INT": { "score": 10, "modifier": 0, "why": "10 base" },
+      "WIS": { "score": 11, "modifier": 0, "why": "10 base + 1 Ref Hill Folk; floor(1 / 2) = 0" },
+      "CHA": { "score": 16, "modifier": 3, "why": "16 base" }
+    },
+    "saves": {
+      "STR": { "value": -1, "why": "Str -1 (half proficiency is for ability checks, not saving throws)" },
+      "DEX": { "value": 4, "why": "Dex +2 + proficiency 2" },
+      "CON": { "value": 2, "why": "Con +2" },
+      "INT": { "value": 0, "why": "Int +0" },
+      "WIS": { "value": 0, "why": "Wis +0" },
+      "CHA": { "value": 5, "why": "Cha +3 + proficiency 2" }
+    },
+    "skills": {
+      "Persuasion": { "value": 5, "why": "Cha +3 + proficiency 2 (no half proficiency: it is only for skills without proficiency)" },
+      "Performance": { "value": 5, "why": "Cha +3 + proficiency 2" },
+      "Deception": { "value": 5, "why": "Cha +3 + proficiency 2" },
+      "Athletics": { "value": 0, "why": "Str -1 + half proficiency 1 (2 / 2)" },
+      "Stealth": { "value": 3, "why": "Dex +2 + half proficiency 1" },
+      "Perception": { "value": 1, "why": "Wis +0 + half proficiency 1" },
+      "Arcana": { "value": 1, "why": "Int +0 + half proficiency 1" },
+      "Animal Handling": { "value": 1, "why": "Wis +0 + half proficiency 1" }
+    },
+    "statistics": {
+      "innate-speed": { "value": 25, "why": "Ref Hill Folk" },
+      "hp": { "value": 2, "why": "Ref Hill Folk: + character level (2)" },
+      "initiative": { "value": 1, "why": "Ref Bard Versatility: half proficiency (2 / 2 = 1) on initiative" },
+      "spellcasting:attack": { "value": 1, "why": "Ref Rod of Focus (attuned)" },
+      "spellcasting:dc": { "value": 1, "why": "Ref Rod of Focus (attuned)" }
+    },
+    "registered": ["ID_PROFICIENCY_WEAPON_PROFICIENCY_SIMPLE_WEAPONS"],
+    "notRegistered": ["ID_PROFICIENCY_WEAPON_PROFICIENCY_MARTIAL_WEAPONS"],
+    "classes": [{ "name": "Ref Bard", "level": 2, "hitDie": 8 }],
+    "spellcasting": {
+      "Ref Bard": { "ability": "Charisma", "attack": 6, "dc": 14, "multiclass": "Full", "classLevel": 2, "edition": "2014", "slots": { "1": 3 },
+        "why": "attack: proficiency 2 + Cha 3 + 1 Ref Rod of Focus; DC: 8 + 2 + 3 + 1 Ref Rod of Focus; slots: 2 at level 1, one more at level 2" }
+    },
+    "spellSlots": { "value": { "1": 3 }, "why": "one spellcasting: its own table" },
+    "armorClass": { "value": 12, "why": "10 + Dex +2 (no armor)" },
+    "hitPoints": { "value": 19, "why": "8 + 1 x 5 (d8 average) + Con +2 x 2 + 2 Ref Hill Folk = 8 + 5 + 4 + 2" },
+    "initiative": { "value": 3, "why": "Dex +2 + 1 half proficiency" },
+    "speed": { "walk": 25, "why": "Ref Hill Folk" },
+    "passivePerception": { "value": 11, "why": "10 + Perception +1" },
+    "attacks": [
+      { "name": "Ref Dagger", "attack": "+4 vs AC", "damage": "1d4+2 piercing", "why": "finesse: Dex +2 rather than Str -1; proficiency 2 (simple weapons)" }
+    ],
+    "attacksPerAction": 1,
+    "traces": [
+      { "value": "spell-attack:ref-bard", "final": 6, "excluded": [] },
+      { "value": "spell-save-dc:ref-bard", "final": 14, "excluded": [] },
+      { "value": "skill:athletics", "final": 0, "excluded": [], "operations": ["round-down"] }
+    ]
+  },
+  "scenarios": [
+    {
+      "id": "rod-removed",
+      "title": "the rod is no longer attuned",
+      "steps": [{ "inventory": [
+        { "id": "dagger", "item": "ID_REF_WEAPON_DAGGER", "equipped": "Main Hand", "attack": 1 },
+        { "id": "rod", "item": "ID_REF_MAGIC_ROD_OF_FOCUS" }
+      ] }],
+      "expected": {
+        "spellcasting": {
+          "Ref Bard": { "ability": "Charisma", "attack": 5, "dc": 13, "multiclass": "Full", "classLevel": 2, "edition": "2014", "slots": { "1": 3 }, "why": "2 + 3; 8 + 2 + 3" }
+        },
+        "absentStatistics": ["spellcasting:attack", "spellcasting:dc"],
+        "traces": [{ "value": "spell-attack:ref-bard", "final": 5, "excluded": [] }]
+      }
+    }
+  ]
+}

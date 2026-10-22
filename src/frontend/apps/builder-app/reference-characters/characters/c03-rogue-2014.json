@@ -1,0 +1,80 @@
+{
+  "id": "c03-rogue-2014",
+  "title": "2014 rogue with expertise and the same skill from class and background",
+  "edition": "2014",
+  "covers": ["skill proficiency", "expertise (double proficiency)", "the same proficiency twice counts once", "finesse weapons use the better ability", "weapon proficiency by the weapon's own id", "light armor", "species speed 35", "Starfall character file export and import"],
+  "steps": [
+    { "abilities": { "Strength": 8, "Dexterity": 16, "Constitution": 12, "Intelligence": 13, "Wisdom": 14, "Charisma": 10 } },
+    { "pick": "Class", "option": "Ref Rogue" },
+    { "pick": "Species", "option": "Ref Swift Folk" },
+    { "pick": "Skill Proficiency (Ref Rogue)", "option": "Skill Proficiency (Stealth)" },
+    { "pick": "Skill Proficiency (Ref Rogue)", "option": "Skill Proficiency (Perception)" },
+    { "pick": "Skill Proficiency (Ref Rogue)", "option": "Skill Proficiency (Acrobatics)" },
+    { "pick": "Skill Proficiency (Ref Rogue)", "option": "Skill Proficiency (Insight)" },
+    { "pick": "Expertise (Ref Rogue)", "option": "Skill Expertise (Stealth)" },
+    { "pick": "Expertise (Ref Rogue)", "option": "Skill Expertise (Perception)" },
+    { "pick": "Background", "option": "Ref Urchin", "why": "after the class skills: the builder offers no skill the character already has, so Stealth is picked first and the background grants it again" },
+    { "level": "Ref Rogue", "to": 3 },
+    { "inventory": [
+      { "id": "leather", "item": "ID_REF_ARMOR_LEATHER", "equipped": "Armor" },
+      { "id": "rapier", "item": "ID_REF_WEAPON_RAPIER", "equipped": "Main Hand", "attack": 1 },
+      { "id": "dagger", "item": "ID_REF_WEAPON_DAGGER", "equipped": "Off Hand", "attack": 2 }
+    ] }
+  ],
+  "expected": {
+    "level": 3,
+    "proficiencyBonus": { "value": 2, "why": "level 3: +2" },
+    "abilities": {
+      "STR": { "score": 8, "modifier": -1, "why": "8 base" },
+      "DEX": { "score": 18, "modifier": 4, "why": "16 base + 2 Ref Swift Folk" },
+      "CON": { "score": 12, "modifier": 1, "why": "12 base" },
+      "INT": { "score": 14, "modifier": 2, "why": "13 base + 1 Ref Swift Folk" },
+      "WIS": { "score": 14, "modifier": 2, "why": "14 base" },
+      "CHA": { "score": 10, "modifier": 0, "why": "10 base" }
+    },
+    "saves": {
+      "STR": { "value": -1, "why": "Str -1" },
+      "DEX": { "value": 6, "why": "Dex +4 + proficiency 2 (Ref Rogue)" },
+      "CON": { "value": 1, "why": "Con +1" },
+      "INT": { "value": 4, "why": "Int +2 + proficiency 2 (Ref Rogue)" },
+      "WIS": { "value": 2, "why": "Wis +2" },
+      "CHA": { "value": 0, "why": "Cha +0" }
+    },
+    "skills": {
+      "Stealth": { "value": 8, "why": "Dex +4 + proficiency 2 + expertise 2; Ref Urchin's Stealth proficiency is the same kind of bonus and counts once" },
+      "Perception": { "value": 6, "why": "Wis +2 + proficiency 2 + expertise 2" },
+      "Acrobatics": { "value": 6, "why": "Dex +4 + proficiency 2" },
+      "Insight": { "value": 4, "why": "Wis +2 + proficiency 2" },
+      "Sleight of Hand": { "value": 6, "why": "Dex +4 + proficiency 2 (Ref Urchin)" },
+      "Athletics": { "value": -1, "why": "Str -1, not proficient" }
+    },
+    "statistics": {
+      "innate-speed": { "value": 35, "why": "Ref Swift Folk" }
+    },
+    "registered": ["ID_PROFICIENCY_WEAPON_PROFICIENCY_SIMPLE_WEAPONS", "ID_REF_PROFICIENCY_WEAPON_RAPIER"],
+    "notRegistered": ["ID_PROFICIENCY_WEAPON_PROFICIENCY_MARTIAL_WEAPONS"],
+    "classes": [{ "name": "Ref Rogue", "level": 3, "hitDie": 8 }],
+    "armorClass": { "value": 15, "why": "11 Ref Leather Armor + Dex +4 (light armor: all of it)" },
+    "hitPoints": { "value": 21, "why": "8 + 2 x 5 (d8 average) + Con +1 x 3 = 8 + 10 + 3" },
+    "initiative": { "value": 4, "why": "Dex +4" },
+    "speed": { "walk": 35, "why": "Ref Swift Folk" },
+    "passivePerception": { "value": 16, "why": "10 + Perception +6" },
+    "attacks": [
+      { "name": "Ref Rapier", "attack": "+6 vs AC", "damage": "1d8+4 piercing", "why": "finesse: Dex +4 rather than Str -1; proficient through the rapier's own proficiency (Ref Rogue) +2" },
+      { "name": "Ref Dagger", "attack": "+6 vs AC", "damage": "1d4+4 piercing", "why": "finesse Dex +4 + proficiency 2 (simple weapons); the attack list shows the weapon's full line" }
+    ],
+    "attacksPerAction": 1,
+    "traces": [
+      { "value": "skill:stealth", "final": 8, "excluded": [{ "reason": "stacking", "value": 2 }] },
+      { "value": "attack:rapier:to-hit", "final": 6, "excluded": [{ "reason": "lower-alternative", "value": -1 }] }
+    ]
+  },
+  "scenarios": [
+    {
+      "id": "export-import",
+      "title": "exported as a Starfall character file and imported as a new character",
+      "steps": [{ "exportImport": true }],
+      "expected": {}
+    }
+  ]
+}

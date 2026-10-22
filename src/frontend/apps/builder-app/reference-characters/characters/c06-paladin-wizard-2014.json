@@ -1,0 +1,70 @@
+{
+  "id": "c06-paladin-wizard-2014",
+  "title": "2014 paladin 3 / wizard 2: multiclass spell slots rounded down",
+  "edition": "2014",
+  "covers": ["multiclassing", "2014 half caster rounds down", "two spellcastings with their own abilities", "saving throws only from the first class", "multiclass hit points"],
+  "steps": [
+    { "abilities": { "Strength": 14, "Dexterity": 10, "Constitution": 14, "Intelligence": 13, "Wisdom": 10, "Charisma": 15 } },
+    { "pick": "Class", "option": "Ref Paladin" },
+    { "pick": "Species", "option": "Ref Plains Folk" },
+    { "pick": "Skill Proficiency (Ref Paladin)", "option": "Skill Proficiency (Persuasion)" },
+    { "pick": "Skill Proficiency (Ref Paladin)", "option": "Skill Proficiency (Religion)" },
+    { "level": "Ref Paladin", "to": 3 },
+    { "multiclass": "Ref Wizard" },
+    { "level": "Ref Wizard", "to": 2 },
+    { "inventory": [
+      { "id": "chain-mail", "item": "ID_REF_ARMOR_CHAIN_MAIL", "equipped": "Armor" },
+      { "id": "shield", "item": "ID_REF_ARMOR_SHIELD", "equipped": "Off Hand" },
+      { "id": "longsword", "item": "ID_REF_WEAPON_LONGSWORD", "equipped": "Main Hand", "attack": 1 }
+    ] }
+  ],
+  "expected": {
+    "level": 5,
+    "proficiencyBonus": { "value": 3, "why": "character level 5 (3 + 2): +3" },
+    "abilities": {
+      "STR": { "score": 16, "modifier": 3, "why": "14 base + 2 Ref Plains Folk" },
+      "DEX": { "score": 10, "modifier": 0, "why": "10 base" },
+      "CON": { "score": 14, "modifier": 2, "why": "14 base" },
+      "INT": { "score": 13, "modifier": 1, "why": "13 base" },
+      "WIS": { "score": 10, "modifier": 0, "why": "10 base" },
+      "CHA": { "score": 16, "modifier": 3, "why": "15 base + 1 Ref Plains Folk" }
+    },
+    "saves": {
+      "STR": { "value": 3, "why": "Str +3" },
+      "DEX": { "value": 0, "why": "Dex +0" },
+      "CON": { "value": 2, "why": "Con +2" },
+      "INT": { "value": 1, "why": "Int +1; Ref Wizard taken as a second class gives no saving throw proficiency" },
+      "WIS": { "value": 3, "why": "Wis +0 + proficiency 3 (Ref Paladin)" },
+      "CHA": { "value": 6, "why": "Cha +3 + proficiency 3 (Ref Paladin)" }
+    },
+    "skills": {
+      "Persuasion": { "value": 6, "why": "Cha +3 + proficiency 3" },
+      "Religion": { "value": 4, "why": "Int +1 + proficiency 3" },
+      "Arcana": { "value": 1, "why": "Int +1, not proficient" }
+    },
+    "statistics": {
+      "innate-speed": { "value": 30, "why": "Ref Plains Folk" }
+    },
+    "registered": ["ID_PROFICIENCY_WEAPON_PROFICIENCY_SIMPLE_WEAPONS", "ID_PROFICIENCY_WEAPON_PROFICIENCY_MARTIAL_WEAPONS"],
+    "classes": [{ "name": "Ref Paladin", "level": 3, "hitDie": 10 }, { "name": "Ref Wizard", "level": 2, "hitDie": 6 }],
+    "spellcasting": {
+      "Ref Paladin": { "ability": "Charisma", "attack": 6, "dc": 14, "multiclass": "Half", "classLevel": 3, "edition": "2014", "why": "3 + 3; 8 + 3 + 3" },
+      "Ref Wizard": { "ability": "Intelligence", "attack": 4, "dc": 12, "multiclass": "Full", "classLevel": 2, "edition": "2014", "why": "3 + 1; 8 + 3 + 1" }
+    },
+    "spellSlots": { "value": { "1": 4, "2": 2 }, "why": "multiclass caster level: paladin 3 / 2 rounded down (2014) = 1, + wizard 2 = 3; the multiclass table at 3: four 1st, two 2nd (2024 rounding would give 4 and three 2nd)" },
+    "armorClass": { "value": 18, "why": "16 Ref Chain Mail + 2 Ref Shield" },
+    "hitPoints": { "value": 40, "why": "Ref Paladin 10 + 2 x 6 = 22; Ref Wizard 2 x 4 (d6 average) = 8; Con +2 x 5 = 10" },
+    "initiative": { "value": 0, "why": "Dex +0" },
+    "speed": { "walk": 30, "why": "Ref Plains Folk" },
+    "passivePerception": { "value": 10, "why": "10 + Perception +0" },
+    "attacks": [
+      { "name": "Ref Longsword", "attack": "+6 vs AC", "damage": "1d8+3 slashing", "why": "Str +3 + proficiency 3; one hand" }
+    ],
+    "attacksPerAction": 1,
+    "traces": [
+      { "value": "spell-attack:ref-paladin", "final": 6, "excluded": [] },
+      { "value": "spell-save-dc:ref-wizard", "final": 12, "excluded": [] },
+      { "value": "saving-throw:intelligence", "final": 1, "excluded": [] }
+    ]
+  }
+}

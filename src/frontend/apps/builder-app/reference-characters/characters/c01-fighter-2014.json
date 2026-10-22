@@ -1,0 +1,100 @@
+{
+  "id": "c01-fighter-2014",
+  "title": "2014 fighter in heavy armor with a shield and a fighting style",
+  "edition": "2014",
+  "covers": ["martial", "heavy armor ignores Dexterity", "shield", "conditional fighting style (needs armor)", "species ability increases", "level-up to 5 (proficiency, Extra Attack, HP)", "taking armor off"],
+  "steps": [
+    { "abilities": { "Strength": 15, "Dexterity": 12, "Constitution": 14, "Intelligence": 10, "Wisdom": 12, "Charisma": 8 } },
+    { "pick": "Class", "option": "Ref Fighter" },
+    { "pick": "Species", "option": "Ref Plains Folk" },
+    { "pick": "Skill Proficiency (Ref Fighter)", "option": "Skill Proficiency (Athletics)" },
+    { "pick": "Skill Proficiency (Ref Fighter)", "option": "Skill Proficiency (Intimidation)" },
+    { "inventory": [
+      { "id": "chain-mail", "item": "ID_REF_ARMOR_CHAIN_MAIL", "equipped": "Armor" },
+      { "id": "shield", "item": "ID_REF_ARMOR_SHIELD", "equipped": "Off Hand" },
+      { "id": "longsword", "item": "ID_REF_WEAPON_LONGSWORD", "equipped": "Main Hand", "attack": 1 }
+    ] }
+  ],
+  "expected": {
+    "level": 1,
+    "proficiencyBonus": { "value": 2, "why": "character level 1: +2 (levels 1-4)" },
+    "abilities": {
+      "STR": { "score": 17, "modifier": 3, "why": "15 base + 2 Ref Plains Folk = 17; floor((17 - 10) / 2) = 3" },
+      "DEX": { "score": 12, "modifier": 1, "why": "12 base; floor(2 / 2) = 1" },
+      "CON": { "score": 14, "modifier": 2, "why": "14 base" },
+      "INT": { "score": 10, "modifier": 0, "why": "10 base" },
+      "WIS": { "score": 12, "modifier": 1, "why": "12 base" },
+      "CHA": { "score": 9, "modifier": -1, "why": "8 base + 1 Ref Plains Folk = 9; floor(-1 / 2) = -1" }
+    },
+    "saves": {
+      "STR": { "value": 5, "why": "Str +3 + proficiency 2 (Ref Fighter)" },
+      "DEX": { "value": 1, "why": "Dex +1" },
+      "CON": { "value": 4, "why": "Con +2 + proficiency 2 (Ref Fighter)" },
+      "INT": { "value": 0, "why": "Int +0" },
+      "WIS": { "value": 1, "why": "Wis +1" },
+      "CHA": { "value": -1, "why": "Cha -1" }
+    },
+    "skills": {
+      "Athletics": { "value": 5, "why": "Str +3 + proficiency 2" },
+      "Intimidation": { "value": 1, "why": "Cha -1 + proficiency 2" },
+      "Perception": { "value": 1, "why": "Wis +1, not proficient" },
+      "Stealth": { "value": 1, "why": "Dex +1, not proficient" }
+    },
+    "statistics": {
+      "ac:misc": { "value": 1, "why": "Ref Defensive Style: +1 while wearing armor" },
+      "innate-speed": { "value": 30, "why": "Ref Plains Folk" }
+    },
+    "registered": ["ID_PROFICIENCY_WEAPON_PROFICIENCY_SIMPLE_WEAPONS", "ID_PROFICIENCY_WEAPON_PROFICIENCY_MARTIAL_WEAPONS"],
+    "classes": [{ "name": "Ref Fighter", "level": 1, "hitDie": 10 }],
+    "armorClass": { "value": 19, "why": "16 Ref Chain Mail (heavy: no Dexterity) + 2 Ref Shield + 1 Ref Defensive Style" },
+    "hitPoints": { "value": 12, "why": "10 (d10, full at level 1) + Con +2 x 1 level" },
+    "initiative": { "value": 1, "why": "Dex +1" },
+    "speed": { "walk": 30, "why": "Ref Plains Folk 30, nothing added" },
+    "passivePerception": { "value": 11, "why": "10 + Perception +1" },
+    "attacks": [
+      { "name": "Ref Longsword", "attack": "+5 vs AC", "damage": "1d8+3 slashing", "why": "Str +3 + proficiency 2 (martial weapons); one hand: d8 + Str 3" }
+    ],
+    "attacksPerAction": 1,
+    "traces": [
+      { "value": "proficiency-bonus", "final": 2, "excluded": [] },
+      { "value": "statistic:ac:misc", "final": 1, "excluded": [] },
+      { "value": "armor-class", "final": 19, "excluded": [] }
+    ]
+  },
+  "scenarios": [
+    {
+      "id": "level-5",
+      "title": "levelled from 1 to 5",
+      "steps": [{ "level": "Ref Fighter", "to": 5 }],
+      "expected": {
+        "level": 5,
+        "proficiencyBonus": { "value": 3, "why": "level 5: +3; the level 1 rule (+2) is the same kind of bonus (base) and lower, so it no longer counts" },
+        "saves": { "STR": { "value": 6, "why": "Str +3 + proficiency 3" }, "CON": { "value": 5, "why": "Con +2 + proficiency 3" } },
+        "skills": { "Athletics": { "value": 6, "why": "Str +3 + proficiency 3" }, "Intimidation": { "value": 2, "why": "Cha -1 + proficiency 3" } },
+        "classes": [{ "name": "Ref Fighter", "level": 5, "hitDie": 10 }],
+        "registered": ["ID_PROFICIENCY_WEAPON_PROFICIENCY_SIMPLE_WEAPONS", "ID_PROFICIENCY_WEAPON_PROFICIENCY_MARTIAL_WEAPONS", "ID_REF_CLASS_FEATURE_FIGHTER_EXTRA_ATTACK"],
+        "hitPoints": { "value": 44, "why": "10 + 4 levels x 6 (d10 fixed average: 10 / 2 + 1) + Con +2 x 5 levels = 10 + 24 + 10" },
+        "attacks": [{ "name": "Ref Longsword", "attack": "+6 vs AC", "damage": "1d8+3 slashing", "why": "Str +3 + proficiency 3" }],
+        "attacksPerAction": 2,
+        "traces": [
+          { "value": "proficiency-bonus", "final": 3, "excluded": [{ "reason": "stacking", "value": 2 }] }
+        ]
+      }
+    },
+    {
+      "id": "armor-off",
+      "title": "chain mail taken off (shield and sword kept)",
+      "steps": [{ "inventory": [
+        { "id": "chain-mail", "item": "ID_REF_ARMOR_CHAIN_MAIL" },
+        { "id": "shield", "item": "ID_REF_ARMOR_SHIELD", "equipped": "Off Hand" },
+        { "id": "longsword", "item": "ID_REF_WEAPON_LONGSWORD", "equipped": "Main Hand", "attack": 1 }
+      ] }],
+      "expected": {
+        "statistics": { "innate-speed": { "value": 30, "why": "unchanged" } },
+        "absentStatistics": ["ac:misc"],
+        "armorClass": { "value": 13, "why": "10 + Dex +1 unarmored + 2 Ref Shield; Ref Defensive Style needs armor, so it is not registered" },
+        "traces": [{ "value": "armor-class", "final": 13, "excluded": [] }]
+      }
+    }
+  ]
+}

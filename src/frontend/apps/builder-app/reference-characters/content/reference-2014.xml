@@ -1,0 +1,174 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Starfall reference content, 2014 rules (source without "(2024)"). Written for Starfall's tests (see ../README.md):
+  invented names, figures shaped like Aurora's rules, no book text.
+-->
+<elements>
+  <!-- ======================================================================= classes -->
+  <element name="Ref Fighter" type="Class" source="Starfall Reference" id="ID_REF_CLASS_FIGHTER">
+    <setters><set name="hd">d10</set></setters>
+    <rules>
+      <grant type="Proficiency" id="ID_REF_PROFICIENCY_SAVE_STRENGTH" />
+      <grant type="Proficiency" id="ID_REF_PROFICIENCY_SAVE_CONSTITUTION" />
+      <grant type="Proficiency" id="ID_PROFICIENCY_WEAPON_PROFICIENCY_SIMPLE_WEAPONS" />
+      <grant type="Proficiency" id="ID_PROFICIENCY_WEAPON_PROFICIENCY_MARTIAL_WEAPONS" />
+      <grant type="Proficiency" id="ID_REF_PROFICIENCY_ARMOR_LIGHT" />
+      <grant type="Proficiency" id="ID_REF_PROFICIENCY_ARMOR_MEDIUM" />
+      <grant type="Proficiency" id="ID_REF_PROFICIENCY_ARMOR_HEAVY" />
+      <grant type="Proficiency" id="ID_REF_PROFICIENCY_ARMOR_SHIELDS" />
+      <select type="Proficiency" name="Skill Proficiency (Ref Fighter)" supports="Ref Fighter Skill" number="2" />
+      <grant type="Class Feature" id="ID_REF_CLASS_FEATURE_DEFENSIVE_STYLE" level="1" />
+      <select type="Class Feature" name="Improvement Option (Ref Fighter 4)" supports="Improvement Option,Ref Fighter,4" level="4" />
+      <grant type="Class Feature" id="ID_REF_CLASS_FEATURE_FIGHTER_EXTRA_ATTACK" level="5" />
+    </rules>
+  </element>
+  <element name="Ref Defensive Style" type="Class Feature" source="Starfall Reference" id="ID_REF_CLASS_FEATURE_DEFENSIVE_STYLE">
+    <rules><stat name="ac:misc" value="1" bonus="fighting style" equipped="[armor:any]" alt="Ref Defensive Style" /></rules>
+  </element>
+  <element name="Extra Attack" type="Class Feature" source="Starfall Reference" id="ID_REF_CLASS_FEATURE_FIGHTER_EXTRA_ATTACK" />
+
+  <element name="Ref Rogue" type="Class" source="Starfall Reference" id="ID_REF_CLASS_ROGUE">
+    <setters><set name="hd">d8</set></setters>
+    <rules>
+      <grant type="Proficiency" id="ID_REF_PROFICIENCY_SAVE_DEXTERITY" />
+      <grant type="Proficiency" id="ID_REF_PROFICIENCY_SAVE_INTELLIGENCE" />
+      <grant type="Proficiency" id="ID_PROFICIENCY_WEAPON_PROFICIENCY_SIMPLE_WEAPONS" />
+      <grant type="Proficiency" id="ID_REF_PROFICIENCY_WEAPON_RAPIER" />
+      <grant type="Proficiency" id="ID_REF_PROFICIENCY_ARMOR_LIGHT" />
+      <select type="Proficiency" name="Skill Proficiency (Ref Rogue)" supports="Ref Rogue Skill" number="4" />
+      <select type="Proficiency" name="Expertise (Ref Rogue)" supports="Ref Expertise" number="2" />
+    </rules>
+  </element>
+
+  <element name="Ref Bard" type="Class" source="Starfall Reference" id="ID_REF_CLASS_BARD">
+    <setters><set name="hd">d8</set></setters>
+    <rules>
+      <grant type="Proficiency" id="ID_REF_PROFICIENCY_SAVE_DEXTERITY" />
+      <grant type="Proficiency" id="ID_REF_PROFICIENCY_SAVE_CHARISMA" />
+      <grant type="Proficiency" id="ID_PROFICIENCY_WEAPON_PROFICIENCY_SIMPLE_WEAPONS" />
+      <grant type="Proficiency" id="ID_REF_PROFICIENCY_ARMOR_LIGHT" />
+      <select type="Proficiency" name="Skill Proficiency (Ref Bard)" supports="Ref Bard Skill" number="3" />
+      <grant type="Class Feature" id="ID_REF_CLASS_FEATURE_BARD_SPELLCASTING" level="1" />
+      <grant type="Class Feature" id="ID_REF_CLASS_FEATURE_BARD_VERSATILITY" level="2" />
+      <stat name="ref bard:spellcasting:slots:1" value="2" level="1" />
+      <stat name="ref bard:spellcasting:slots:1" value="1" level="2" />
+    </rules>
+  </element>
+  <element name="Ref Bard Spellcasting" type="Class Feature" source="Starfall Reference" id="ID_REF_CLASS_FEATURE_BARD_SPELLCASTING">
+    <spellcasting name="Ref Bard" ability="Charisma" allowReplace="true">
+      <list known="true">Ref Bard</list>
+    </spellcasting>
+    <rules><grant type="Grants" id="ID_INTERNAL_GRANT_MULTICLASS_SPELLCASTING_SLOTS_FULL" /></rules>
+  </element>
+  <!-- half proficiency (rounded down in 2014) on every check without proficiency, and on initiative -->
+  <element name="Ref Bard Versatility" type="Class Feature" source="Starfall Reference" id="ID_REF_CLASS_FEATURE_BARD_VERSATILITY">
+    <rules>
+      <stat name="acrobatics:misc" value="proficiency:half" requirements="!ID_REF_PROFICIENCY_SKILL_ACROBATICS" />
+      <stat name="animal handling:misc" value="proficiency:half" />
+      <stat name="arcana:misc" value="proficiency:half" requirements="!ID_REF_PROFICIENCY_SKILL_ARCANA" />
+      <stat name="athletics:misc" value="proficiency:half" requirements="!ID_REF_PROFICIENCY_SKILL_ATHLETICS" />
+      <stat name="deception:misc" value="proficiency:half" requirements="!ID_REF_PROFICIENCY_SKILL_DECEPTION" />
+      <stat name="history:misc" value="proficiency:half" requirements="!ID_REF_PROFICIENCY_SKILL_HISTORY" />
+      <stat name="insight:misc" value="proficiency:half" requirements="!ID_REF_PROFICIENCY_SKILL_INSIGHT" />
+      <stat name="intimidation:misc" value="proficiency:half" requirements="!ID_REF_PROFICIENCY_SKILL_INTIMIDATION" />
+      <stat name="investigation:misc" value="proficiency:half" />
+      <stat name="medicine:misc" value="proficiency:half" />
+      <stat name="nature:misc" value="proficiency:half" />
+      <stat name="perception:misc" value="proficiency:half" requirements="!ID_REF_PROFICIENCY_SKILL_PERCEPTION" />
+      <stat name="performance:misc" value="proficiency:half" requirements="!ID_REF_PROFICIENCY_SKILL_PERFORMANCE" />
+      <stat name="persuasion:misc" value="proficiency:half" requirements="!ID_REF_PROFICIENCY_SKILL_PERSUASION" />
+      <stat name="religion:misc" value="proficiency:half" requirements="!ID_REF_PROFICIENCY_SKILL_RELIGION" />
+      <stat name="sleight of hand:misc" value="proficiency:half" requirements="!ID_REF_PROFICIENCY_SKILL_SLEIGHTOFHAND" />
+      <stat name="stealth:misc" value="proficiency:half" requirements="!ID_REF_PROFICIENCY_SKILL_STEALTH" />
+      <stat name="survival:misc" value="proficiency:half" requirements="!ID_REF_PROFICIENCY_SKILL_SURVIVAL" />
+      <stat name="initiative" value="proficiency:half" bonus="proficiency" />
+    </rules>
+  </element>
+
+  <element name="Ref Wizard" type="Class" source="Starfall Reference" id="ID_REF_CLASS_WIZARD">
+    <setters><set name="hd">d6</set></setters>
+    <multiclass id="ID_REF_MULTICLASS_WIZARD">
+      <prerequisite>Intelligence 13</prerequisite>
+      <rules />
+    </multiclass>
+    <rules>
+      <grant type="Proficiency" id="ID_REF_PROFICIENCY_SAVE_INTELLIGENCE" requirements="!ID_REF_MULTICLASS_WIZARD" />
+      <grant type="Proficiency" id="ID_REF_PROFICIENCY_SAVE_WISDOM" requirements="!ID_REF_MULTICLASS_WIZARD" />
+      <grant type="Proficiency" id="ID_PROFICIENCY_WEAPON_PROFICIENCY_SIMPLE_WEAPONS" requirements="!ID_REF_MULTICLASS_WIZARD" />
+      <select type="Proficiency" name="Skill Proficiency (Ref Wizard)" supports="Ref Wizard Skill" number="2" requirements="!ID_REF_MULTICLASS_WIZARD" />
+      <grant type="Class Feature" id="ID_REF_CLASS_FEATURE_WIZARD_SPELLCASTING" level="1" />
+      <stat name="ref wizard:spellcasting:slots:1" value="2" level="1" />
+      <stat name="ref wizard:spellcasting:slots:1" value="1" level="2" />
+      <stat name="ref wizard:spellcasting:slots:1" value="1" level="3" />
+      <stat name="ref wizard:spellcasting:slots:2" value="2" level="3" />
+    </rules>
+  </element>
+  <element name="Ref Wizard Spellcasting" type="Class Feature" source="Starfall Reference" id="ID_REF_CLASS_FEATURE_WIZARD_SPELLCASTING">
+    <spellcasting name="Ref Wizard" ability="Intelligence" prepare="true">
+      <list>Ref Wizard</list>
+    </spellcasting>
+    <rules><grant type="Grants" id="ID_INTERNAL_GRANT_MULTICLASS_SPELLCASTING_SLOTS_FULL" /></rules>
+  </element>
+
+  <element name="Ref Paladin" type="Class" source="Starfall Reference" id="ID_REF_CLASS_PALADIN">
+    <setters><set name="hd">d10</set></setters>
+    <rules>
+      <grant type="Proficiency" id="ID_REF_PROFICIENCY_SAVE_WISDOM" />
+      <grant type="Proficiency" id="ID_REF_PROFICIENCY_SAVE_CHARISMA" />
+      <grant type="Proficiency" id="ID_PROFICIENCY_WEAPON_PROFICIENCY_SIMPLE_WEAPONS" />
+      <grant type="Proficiency" id="ID_PROFICIENCY_WEAPON_PROFICIENCY_MARTIAL_WEAPONS" />
+      <grant type="Proficiency" id="ID_REF_PROFICIENCY_ARMOR_LIGHT" />
+      <grant type="Proficiency" id="ID_REF_PROFICIENCY_ARMOR_MEDIUM" />
+      <grant type="Proficiency" id="ID_REF_PROFICIENCY_ARMOR_HEAVY" />
+      <grant type="Proficiency" id="ID_REF_PROFICIENCY_ARMOR_SHIELDS" />
+      <select type="Proficiency" name="Skill Proficiency (Ref Paladin)" supports="Ref Paladin Skill" number="2" />
+      <grant type="Class Feature" id="ID_REF_CLASS_FEATURE_PALADIN_SPELLCASTING" level="2" />
+      <stat name="ref paladin:spellcasting:slots:1" value="2" level="2" />
+      <stat name="ref paladin:spellcasting:slots:1" value="1" level="3" />
+    </rules>
+  </element>
+  <element name="Ref Paladin Spellcasting" type="Class Feature" source="Starfall Reference" id="ID_REF_CLASS_FEATURE_PALADIN_SPELLCASTING">
+    <spellcasting name="Ref Paladin" ability="Charisma" prepare="true">
+      <list>Ref Paladin</list>
+    </spellcasting>
+    <rules><grant type="Grants" id="ID_INTERNAL_GRANT_MULTICLASS_SPELLCASTING_SLOTS_HALF" /></rules>
+  </element>
+
+  <!-- ======================================================================= species -->
+  <element name="Ref Plains Folk" type="Race" source="Starfall Reference" id="ID_REF_RACE_PLAINS_FOLK">
+    <rules>
+      <stat name="strength" value="2" />
+      <stat name="charisma" value="1" />
+      <stat name="innate speed" value="30" bonus="base" />
+    </rules>
+  </element>
+  <element name="Ref Swift Folk" type="Race" source="Starfall Reference" id="ID_REF_RACE_SWIFT_FOLK">
+    <rules>
+      <stat name="dexterity" value="2" />
+      <stat name="intelligence" value="1" />
+      <stat name="innate speed" value="35" bonus="base" />
+    </rules>
+  </element>
+  <element name="Ref Hill Folk" type="Race" source="Starfall Reference" id="ID_REF_RACE_HILL_FOLK">
+    <rules>
+      <stat name="constitution" value="2" />
+      <stat name="wisdom" value="1" />
+      <stat name="innate speed" value="25" bonus="base" />
+      <stat name="hp" value="level" />
+    </rules>
+  </element>
+
+  <!-- ======================================================================= backgrounds -->
+  <element name="Ref Acolyte" type="Background" source="Starfall Reference" id="ID_REF_BACKGROUND_ACOLYTE">
+    <rules>
+      <grant type="Proficiency" id="ID_REF_PROFICIENCY_SKILL_INSIGHT" />
+      <grant type="Proficiency" id="ID_REF_PROFICIENCY_SKILL_RELIGION" />
+    </rules>
+  </element>
+  <element name="Ref Urchin" type="Background" source="Starfall Reference" id="ID_REF_BACKGROUND_URCHIN">
+    <rules>
+      <grant type="Proficiency" id="ID_REF_PROFICIENCY_SKILL_SLEIGHTOFHAND" />
+      <grant type="Proficiency" id="ID_REF_PROFICIENCY_SKILL_STEALTH" />
+    </rules>
+  </element>
+</elements>

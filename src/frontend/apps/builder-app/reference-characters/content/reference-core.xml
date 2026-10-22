@@ -1,0 +1,274 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Starfall reference content: shared proficiencies and equipment for the reference characters.
+  Written for Starfall's tests (see ../README.md). Invented names and figures shaped like Aurora's rules; no book text.
+  Ids that Starfall's rules look for by name (weapon proficiency groups) keep those ids.
+-->
+<elements>
+  <!-- skill proficiencies: the "<skill>:proficiency" statistic, counted once per stacking kind ("proficiency") -->
+  <element name="Skill Proficiency (Acrobatics)" type="Proficiency" source="Starfall Reference" id="ID_REF_PROFICIENCY_SKILL_ACROBATICS">
+    <supports>Skill, Ref Rogue Skill, Ref Monk Skill</supports>
+    <rules><stat name="acrobatics:proficiency" value="proficiency" bonus="proficiency" /></rules>
+  </element>
+  <element name="Skill Proficiency (Athletics)" type="Proficiency" source="Starfall Reference" id="ID_REF_PROFICIENCY_SKILL_ATHLETICS">
+    <supports>Skill, Ref Fighter Skill, Ref Barbarian Skill, Ref Monk Skill, Ref Ranger Skill</supports>
+    <rules><stat name="athletics:proficiency" value="proficiency" bonus="proficiency" /></rules>
+  </element>
+  <element name="Skill Proficiency (Arcana)" type="Proficiency" source="Starfall Reference" id="ID_REF_PROFICIENCY_SKILL_ARCANA">
+    <supports>Skill, Ref Wizard Skill</supports>
+    <rules><stat name="arcana:proficiency" value="proficiency" bonus="proficiency" /></rules>
+  </element>
+  <element name="Skill Proficiency (Deception)" type="Proficiency" source="Starfall Reference" id="ID_REF_PROFICIENCY_SKILL_DECEPTION">
+    <supports>Skill, Ref Bard Skill, Ref Rogue Skill</supports>
+    <rules><stat name="deception:proficiency" value="proficiency" bonus="proficiency" /></rules>
+  </element>
+  <element name="Skill Proficiency (History)" type="Proficiency" source="Starfall Reference" id="ID_REF_PROFICIENCY_SKILL_HISTORY">
+    <supports>Skill, Ref Wizard Skill, Ref Cleric Skill</supports>
+    <rules><stat name="history:proficiency" value="proficiency" bonus="proficiency" /></rules>
+  </element>
+  <element name="Skill Proficiency (Insight)" type="Proficiency" source="Starfall Reference" id="ID_REF_PROFICIENCY_SKILL_INSIGHT">
+    <supports>Skill, Ref Rogue Skill, Ref Wizard Skill, Ref Paladin Skill, Ref Cleric Skill, Ref Monk Skill</supports>
+    <rules><stat name="insight:proficiency" value="proficiency" bonus="proficiency" /></rules>
+  </element>
+  <element name="Skill Proficiency (Intimidation)" type="Proficiency" source="Starfall Reference" id="ID_REF_PROFICIENCY_SKILL_INTIMIDATION">
+    <supports>Skill, Ref Fighter Skill, Ref Paladin Skill, Ref Barbarian Skill</supports>
+    <rules><stat name="intimidation:proficiency" value="proficiency" bonus="proficiency" /></rules>
+  </element>
+  <element name="Skill Proficiency (Perception)" type="Proficiency" source="Starfall Reference" id="ID_REF_PROFICIENCY_SKILL_PERCEPTION">
+    <supports>Skill, Ref Fighter Skill, Ref Rogue Skill, Ref Barbarian Skill, Ref Ranger Skill</supports>
+    <rules><stat name="perception:proficiency" value="proficiency" bonus="proficiency" /></rules>
+  </element>
+  <element name="Skill Proficiency (Performance)" type="Proficiency" source="Starfall Reference" id="ID_REF_PROFICIENCY_SKILL_PERFORMANCE">
+    <supports>Skill, Ref Bard Skill</supports>
+    <rules><stat name="performance:proficiency" value="proficiency" bonus="proficiency" /></rules>
+  </element>
+  <element name="Skill Proficiency (Persuasion)" type="Proficiency" source="Starfall Reference" id="ID_REF_PROFICIENCY_SKILL_PERSUASION">
+    <supports>Skill, Ref Bard Skill, Ref Paladin Skill, Ref Cleric Skill</supports>
+    <rules><stat name="persuasion:proficiency" value="proficiency" bonus="proficiency" /></rules>
+  </element>
+  <element name="Skill Proficiency (Religion)" type="Proficiency" source="Starfall Reference" id="ID_REF_PROFICIENCY_SKILL_RELIGION">
+    <supports>Skill, Ref Paladin Skill, Ref Cleric Skill</supports>
+    <rules><stat name="religion:proficiency" value="proficiency" bonus="proficiency" /></rules>
+  </element>
+  <element name="Skill Proficiency (Sleight of Hand)" type="Proficiency" source="Starfall Reference" id="ID_REF_PROFICIENCY_SKILL_SLEIGHTOFHAND">
+    <supports>Skill, Ref Rogue Skill</supports>
+    <rules><stat name="sleight of hand:proficiency" value="proficiency" bonus="proficiency" /></rules>
+  </element>
+  <element name="Skill Proficiency (Stealth)" type="Proficiency" source="Starfall Reference" id="ID_REF_PROFICIENCY_SKILL_STEALTH">
+    <supports>Skill, Ref Rogue Skill, Ref Ranger Skill, Ref Monk Skill</supports>
+    <rules><stat name="stealth:proficiency" value="proficiency" bonus="proficiency" /></rules>
+  </element>
+  <element name="Skill Proficiency (Survival)" type="Proficiency" source="Starfall Reference" id="ID_REF_PROFICIENCY_SKILL_SURVIVAL">
+    <supports>Skill, Ref Fighter Skill, Ref Barbarian Skill, Ref Ranger Skill</supports>
+    <rules><stat name="survival:proficiency" value="proficiency" bonus="proficiency" /></rules>
+  </element>
+
+  <!-- expertise: a second proficiency of another stacking kind ("double") -->
+  <element name="Skill Expertise (Perception)" type="Proficiency" source="Starfall Reference" id="ID_REF_EXPERTISE_SKILL_PERCEPTION">
+    <supports>Ref Expertise</supports>
+    <rules><stat name="perception:proficiency" value="proficiency" bonus="double" /></rules>
+  </element>
+  <element name="Skill Expertise (Stealth)" type="Proficiency" source="Starfall Reference" id="ID_REF_EXPERTISE_SKILL_STEALTH">
+    <supports>Ref Expertise</supports>
+    <rules><stat name="stealth:proficiency" value="proficiency" bonus="double" /></rules>
+  </element>
+  <element name="Skill Expertise (Sleight of Hand)" type="Proficiency" source="Starfall Reference" id="ID_REF_EXPERTISE_SKILL_SLEIGHTOFHAND">
+    <supports>Ref Expertise</supports>
+    <rules><stat name="sleight of hand:proficiency" value="proficiency" bonus="double" /></rules>
+  </element>
+
+  <!-- saving throws: Aurora's "<ability>:save:proficiency" -->
+  <element name="Saving Throw Proficiency (Strength)" type="Proficiency" source="Starfall Reference" id="ID_REF_PROFICIENCY_SAVE_STRENGTH">
+    <supports>Saving Throw</supports>
+    <rules><stat name="strength:save:proficiency" value="proficiency" bonus="proficiency" /></rules>
+  </element>
+  <element name="Saving Throw Proficiency (Dexterity)" type="Proficiency" source="Starfall Reference" id="ID_REF_PROFICIENCY_SAVE_DEXTERITY">
+    <supports>Saving Throw</supports>
+    <rules><stat name="dexterity:save:proficiency" value="proficiency" bonus="proficiency" /></rules>
+  </element>
+  <element name="Saving Throw Proficiency (Constitution)" type="Proficiency" source="Starfall Reference" id="ID_REF_PROFICIENCY_SAVE_CONSTITUTION">
+    <supports>Saving Throw</supports>
+    <rules><stat name="constitution:save:proficiency" value="proficiency" bonus="proficiency" /></rules>
+  </element>
+  <element name="Saving Throw Proficiency (Intelligence)" type="Proficiency" source="Starfall Reference" id="ID_REF_PROFICIENCY_SAVE_INTELLIGENCE">
+    <supports>Saving Throw</supports>
+    <rules><stat name="intelligence:save:proficiency" value="proficiency" bonus="proficiency" /></rules>
+  </element>
+  <element name="Saving Throw Proficiency (Wisdom)" type="Proficiency" source="Starfall Reference" id="ID_REF_PROFICIENCY_SAVE_WISDOM">
+    <supports>Saving Throw</supports>
+    <rules><stat name="wisdom:save:proficiency" value="proficiency" bonus="proficiency" /></rules>
+  </element>
+  <element name="Saving Throw Proficiency (Charisma)" type="Proficiency" source="Starfall Reference" id="ID_REF_PROFICIENCY_SAVE_CHARISMA">
+    <supports>Saving Throw</supports>
+    <rules><stat name="charisma:save:proficiency" value="proficiency" bonus="proficiency" /></rules>
+  </element>
+
+  <!-- weapon and armor proficiencies (the weapon groups keep the ids Starfall's attack rules look for) -->
+  <element name="Weapon Proficiency (Simple Weapons)" type="Proficiency" source="Starfall Reference" id="ID_PROFICIENCY_WEAPON_PROFICIENCY_SIMPLE_WEAPONS">
+    <supports>Weapon Proficiency</supports>
+  </element>
+  <element name="Weapon Proficiency (Martial Weapons)" type="Proficiency" source="Starfall Reference" id="ID_PROFICIENCY_WEAPON_PROFICIENCY_MARTIAL_WEAPONS">
+    <supports>Weapon Proficiency</supports>
+  </element>
+  <element name="Weapon Proficiency (Ref Rapier)" type="Proficiency" source="Starfall Reference" id="ID_REF_PROFICIENCY_WEAPON_RAPIER">
+    <supports>Weapon Proficiency</supports>
+  </element>
+  <element name="Armor Proficiency (Light Armor)" type="Proficiency" source="Starfall Reference" id="ID_REF_PROFICIENCY_ARMOR_LIGHT">
+    <supports>Armor Proficiency</supports>
+  </element>
+  <element name="Armor Proficiency (Medium Armor)" type="Proficiency" source="Starfall Reference" id="ID_REF_PROFICIENCY_ARMOR_MEDIUM">
+    <supports>Armor Proficiency</supports>
+  </element>
+  <element name="Armor Proficiency (Heavy Armor)" type="Proficiency" source="Starfall Reference" id="ID_REF_PROFICIENCY_ARMOR_HEAVY">
+    <supports>Armor Proficiency</supports>
+  </element>
+  <element name="Armor Proficiency (Shields)" type="Proficiency" source="Starfall Reference" id="ID_REF_PROFICIENCY_ARMOR_SHIELDS">
+    <supports>Armor Proficiency</supports>
+  </element>
+
+  <!-- armor -->
+  <element name="Ref Leather Armor" type="Armor" source="Starfall Reference" id="ID_REF_ARMOR_LEATHER">
+    <setters>
+      <set name="armor">Light</set>
+      <set name="armorClass">11</set>
+      <set name="weight" lb="10">10 lb.</set>
+    </setters>
+  </element>
+  <element name="Ref Breastplate" type="Armor" source="Starfall Reference" id="ID_REF_ARMOR_BREASTPLATE">
+    <setters>
+      <set name="armor">Medium</set>
+      <set name="armorClass">14</set>
+      <set name="weight" lb="20">20 lb.</set>
+    </setters>
+  </element>
+  <element name="Ref Chain Mail" type="Armor" source="Starfall Reference" id="ID_REF_ARMOR_CHAIN_MAIL">
+    <setters>
+      <set name="armor">Heavy</set>
+      <set name="armorClass">16</set>
+      <set name="strength">13</set>
+      <set name="stealth">Disadvantage</set>
+      <set name="weight" lb="55">55 lb.</set>
+    </setters>
+  </element>
+  <element name="Ref Shield" type="Armor" source="Starfall Reference" id="ID_REF_ARMOR_SHIELD">
+    <setters>
+      <set name="armor">Shield</set>
+      <set name="armorClass">2</set>
+      <set name="weight" lb="6">6 lb.</set>
+    </setters>
+  </element>
+
+  <!-- weapons: category, properties and damage type in the supports, as Aurora's items have them -->
+  <element name="Ref Longsword" type="Weapon" source="Starfall Reference" id="ID_REF_WEAPON_LONGSWORD">
+    <supports>ID_INTERNAL_WEAPON_CATEGORY_MARTIAL_MELEE, ID_INTERNAL_WEAPON_PROPERTY_VERSATILE</supports>
+    <setters>
+      <set name="damage" type="slashing">1d8</set>
+      <set name="versatile">1d10</set>
+      <set name="weight" lb="3">3 lb.</set>
+    </setters>
+  </element>
+  <element name="Ref Rapier" type="Weapon" source="Starfall Reference" id="ID_REF_WEAPON_RAPIER">
+    <supports>ID_INTERNAL_WEAPON_CATEGORY_MARTIAL_MELEE, ID_INTERNAL_WEAPON_PROPERTY_FINESSE</supports>
+    <setters>
+      <set name="damage" type="piercing">1d8</set>
+      <set name="proficiency">ID_REF_PROFICIENCY_WEAPON_RAPIER</set>
+      <set name="weight" lb="2">2 lb.</set>
+    </setters>
+  </element>
+  <element name="Ref Dagger" type="Weapon" source="Starfall Reference" id="ID_REF_WEAPON_DAGGER">
+    <supports>ID_INTERNAL_WEAPON_CATEGORY_SIMPLE_MELEE, ID_INTERNAL_WEAPON_PROPERTY_FINESSE, ID_INTERNAL_WEAPON_PROPERTY_LIGHT, ID_INTERNAL_WEAPON_PROPERTY_THROWN</supports>
+    <setters>
+      <set name="damage" type="piercing">1d4</set>
+      <set name="range">20/60</set>
+      <set name="weight" lb="1">1 lb.</set>
+    </setters>
+  </element>
+  <element name="Ref Quarterstaff" type="Weapon" source="Starfall Reference" id="ID_REF_WEAPON_QUARTERSTAFF">
+    <supports>ID_INTERNAL_WEAPON_CATEGORY_SIMPLE_MELEE, ID_INTERNAL_WEAPON_PROPERTY_VERSATILE</supports>
+    <setters>
+      <set name="damage" type="bludgeoning">1d6</set>
+      <set name="versatile">1d8</set>
+      <set name="weight" lb="4">4 lb.</set>
+    </setters>
+  </element>
+  <element name="Ref Shortbow" type="Weapon" source="Starfall Reference" id="ID_REF_WEAPON_SHORTBOW">
+    <supports>ID_INTERNAL_WEAPON_CATEGORY_SIMPLE_RANGED, ID_INTERNAL_WEAPON_PROPERTY_TWOHANDED</supports>
+    <setters>
+      <set name="damage" type="piercing">1d6</set>
+      <set name="range">80/320</set>
+      <set name="weight" lb="2">2 lb.</set>
+    </setters>
+  </element>
+
+  <!-- magic items -->
+  <element name="Ref Longsword +1" type="Magic Item" source="Starfall Reference" id="ID_REF_MAGIC_LONGSWORD_1">
+    <setters>
+      <set name="category">Magic Weapons</set>
+      <set name="type">Weapon</set>
+      <set name="weapon">Ref Longsword</set>
+      <set name="rarity">Uncommon</set>
+      <set name="enhancement">1</set>
+    </setters>
+  </element>
+  <element name="Ref Breastplate +1" type="Magic Item" source="Starfall Reference" id="ID_REF_MAGIC_BREASTPLATE_1">
+    <setters>
+      <set name="category">Magic Armor</set>
+      <set name="type">Armor</set>
+      <set name="armor">Ref Breastplate</set>
+      <set name="rarity">Rare</set>
+      <set name="enhancement">1</set>
+    </setters>
+    <rules><stat name="ac:armored:enhancement" value="1" bonus="enhancement" /></rules>
+  </element>
+  <element name="Ref Ring of Warding" type="Magic Item" source="Starfall Reference" id="ID_REF_MAGIC_RING_OF_WARDING">
+    <setters>
+      <set name="category">Rings</set>
+      <set name="type">Ring</set>
+      <set name="rarity">Uncommon</set>
+      <set name="attunement">true</set>
+    </setters>
+    <rules><stat name="ac:misc" value="1" bonus="warding" /></rules>
+  </element>
+  <element name="Ref Amulet of Warding" type="Magic Item" source="Starfall Reference" id="ID_REF_MAGIC_AMULET_OF_WARDING">
+    <setters>
+      <set name="category">Wondrous Items</set>
+      <set name="type">Wondrous item</set>
+      <set name="rarity">Rare</set>
+      <set name="attunement">true</set>
+    </setters>
+    <rules><stat name="ac:misc" value="2" bonus="warding" /></rules>
+  </element>
+  <element name="Ref Cloak of Guarding" type="Magic Item" source="Starfall Reference" id="ID_REF_MAGIC_CLOAK_OF_GUARDING">
+    <setters>
+      <set name="category">Wondrous Items</set>
+      <set name="type">Wondrous item</set>
+      <set name="rarity">Uncommon</set>
+      <set name="slot">cloak</set>
+    </setters>
+    <rules>
+      <stat name="ac:misc" value="1" />
+      <stat name="wisdom:save:misc" value="1" />
+    </rules>
+  </element>
+  <element name="Ref Gauntlets of Might" type="Magic Item" source="Starfall Reference" id="ID_REF_MAGIC_GAUNTLETS_OF_MIGHT">
+    <setters>
+      <set name="category">Wondrous Items</set>
+      <set name="type">Wondrous item</set>
+      <set name="rarity">Uncommon</set>
+      <set name="attunement">true</set>
+    </setters>
+    <rules><stat name="strength:score:set" value="19" /></rules>
+  </element>
+  <element name="Ref Rod of Focus" type="Magic Item" source="Starfall Reference" id="ID_REF_MAGIC_ROD_OF_FOCUS">
+    <setters>
+      <set name="category">Rods</set>
+      <set name="type">Rod</set>
+      <set name="rarity">Uncommon</set>
+      <set name="attunement">true</set>
+    </setters>
+    <rules>
+      <stat name="spellcasting:attack" value="1" />
+      <stat name="spellcasting:dc" value="1" />
+    </rules>
+  </element>
+</elements>

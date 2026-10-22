@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Starfall reference content, 2024 rules (source "(2024)"). Written for Starfall's tests (see ../README.md):
+  invented names, figures shaped like Aurora's rules, no book text.
+-->
+<elements>
+  <!-- ======================================================================= classes -->
+  <element name="Ref Monk" type="Class" source="Starfall Reference (2024)" id="ID_REF24_CLASS_MONK">
+    <setters><set name="hd">d8</set></setters>
+    <rules>
+      <grant type="Proficiency" id="ID_REF_PROFICIENCY_SAVE_STRENGTH" />
+      <grant type="Proficiency" id="ID_REF_PROFICIENCY_SAVE_DEXTERITY" />
+      <grant type="Proficiency" id="ID_PROFICIENCY_WEAPON_PROFICIENCY_SIMPLE_WEAPONS" />
+      <select type="Proficiency" name="Skill Proficiency (Ref Monk)" supports="Ref Monk Skill" number="2" />
+      <grant type="Class Feature" id="ID_REF24_CLASS_FEATURE_MONK_DEFENSE" level="1" />
+      <grant type="Class Feature" id="ID_REF24_CLASS_FEATURE_MONK_MOVEMENT" level="2" />
+    </rules>
+  </element>
+  <!-- an unarmored calculation of its own (10 + Dexterity + Wisdom) that competes in Aurora's ac:calculation -->
+  <element name="Ref Monk Defense" type="Class Feature" source="Starfall Reference (2024)" id="ID_REF24_CLASS_FEATURE_MONK_DEFENSE">
+    <rules>
+      <stat name="ac:ref monk defense" value="10" bonus="base" />
+      <stat name="ac:ref monk defense" value="dexterity:modifier" bonus="primary ability" />
+      <stat name="ac:ref monk defense" value="wisdom:modifier" bonus="secondary ability" />
+      <stat name="ac:calculation" value="ac:ref monk defense" bonus="calculation" equipped="[armor:none],[shield:none]" alt="Ref Monk Defense" />
+    </rules>
+  </element>
+  <element name="Ref Monk Movement" type="Class Feature" source="Starfall Reference (2024)" id="ID_REF24_CLASS_FEATURE_MONK_MOVEMENT">
+    <rules><stat name="innate speed:misc" value="10" equipped="[armor:none],[shield:none]" alt="Ref Monk Movement" /></rules>
+  </element>
+
+  <element name="Ref Barbarian" type="Class" source="Starfall Reference (2024)" id="ID_REF24_CLASS_BARBARIAN">
+    <setters><set name="hd">d12</set></setters>
+    <rules>
+      <grant type="Proficiency" id="ID_REF_PROFICIENCY_SAVE_STRENGTH" />
+      <grant type="Proficiency" id="ID_REF_PROFICIENCY_SAVE_CONSTITUTION" />
+      <grant type="Proficiency" id="ID_PROFICIENCY_WEAPON_PROFICIENCY_SIMPLE_WEAPONS" />
+      <grant type="Proficiency" id="ID_PROFICIENCY_WEAPON_PROFICIENCY_MARTIAL_WEAPONS" />
+      <grant type="Proficiency" id="ID_REF_PROFICIENCY_ARMOR_LIGHT" />
+      <grant type="Proficiency" id="ID_REF_PROFICIENCY_ARMOR_MEDIUM" />
+      <grant type="Proficiency" id="ID_REF_PROFICIENCY_ARMOR_SHIELDS" />
+      <select type="Proficiency" name="Skill Proficiency (Ref Barbarian)" supports="Ref Barbarian Skill" number="2" />
+      <grant type="Class Feature" id="ID_REF24_CLASS_FEATURE_BARBARIAN_DEFENSE" level="1" />
+      <grant type="Class Feature" id="ID_REF24_CLASS_FEATURE_BARBARIAN_EXTRA_ATTACK" level="5" />
+      <grant type="Class Feature" id="ID_REF24_CLASS_FEATURE_BARBARIAN_FAST_MOVEMENT" level="5" />
+    </rules>
+  </element>
+  <!-- 10 + Dexterity + Constitution, a shield allowed -->
+  <element name="Ref Barbarian Defense" type="Class Feature" source="Starfall Reference (2024)" id="ID_REF24_CLASS_FEATURE_BARBARIAN_DEFENSE">
+    <rules>
+      <stat name="ac:ref barbarian defense" value="10" bonus="base" />
+      <stat name="ac:ref barbarian defense" value="dexterity:modifier" bonus="primary ability" />
+      <stat name="ac:ref barbarian defense" value="constitution:modifier" bonus="secondary ability" />
+      <stat name="ac:calculation" value="ac:ref barbarian defense" bonus="calculation" equipped="[armor:none]" alt="Ref Barbarian Defense" />
+    </rules>
+  </element>
+  <element name="Extra Attack" type="Class Feature" source="Starfall Reference (2024)" id="ID_REF24_CLASS_FEATURE_BARBARIAN_EXTRA_ATTACK" />
+  <element name="Ref Fast Movement" type="Class Feature" source="Starfall Reference (2024)" id="ID_REF24_CLASS_FEATURE_BARBARIAN_FAST_MOVEMENT">
+    <rules><stat name="innate speed:misc" value="10" equipped="![armor:heavy]" alt="Ref Fast Movement" /></rules>
+  </element>
+
+  <element name="Ref Ranger" type="Class" source="Starfall Reference (2024)" id="ID_REF24_CLASS_RANGER">
+    <setters><set name="hd">d10</set></setters>
+    <rules>
+      <grant type="Proficiency" id="ID_REF_PROFICIENCY_SAVE_STRENGTH" />
+      <grant type="Proficiency" id="ID_REF_PROFICIENCY_SAVE_DEXTERITY" />
+      <grant type="Proficiency" id="ID_PROFICIENCY_WEAPON_PROFICIENCY_SIMPLE_WEAPONS" />
+      <grant type="Proficiency" id="ID_PROFICIENCY_WEAPON_PROFICIENCY_MARTIAL_WEAPONS" />
+      <grant type="Proficiency" id="ID_REF_PROFICIENCY_ARMOR_LIGHT" />
+      <grant type="Proficiency" id="ID_REF_PROFICIENCY_ARMOR_MEDIUM" />
+      <grant type="Proficiency" id="ID_REF_PROFICIENCY_ARMOR_SHIELDS" />
+      <select type="Proficiency" name="Skill Proficiency (Ref Ranger)" supports="Ref Ranger Skill" number="3" />
+      <grant type="Class Feature" id="ID_REF24_CLASS_FEATURE_RANGER_SPELLCASTING" level="1" />
+      <grant type="Class Feature" id="ID_REF24_CLASS_FEATURE_RANGER_ARCHERY" level="2" />
+      <stat name="ref ranger:spellcasting:slots:1" value="2" level="1" />
+      <stat name="ref ranger:spellcasting:slots:1" value="1" level="3" />
+    </rules>
+  </element>
+  <element name="Ref Ranger Spellcasting" type="Class Feature" source="Starfall Reference (2024)" id="ID_REF24_CLASS_FEATURE_RANGER_SPELLCASTING">
+    <spellcasting name="Ref Ranger" ability="Wisdom">
+      <list known="true">Ref Ranger</list>
+    </spellcasting>
+    <rules><grant type="Grants" id="ID_INTERNAL_GRANT_MULTICLASS_SPELLCASTING_SLOTS_HALF" /></rules>
+  </element>
+  <element name="Ref Archery Style" type="Class Feature" source="Starfall Reference (2024)" id="ID_REF24_CLASS_FEATURE_RANGER_ARCHERY">
+    <rules><stat name="ranged:attack" value="2" bonus="fighting style" alt="Ref Archery Style" /></rules>
+  </element>
+
+  <element name="Ref Cleric" type="Class" source="Starfall Reference (2024)" id="ID_REF24_CLASS_CLERIC">
+    <setters><set name="hd">d8</set></setters>
+    <multiclass id="ID_REF24_MULTICLASS_CLERIC">
+      <prerequisite>Wisdom 13</prerequisite>
+      <rules />
+    </multiclass>
+    <rules>
+      <grant type="Proficiency" id="ID_REF_PROFICIENCY_SAVE_WISDOM" requirements="!ID_REF24_MULTICLASS_CLERIC" />
+      <grant type="Proficiency" id="ID_REF_PROFICIENCY_SAVE_CHARISMA" requirements="!ID_REF24_MULTICLASS_CLERIC" />
+      <grant type="Proficiency" id="ID_PROFICIENCY_WEAPON_PROFICIENCY_SIMPLE_WEAPONS" />
+      <select type="Proficiency" name="Skill Proficiency (Ref Cleric)" supports="Ref Cleric Skill" number="2" requirements="!ID_REF24_MULTICLASS_CLERIC" />
+      <grant type="Class Feature" id="ID_REF24_CLASS_FEATURE_CLERIC_SPELLCASTING" level="1" />
+      <stat name="ref cleric:spellcasting:slots:1" value="2" level="1" />
+    </rules>
+  </element>
+  <element name="Ref Cleric Spellcasting" type="Class Feature" source="Starfall Reference (2024)" id="ID_REF24_CLASS_FEATURE_CLERIC_SPELLCASTING">
+    <spellcasting name="Ref Cleric" ability="Wisdom" prepare="true">
+      <list>Ref Cleric</list>
+    </spellcasting>
+    <rules><grant type="Grants" id="ID_INTERNAL_GRANT_MULTICLASS_SPELLCASTING_SLOTS_FULL" /></rules>
+  </element>
+
+  <!-- ======================================================================= species -->
+  <element name="Ref Wanderer" type="Race" source="Starfall Reference (2024)" id="ID_REF24_RACE_WANDERER">
+    <rules><stat name="innate speed" value="30" bonus="base" /></rules>
+  </element>
+  <!-- natural armor (13 + Dexterity) competing with other unarmored calculations, a shield allowed -->
+  <element name="Ref Stoneborn" type="Race" source="Starfall Reference (2024)" id="ID_REF24_RACE_STONEBORN">
+    <rules>
+      <stat name="innate speed" value="30" bonus="base" />
+      <stat name="ac:ref stoneborn hide" value="13" bonus="base" />
+      <stat name="ac:ref stoneborn hide" value="dexterity:modifier" bonus="primary ability" />
+      <stat name="ac:calculation" value="ac:ref stoneborn hide" bonus="calculation" equipped="[armor:none]" alt="Ref Stoneborn Hide" />
+    </rules>
+  </element>
+
+  <!-- ======================================================================= backgrounds and feats -->
+  <element name="Ref Sentinel" type="Background" source="Starfall Reference (2024)" id="ID_REF24_BACKGROUND_SENTINEL">
+    <rules>
+      <stat name="wisdom" value="2" />
+      <stat name="dexterity" value="1" />
+      <grant type="Proficiency" id="ID_REF_PROFICIENCY_SKILL_INSIGHT" />
+      <grant type="Proficiency" id="ID_REF_PROFICIENCY_SKILL_PERCEPTION" />
+      <grant type="Feat" id="ID_REF24_FEAT_ALERTNESS" />
+    </rules>
+  </element>
+  <element name="Ref Laborer" type="Background" source="Starfall Reference (2024)" id="ID_REF24_BACKGROUND_LABORER">
+    <rules>
+      <stat name="strength" value="2" />
+      <stat name="constitution" value="1" />
+      <grant type="Proficiency" id="ID_REF_PROFICIENCY_SKILL_ATHLETICS" />
+      <grant type="Proficiency" id="ID_REF_PROFICIENCY_SKILL_SURVIVAL" />
+    </rules>
+  </element>
+  <element name="Ref Alertness" type="Feat" source="Starfall Reference (2024)" id="ID_REF24_FEAT_ALERTNESS">
+    <rules><stat name="initiative" value="proficiency" bonus="alertness" alt="Ref Alertness" /></rules>
+  </element>
+</elements>
