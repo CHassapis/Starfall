@@ -6,12 +6,15 @@ import { HomebrewClasses, HomebrewSpells, HomebrewSubclasses } from "./workshop-
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Link, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
+import { ImportDiagnostics } from "@/components/import-diagnostics";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { apiClient } from "@/lib/api-client";
 import { withNewBooksOff } from "@/lib/api/homebrew";
+import type { DeleteHomebrewResponse, ImportDiagnostic, UploadHomebrewResponse } from "@/lib/contracts/import-diagnostics";
 import { homebrewUploadError } from "@/lib/homebrew-upload-error";
+import { arrangeDiagnostics } from "@/lib/import-diagnostics";
 import { isAdmin } from "@/lib/player";
 
 interface HomebrewFile {
@@ -29,6 +32,7 @@ function FilesTab() {
   const input = useRef<HTMLInputElement>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [warnings, setWarnings] = useState<string[]>([]);
+  const [diagnostics, setDiagnostics] = useState<ImportDiagnostic[]>([]);
   const admin = isAdmin();
   const { data, isLoading } = useQuery({ queryKey: ["homebrew"], queryFn: () => apiClient.get<{ files: HomebrewFile[] }>("/api/elements/homebrew") });
 
@@ -42,12 +46,15 @@ function FilesTab() {
   const upload = useMutation({
     mutationFn: async (files: File[]) => {
       setWarnings([]);
+      setDiagnostics([]);
       setUploadError(null);
       await withNewBooksOff(async () => {
         for (const file of files) {
           try {
-            const result = await apiClient.post<{ fileName: string; content: string }, { warnings?: string[] }>("/api/elements/homebrew", { fileName: file.name, content: await file.text() });
+            const result = await apiClient.post<{ fileName: string; content: string }, Partial<UploadHomebrewResponse>>("/api/elements/homebrew", { fileName: file.name, content: await file.text() });
             if (result.warnings?.length) setWarnings((current) => [...new Set([...current, ...result.warnings!])]);
+            // every upload imports the whole folder again, so each result says it all; the last one counts
+            if (result.diagnostics) setDiagnostics(arrangeDiagnostics(result.diagnostics));
           } catch (error) { throw new Error(`${file.name}: ${homebrewUploadError(error as Error)}`, { cause: error }); }
         }
       });
@@ -58,8 +65,11 @@ function FilesTab() {
   });
 
   const remove = useMutation({
-    mutationFn: (file: string) => apiClient.delete<{ warnings?: string[] }>(`/api/elements/homebrew/${encodeURIComponent(file)}`),
-    onSuccess: (result) => setWarnings(result.warnings ?? []),
+    mutationFn: (file: string) => apiClient.delete<Partial<DeleteHomebrewResponse>>(`/api/elements/homebrew/${encodeURIComponent(file)}`),
+    onSuccess: (result) => {
+      setWarnings(result.warnings ?? []);
+      setDiagnostics(result.diagnostics ?? []);
+    },
     onError: (e) => toast.error("Could not remove it", { description: e.message }),
     onSettled: refresh,
   });
@@ -96,7 +106,8 @@ function FilesTab() {
 
       <p className="text-sm text-muted-foreground">Files can define new elements or use &lt;append id="…"&gt; to change existing ones. Wrap them in one &lt;elements&gt; root. Patches affect their original source content; they do not create a separate Homebrew book. Upload the same filename to replace a patch.</p>
       {uploadError && <p role="alert" className="rounded-md border border-destructive/40 p-3 text-sm text-destructive">{uploadError}</p>}
-      {warnings.length > 0 && <div role="status" className="space-y-2 rounded-md border border-amber-500/50 bg-amber-500/5 p-3 text-sm">
+      {diagnostics.length > 0 && <ImportDiagnostics diagnostics={diagnostics} title="Saved, but the homebrew needs attention" />}
+      {diagnostics.length === 0 && warnings.length > 0 && <div role="status" className="space-y-2 rounded-md border border-amber-500/50 bg-amber-500/5 p-3 text-sm">
         <p className="font-medium">Files saved, but some patches need attention</p>
         <ul className="list-inside list-disc break-words">{warnings.map((warning) => <li key={warning}>{warning}</li>)}</ul>
       </div>}
