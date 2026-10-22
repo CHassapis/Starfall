@@ -12,7 +12,9 @@ namespace Starlights.Modules.Characters.Services.Calculation;
 /// </list>
 /// The web app traces what it works out itself, in the same shape: <c>armor-class</c>, <c>hit-points</c>,
 /// <c>initiative</c>, <c>passive-perception</c>, <c>speed:&lt;walk|fly|climb|swim&gt;</c>,
-/// <c>attack:&lt;inventory or custom attack id&gt;:&lt;to-hit|damage&gt;</c>.
+/// <c>attack:&lt;inventory or custom attack id&gt;:&lt;to-hit|damage&gt;</c>, a spell's growing dice and flat bonus at the
+/// level it is cast at <c>spell:&lt;name slug&gt;:&lt;level&gt;:&lt;dice|bonus&gt;</c>, and the maximum uses of a resource the
+/// player added <c>resource:&lt;id&gt;:max</c>.
 /// </summary>
 public static partial class CalculationTraceKeys
 {
@@ -21,7 +23,7 @@ public static partial class CalculationTraceKeys
     [GeneratedRegex(@"^(ability-score|ability-modifier|saving-throw):(strength|dexterity|constitution|intelligence|wisdom|charisma)$|^proficiency-bonus$|^skill:[a-z][a-z-]{0,63}$|^(spell-attack|spell-save-dc):[a-z0-9][a-z0-9'()-]{0,99}$|^statistic:[a-z0-9-][a-z0-9:'()+_-]{0,199}$")]
     private static partial Regex ServerKey();
 
-    [GeneratedRegex(@"^(armor-class|hit-points|initiative|passive-perception)$|^speed:(walk|fly|climb|swim)$|^attack:[A-Za-z0-9_-]{1,64}:(to-hit|damage)$")]
+    [GeneratedRegex(@"^(armor-class|hit-points|initiative|passive-perception)$|^speed:(walk|fly|climb|swim)$|^attack:[A-Za-z0-9_-]{1,64}:(to-hit|damage)$|^spell:[^:\s]{1,100}:\d:(dice|bonus)$|^resource:[A-Za-z0-9_-]{1,64}:max$")]
     private static partial Regex WebKey();
 
     /// <summary>A value the server traces.</summary>
