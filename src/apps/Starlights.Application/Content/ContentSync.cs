@@ -19,6 +19,9 @@ public sealed record ContentJobStatus(bool Running, string? Step, IReadOnlyList<
 {
     /// <summary>What the run's imports ran into (files skipped, grants left out), arranged as each import arranges its own.</summary>
     public IReadOnlyList<ImportDiagnostic> Diagnostics { get; init; } = [];
+
+    /// <summary>The run's imports' elements in full, in part or as text only, and what they skipped, added up.</summary>
+    public ImportEntryCounts Entries { get; init; } = ImportEntryCounts.None;
 }
 
 /// <summary>One content source as this server has it: the commit or release in use, when it last changed and was checked.</summary>
@@ -72,6 +75,7 @@ public sealed partial class ContentSync
     private readonly object _gate = new();
     private readonly List<string> _log = [];
     private readonly List<ImportDiagnostic> _diagnostics = [];
+    private ImportEntryCounts _entries = ImportEntryCounts.None;
     private bool _running;
     private string? _step;
     private DateTimeOffset? _started, _finished;
@@ -146,7 +150,7 @@ public sealed partial class ContentSync
     {
         lock (_gate)
         {
-            return new ContentJobStatus(_running, _step, [.. _log], _started, _finished, _succeeded) { Diagnostics = [.. _diagnostics] };
+            return new ContentJobStatus(_running, _step, [.. _log], _started, _finished, _succeeded) { Diagnostics = [.. _diagnostics], Entries = _entries };
         }
     }
 
@@ -341,6 +345,7 @@ public sealed partial class ContentSync
             _running = true;
             _log.Clear();
             _diagnostics.Clear();
+            _entries = ImportEntryCounts.None;
             _started = DateTimeOffset.UtcNow;
             _finished = null;
             _succeeded = null;
@@ -450,6 +455,7 @@ public sealed partial class ContentSync
             lock (_gate)
             {
                 _diagnostics.AddRange(result.Diagnostics);
+                _entries += result.Entries;
             }
         }
 

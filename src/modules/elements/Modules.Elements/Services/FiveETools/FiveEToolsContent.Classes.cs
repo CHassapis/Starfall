@@ -15,7 +15,7 @@ internal sealed partial class FiveEToolsContent
         foreach (var cls in Ordered(_json.Load("class/class-*.json", "class")))
         {
             var (name, source) = (Name(cls), SourceOf(cls));
-            if (Skip(cls) || name.Length == 0 || AuroraHas("class", cls))
+            if (Skip(cls, "class") || name.Length == 0 || AuroraHas("class", cls))
             {
                 continue;
             }
@@ -383,7 +383,7 @@ internal sealed partial class FiveEToolsContent
             var (name, source) = (Name(subclass), SourceOf(subclass));
             var shortName = FiveEToolsJson.Str(subclass, "shortName") ?? name;
             // 5etools' copies of the 2014 subclasses onto the 2024 classes: Aurora's subclass choices offer those already
-            if (Skip(subclass) || name.Length == 0 || subclass["_copiedFrom"] is not null || AuroraHas("subclass", subclass, shortName))
+            if (Skip(subclass, "subclass") || name.Length == 0 || subclass["_copiedFrom"] is not null || AuroraHas("subclass", subclass, shortName))
             {
                 continue;
             }

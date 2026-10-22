@@ -91,7 +91,7 @@ public class AuroraImporterDiagnosticsTests
     [TestMethod]
     public async Task HomebrewImport_DoesNotReportTheContentRepositorysBrokenFiles()
     {
-        Homebrew("fine.xml", """<elements><element name="Fine" type="Feat" source="Brew" id="ID_BREW_FINE" /></elements>""");
+        Homebrew("fine.xml", """<elements><element name="Fine" type="Feat" source="Brew" id="ID_BREW_FINE"><rules><stat name="strength" value="1" /></rules></element></elements>""");
 
         var result = await ImportAsync(AuroraImporterIndex.Homebrew);
 
@@ -157,11 +157,14 @@ public class AuroraImporterDiagnosticsTests
 
         var result = await ImportAsync(AuroraImporterOptions.FiveEToolsIndex, data);
 
-        result.Diagnostics.Where(d => d.Importer == ImportDiagnosticImporter.FiveETools).Select(d => (d.Code, d.ElementId, d.ElementName, d.Detail)).Should().Equal(
+        // what it left out (the features it made with no rules are reported apart, as text only)
+        result.Diagnostics.Where(d => d.Importer == ImportDiagnosticImporter.FiveETools && d.Severity == ImportDiagnosticSeverity.Warning).Select(d => (d.Code, d.ElementId, d.ElementName, d.Detail)).Should().Equal(
             (ImportDiagnosticCode.ClassFeatureMissing, "ID_5ETOOLS_CLASS_TST_TESTER", "Tester", "Vanished|Tester|TST|2"),
             (ImportDiagnosticCode.ClassFeatureMissing, "ID_5ETOOLS_SUBCLASS_TST_TESTER_KEPT_PATH", "Kept Path", "Gone Thing|Tester|TST|Kept|TST|6"),
             (ImportDiagnosticCode.SubclassClassMissing, (string?)null, "Lost Path", "Nobody|TST"));
-        result.Diagnostics.Should().OnlyContain(d => d.File == "5etools/content.xml" && d.Severity == ImportDiagnosticSeverity.Warning);
+        result.Diagnostics.Should().OnlyContain(d => d.File == "5etools/content.xml");
+        result.Diagnostics.Where(d => d.Code == ImportDiagnosticCode.TextOnly).Should().NotContain(d => d.ElementId == "ID_5ETOOLS_CLASS_TST_TESTER", "a class is not a feature");
+        result.Diagnostics.Where(d => d.Severity != ImportDiagnosticSeverity.Info).Should().OnlyContain(d => d.Severity == ImportDiagnosticSeverity.Warning);
         result.Diagnostics.Single(d => d.Code == ImportDiagnosticCode.SubclassClassMissing).Message
             .Should().Be("Lost Path is a subclass of Nobody (Test Book), a class neither Aurora nor 5etools has here; it was left out.");
     }
@@ -170,10 +173,123 @@ public class AuroraImporterDiagnosticsTests
     public async Task OtherImports_DoNotRepeatWhatThe5etoolsTranslationRanInto()
     {
         var data = FiveEToolsDataFolder();
-        Homebrew("fine.xml", """<elements><element name="Fine" type="Feat" source="Brew" id="ID_BREW_FINE" /></elements>""");
+        Homebrew("fine.xml", """<elements><element name="Fine" type="Feat" source="Brew" id="ID_BREW_FINE"><rules><stat name="strength" value="1" /></rules></element></elements>""");
 
         (await ImportAsync(AuroraImporterIndex.Homebrew, data)).Diagnostics.Should().BeEmpty();
         (await ImportAsync("core/test.index", data)).Diagnostics.Should().NotContain(d => d.Importer == ImportDiagnosticImporter.FiveETools);
+    }
+
+    [TestMethod]
+    public async Task HomebrewImport_CountsEachEntryOnce_InFullInPartTextOnlyOrSkipped()
+    {
+        Homebrew("a.xml", """
+            <elements>
+              <element name="Brew Grantor" type="Feat" source="Brew" id="ID_BREW_GRANTOR"><rules><grant type="Feat" id="ID_BREW_MISSING" /></rules></element>
+              <element name="Brew Stat" type="Feat" source="Brew" id="ID_BREW_STAT"><rules><stat name="strength" value="1" /></rules></element>
+              <element name="Brew Story" type="Feat" source="Brew" id="ID_BREW_STORY"><description><p>Only words.</p></description></element>
+              <element name="Brew Daily" type="Class Feature" source="Brew" id="ID_BREW_DAILY"><sheet usage="1/Long Rest"><description>Once a day.</description></sheet></element>
+              <element name="Brew Picky" type="Feat" source="Brew" id="ID_BREW_PICKY">
+                <requirements>ID_BREW_NOWHERE,[str:13]</requirements>
+                <rules><stat name="dexterity" value="1" requirements="[odd thing]" /></rules>
+              </element>
+              <element name="Nameless" type="Feat" source="Brew" />
+              <element name="Brew Twice" type="Feat" source="Brew" id="ID_BREW_TWICE"><rules><stat name="wisdom" value="1" /></rules></element>
+              <element name="Brew Twice" type="Feat" source="Brew" id="ID_BREW_TWICE"><rules><stat name="wisdom" value="2" /></rules></element>
+            </elements>
+            """);
+        // the homebrew copy of a feat the content repository has: it takes its place on purpose
+        Homebrew("c.xml", """<elements><element name="Test Feat" type="Feat" source="Brew" id="ID_TEST_FEAT"><rules><stat name="charisma" value="1" /></rules></element></elements>""");
+
+        var result = await ImportAsync(AuroraImporterIndex.Homebrew);
+
+        // in full: Brew Stat, Brew Daily (its uses), Brew Twice (one copy), Test Feat; in part: Brew Grantor (its grant),
+        // Brew Picky (two requirement terms); text only: Brew Story; skipped: Nameless, Brew Twice's second copy, the
+        // repository's Test Feat
+        result.Entries.Should().Be(new ImportEntryCounts(Complete: 4, Partial: 2, TextOnly: 1, Skipped: 3));
+        result.Diagnostics.Select(d => (d.Severity, d.Code, d.File, d.ElementId, d.Detail)).Should().Equal(
+            (ImportDiagnosticSeverity.Warning, ImportDiagnosticCode.GrantUnresolved, "homebrew/a.xml", "ID_BREW_GRANTOR", "ID_BREW_MISSING"),
+            (ImportDiagnosticSeverity.Warning, ImportDiagnosticCode.DuplicateId, "homebrew/a.xml", "ID_BREW_TWICE", "homebrew/a.xml"),
+            (ImportDiagnosticSeverity.Warning, ImportDiagnosticCode.ElementIncomplete, "homebrew/a.xml", (string?)null, "id"),
+            (ImportDiagnosticSeverity.Warning, ImportDiagnosticCode.RequirementUnsupported, "homebrew/a.xml", "ID_BREW_PICKY", "ID_BREW_NOWHERE"),
+            (ImportDiagnosticSeverity.Warning, ImportDiagnosticCode.RequirementUnsupported, "homebrew/a.xml", "ID_BREW_PICKY", "[odd thing]"),
+            (ImportDiagnosticSeverity.Info, ImportDiagnosticCode.DuplicateId, "core/feats.xml", "ID_TEST_FEAT", "homebrew/c.xml"),
+            (ImportDiagnosticSeverity.Info, ImportDiagnosticCode.TextOnly, "homebrew/a.xml", "ID_BREW_STORY", (string?)null));
+        result.Diagnostics.Select(d => d.Message).Should().Equal(
+            "Brew Grantor grants ID_BREW_MISSING, which is not in the content; that grant was left out.",
+            "Brew Twice (ID_BREW_TWICE) is defined twice in homebrew/a.xml; the first is used and the other left out.",
+            "An element in homebrew/a.xml has no id, so it was skipped.",
+            "Brew Picky's requirements name ID_BREW_NOWHERE, which is not in the content: it counts as something no character has.",
+            "Brew Picky's requirements use [odd thing], which Starfall cannot check: it counts as never true.",
+            "Test Feat (ID_TEST_FEAT) is defined in both core/feats.xml and homebrew/c.xml; the copy in homebrew/c.xml is used and the other left out.",
+            "Brew Story has no rules: Starfall shows its description, but applies nothing from it.");
+        result.Diagnostics.Single(d => d.Code == ImportDiagnosticCode.ElementIncomplete).ElementName.Should().Be("Nameless");
+    }
+
+    [TestMethod]
+    public async Task StarfallsOwnContent_RepeatsNoId_OfTheContent()
+    {
+        (await ImportAsync(AuroraImporterOptions.BuiltInIndex)).Diagnostics.Should().NotContain(d => d.Code == ImportDiagnosticCode.DuplicateId);
+        (await ImportAsync("core/test.index")).Diagnostics.Should().NotContain(d => d.Code == ImportDiagnosticCode.DuplicateId);
+    }
+
+    [TestMethod]
+    public async Task FiveEToolsImport_CountsWhatItLeavesOut_OnceAnEntry_ByReason()
+    {
+        var data = Directory.CreateDirectory(Path.Combine(_root, "5etools-skips")).FullName;
+        Directory.CreateDirectory(Path.Combine(data, "class"));
+        File.WriteAllText(Path.Combine(data, "deities.json"), """{"deity": []}""");
+        File.WriteAllText(Path.Combine(data, "books.json"), """{"book": [{"id": "TST", "name": "Test Book", "published": "2020-01-01"}]}""");
+        File.WriteAllText(Path.Combine(data, "class", "class-skips.json"), """
+            {
+              "class": [
+                { "name": "Lab Rat", "source": "UATest", "hd": { "faces": 8 } },
+                { "name": "Old Tester", "source": "TST", "reprintedAs": ["Tester|XTST"], "hd": { "faces": 8 } },
+                { "name": "Sidekick", "source": "TST", "isSidekick": true, "hd": { "faces": 8 } }
+              ]
+            }
+            """);
+        // Aurora's core content has a Test Feat
+        File.WriteAllText(Path.Combine(data, "feats.json"), """{"feat": [{ "name": "Test Feat", "source": "TST", "entries": ["The same feat."] }]}""");
+        // an Unearthed Arcana subrace of a 5etools species: looked at for the species and again for subraces of Aurora's
+        File.WriteAllText(Path.Combine(data, "races.json"), """
+            {
+              "race": [{ "name": "Testfolk", "source": "TST", "size": ["M"], "speed": 30, "entries": ["Folk."] }],
+              "subrace": [{ "name": "Hill", "source": "UATest", "raceName": "Testfolk", "raceSource": "TST", "entries": ["Hills."] }]
+            }
+            """);
+
+        var result = await ImportAsync(AuroraImporterOptions.FiveEToolsIndex, "5etools-skips");
+
+        result.Diagnostics.Where(d => d.Code == ImportDiagnosticCode.EntriesSkipped).Select(d => (d.Severity, d.Detail, d.Count, d.Message)).Should().Equal(
+            (ImportDiagnosticSeverity.Info, "aurora-has-it", 1, "1 5etools entry left out: already in the Aurora content, whose version is used."),
+            (ImportDiagnosticSeverity.Info, "not-for-players", 1, "1 5etools entry left out: not for player characters (sidekicks, NPC species)."),
+            (ImportDiagnosticSeverity.Info, "reprinted", 1, "1 5etools entry left out: reprinted in a later book, whose printing is used instead."),
+            (ImportDiagnosticSeverity.Info, "unearthed-arcana", 2, "2 5etools entries left out: Unearthed Arcana or Plane Shift, which Starfall leaves out like the Aurora import."));
+        result.Diagnostics.Where(d => d.Code == ImportDiagnosticCode.EntriesSkipped).Should().OnlyContain(d => d.Importer == ImportDiagnosticImporter.FiveETools && d.File == "5etools/content.xml");
+        result.Entries.Skipped.Should().Be(5);
+        (await ImportAsync(AuroraImporterIndex.Homebrew, "5etools-skips")).Diagnostics.Should().NotContain(d => d.Code == ImportDiagnosticCode.EntriesSkipped);
+    }
+
+    [TestMethod]
+    public void EntryCounts_PutEachElementInOneBucket()
+    {
+        ImportDiagnostic Warn(ImportDiagnosticCode code, string? id, string detail = "") =>
+            new(ImportDiagnosticSeverity.Warning, code, ImportDiagnosticImporter.Homebrew, "made up") { ElementId = id, Detail = detail };
+        var diagnostics = new[]
+        {
+            Warn(ImportDiagnosticCode.RequirementUnsupported, "A", "ID_X"),
+            Warn(ImportDiagnosticCode.RequirementUnsupported, "A", "ID_X"),
+            Warn(ImportDiagnosticCode.GrantUnresolved, "C"),
+            new ImportDiagnostic(ImportDiagnosticSeverity.Info, ImportDiagnosticCode.TextOnly, ImportDiagnosticImporter.Homebrew, "made up") { ElementId = "B" },
+            new ImportDiagnostic(ImportDiagnosticSeverity.Info, ImportDiagnosticCode.DuplicateId, ImportDiagnosticImporter.Homebrew, "made up") { ElementId = "D" },
+            new ImportDiagnostic(ImportDiagnosticSeverity.Info, ImportDiagnosticCode.EntriesSkipped, ImportDiagnosticImporter.FiveETools, "made up") { Count = 7 },
+        };
+
+        // A: partial (its requirement); B: text only; C: partial although it is text only too; D: in full (the copy of its
+        // id that was left out is the skipped one); skipped: D's other copy and the 7 tallied
+        ImportEntryCounts.Of([("A", false), ("B", true), ("C", true), ("D", false)], diagnostics)
+            .Should().Be(new ImportEntryCounts(Complete: 1, Partial: 2, TextOnly: 1, Skipped: 8));
+        (new ImportEntryCounts(1, 2, 3, 4) + new ImportEntryCounts(10, 20, 30, 40)).Should().Be(new ImportEntryCounts(11, 22, 33, 44));
     }
 
     [TestMethod]

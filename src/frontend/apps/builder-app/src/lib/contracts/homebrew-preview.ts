@@ -47,6 +47,7 @@ export interface ImportDiagnostic {
   elementName?: null | string;
   detail?: null | string;
   omitted?: null | number;
+  count?: null | number;
 }
 
 export type HomebrewElementChangeKind = "added" | "changed" | "removed";
@@ -63,9 +64,9 @@ export type ImportDiagnosticSeverity = "error" | "warning" | "info";
 
 export const ImportDiagnosticSeverityValues = ["error", "warning", "info"] as const satisfies readonly ImportDiagnosticSeverity[];
 
-export type ImportDiagnosticCode = "unreadable-file" | "index-entry-missing" | "append-target-missing" | "grant-unresolved" | "class-feature-missing" | "subclass-class-missing" | "element-missing" | "choice-unmatched" | "invalid-value" | "replaces-existing" | "stale-revision";
+export type ImportDiagnosticCode = "unreadable-file" | "index-entry-missing" | "append-target-missing" | "grant-unresolved" | "class-feature-missing" | "subclass-class-missing" | "element-missing" | "choice-unmatched" | "invalid-value" | "replaces-existing" | "stale-revision" | "duplicate-id" | "element-incomplete" | "requirement-unsupported" | "text-only" | "entries-skipped";
 
-export const ImportDiagnosticCodeValues = ["unreadable-file", "index-entry-missing", "append-target-missing", "grant-unresolved", "class-feature-missing", "subclass-class-missing", "element-missing", "choice-unmatched", "invalid-value", "replaces-existing", "stale-revision"] as const satisfies readonly ImportDiagnosticCode[];
+export const ImportDiagnosticCodeValues = ["unreadable-file", "index-entry-missing", "append-target-missing", "grant-unresolved", "class-feature-missing", "subclass-class-missing", "element-missing", "choice-unmatched", "invalid-value", "replaces-existing", "stale-revision", "duplicate-id", "element-incomplete", "requirement-unsupported", "text-only", "entries-skipped"] as const satisfies readonly ImportDiagnosticCode[];
 
 export type ImportDiagnosticImporter = "aurora" | "5etools" | "homebrew" | "aurora-character";
 

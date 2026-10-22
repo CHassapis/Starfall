@@ -57,7 +57,17 @@ describe("the import diagnostics contract", () => {
     expect(values("ImportDiagnosticCode")).toEqual([
       "unreadable-file", "index-entry-missing", "append-target-missing", "grant-unresolved", "class-feature-missing", "subclass-class-missing",
       "element-missing", "choice-unmatched", "invalid-value", "replaces-existing", "stale-revision",
+      "duplicate-id", "element-incomplete", "requirement-unsupported", "text-only", "entries-skipped",
     ]);
+  });
+
+  it("the imports count their entries: in full, in part, text only, skipped", () => {
+    const property = (schema: string, name: string) => document.components.schemas[schema].properties?.[name];
+    for (const schema of ["AuroraImportResult", "ContentJobStatus", "UploadHomebrewResponse", "DeleteHomebrewResponse"]) {
+      expect(property(schema, "entries")?.$ref, schema).toBe("#/components/schemas/ImportEntryCounts");
+    }
+    expect(Object.keys(document.components.schemas.ImportEntryCounts.properties ?? {})).toEqual(["complete", "partial", "textOnly", "skipped"]);
+    expect(property("ImportDiagnostic", "count")).toBeDefined();
   });
 
   it("the job status and the import result carry them, and the old text warnings stay", () => {

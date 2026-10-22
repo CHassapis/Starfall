@@ -4675,6 +4675,9 @@
             "items": {
               "$ref": "#/components/schemas/ImportDiagnostic"
             }
+          },
+          "entries": {
+            "$ref": "#/components/schemas/ImportEntryCounts"
           }
         }
       },
@@ -6751,6 +6754,9 @@
             "items": {
               "$ref": "#/components/schemas/ImportDiagnostic"
             }
+          },
+          "entries": {
+            "$ref": "#/components/schemas/ImportEntryCounts"
           }
         }
       },
@@ -8014,6 +8020,9 @@
             "items": {
               "$ref": "#/components/schemas/ImportDiagnostic"
             }
+          },
+          "entries": {
+            "$ref": "#/components/schemas/ImportEntryCounts"
           }
         }
       },
@@ -9988,6 +9997,15 @@
               "string"
             ],
             "format": "int32"
+          },
+          "count": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
           }
         }
       },
@@ -10003,7 +10021,12 @@
           "choice-unmatched",
           "invalid-value",
           "replaces-existing",
-          "stale-revision"
+          "stale-revision",
+          "duplicate-id",
+          "element-incomplete",
+          "requirement-unsupported",
+          "text-only",
+          "entries-skipped"
         ]
       },
       "ImportDiagnosticImporter": {
@@ -10020,6 +10043,49 @@
           "warning",
           "info"
         ]
+      },
+      "ImportEntryCounts": {
+        "required": [
+          "complete",
+          "partial",
+          "textOnly",
+          "skipped"
+        ],
+        "type": "object",
+        "properties": {
+          "complete": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "partial": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "textOnly": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "skipped": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
       },
       "IncludeRuleItem": {
         "required": [
@@ -13356,6 +13422,9 @@
             "items": {
               "$ref": "#/components/schemas/ImportDiagnostic"
             }
+          },
+          "entries": {
+            "$ref": "#/components/schemas/ImportEntryCounts"
           }
         }
       },

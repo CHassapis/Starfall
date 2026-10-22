@@ -20,7 +20,7 @@ internal sealed partial class FiveEToolsContent
         foreach (var spell in Ordered(_json.Load("spells/spells-*.json", "spell")))
         {
             var (name, source) = (Name(spell), SourceOf(spell));
-            if (Skip(spell) || name.Length == 0 || AuroraHas("spell", spell))
+            if (Skip(spell, "spell") || name.Length == 0 || AuroraHas("spell", spell))
             {
                 continue;
             }
@@ -139,7 +139,7 @@ internal sealed partial class FiveEToolsContent
         foreach (var feat in Ordered(_json.Load("feats.json", "feat")))
         {
             var (name, source) = (Name(feat), SourceOf(feat));
-            if (Skip(feat) || name.Length == 0 || AuroraHas("feat", feat))
+            if (Skip(feat, "feat") || name.Length == 0 || AuroraHas("feat", feat))
             {
                 continue;
             }
@@ -179,7 +179,7 @@ internal sealed partial class FiveEToolsContent
     /// </summary>
     private void OptionalFeatures()
     {
-        var options = Ordered(_json.Load("optionalfeatures.json", "optionalfeature")).Where(o => !Skip(o)).ToList();
+        var options = Ordered(_json.Load("optionalfeatures.json", "optionalfeature")).Where(o => !Skip(o, "optionalfeature")).ToList();
         string[] types = ["Class Feature", "Archetype Feature", "Feat", "Feat Feature"];
 
         var learned = _optionSupports;
@@ -247,7 +247,7 @@ internal sealed partial class FiveEToolsContent
         foreach (var background in Ordered(_json.Load("backgrounds.json", "background")))
         {
             var (name, source) = (Name(background), SourceOf(background));
-            if (Skip(background) || name.Length == 0 || AuroraHas("background", background))
+            if (Skip(background, "background") || name.Length == 0 || AuroraHas("background", background))
             {
                 continue;
             }
@@ -339,7 +339,7 @@ internal sealed partial class FiveEToolsContent
         foreach (var race in Ordered(_json.Load("races.json", "race")))
         {
             var (name, source) = (Name(race), SourceOf(race));
-            if (Skip(race) || name.Length == 0 || AuroraHas("race", race))
+            if (Skip(race, "race") || name.Length == 0 || AuroraHas("race", race))
             {
                 continue;
             }
@@ -350,7 +350,7 @@ internal sealed partial class FiveEToolsContent
             SpeciesRules(rules, race, name, source, modern);
 
             // its subraces, when it has any (2014 species)
-            var own = subraces.Where(s => FiveEToolsJson.Str(s, "raceName") == name && FiveEToolsJson.Str(s, "raceSource") == source && Name(s).Length > 0 && !Skip(s)).ToList();
+            var own = subraces.Where(s => FiveEToolsJson.Str(s, "raceName") == name && FiveEToolsJson.Str(s, "raceSource") == source && Name(s).Length > 0 && !Skip(s, "subrace")).ToList();
             if (own.Count > 0)
             {
                 var token = $"{name} Subrace";
@@ -366,9 +366,13 @@ internal sealed partial class FiveEToolsContent
         foreach (var subrace in Ordered(subraces))
         {
             var (subName, raceName) = (Name(subrace), FiveEToolsJson.Str(subrace, "raceName") ?? "");
-            if (subName.Length == 0 || Skip(subrace) || !_aurora.Has("race", raceName)
-                || _aurora.Has("race", $"{raceName} ({subName})", $"{subName} {raceName}", subName))
+            if (subName.Length == 0 || Skip(subrace, "subrace") || !_aurora.Has("race", raceName))
             {
+                continue;
+            }
+            if (_aurora.Has("race", $"{raceName} ({subName})", $"{subName} {raceName}", subName))
+            {
+                Leave("subrace", subrace, AuroraHasIt);
                 continue;
             }
             var parent = _aurora.Find("Race", raceName, SourceName(FiveEToolsJson.Str(subrace, "raceSource") ?? "")).FirstOrDefault();

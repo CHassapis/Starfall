@@ -1,3 +1,5 @@
+using Starlights.Modules.Elements.Integration;
+
 namespace Starlights.Modules.Characters.Services.Processing;
 
 /// <summary>
@@ -19,37 +21,29 @@ public static class RequirementsExpression
     /// <param name="value">A bracket term's value by its lowercase Aurora name ("str", "level:warlock"); null when unknown.</param>
     public static bool Evaluate(string expression, Func<Guid, bool> hasElement, Func<string, int?> value, Func<string, bool>? equipped = null)
     {
-        var tokens = Tokenize(expression);
+        var tokens = RequirementTerms.Tokenize(expression);
         var position = 0;
 
         string? Peek() => position < tokens.Count ? tokens[position] : null;
 
         bool Term(string term)
         {
-            if (Guid.TryParse(term, out var elementId))
+            // one grammar with the importer, which reports the terms nothing can meet (RequirementTerms)
+            var inner = term.Length > 1 ? term[1..^1] : term;
+            switch (RequirementTerms.Classify(term))
             {
-                return hasElement(elementId);
-            }
-
-            if (term.StartsWith('[') && term.EndsWith(']'))
-            {
-                var inner = term[1..^1];
-                if (inner.StartsWith("equipped:", StringComparison.OrdinalIgnoreCase))
-                {
+                case RequirementTermKind.Element:
+                    return hasElement(Guid.Parse(term));
+                case RequirementTermKind.Equipped:
                     return equipped?.Invoke(inner["equipped:".Length..].Trim().ToLowerInvariant()) ?? false;
-                }
-                var cut = inner.LastIndexOf(':');
-                if (cut > 0 && int.TryParse(inner[(cut + 1)..].Trim(), out var least))
-                {
-                    return value(inner[..cut].Trim().ToLowerInvariant()) is { } actual && actual >= least;
-                }
-                if (inner.StartsWith("type:", StringComparison.OrdinalIgnoreCase))
-                {
+                case RequirementTermKind.Value:
+                    var cut = inner.LastIndexOf(':');
+                    return value(inner[..cut].Trim().ToLowerInvariant()) is { } actual && actual >= int.Parse(inner[(cut + 1)..].Trim());
+                case RequirementTermKind.Type:
                     return value(inner.Trim().ToLowerInvariant()) is > 0;
-                }
+                default:
+                    return false;
             }
-
-            return false;
         }
 
         bool Or()
@@ -98,58 +92,5 @@ public static class RequirementsExpression
         }
 
         return Or();
-    }
-
-    private static List<string> Tokenize(string expression)
-    {
-        var tokens = new List<string>();
-        var term = new System.Text.StringBuilder();
-
-        void Flush()
-        {
-            var value = term.ToString().Trim();
-            if (value.Length > 0)
-            {
-                tokens.Add(value);
-            }
-            term.Clear();
-        }
-
-        for (var i = 0; i < expression.Length; i++)
-        {
-            var c = expression[i];
-
-            // [stat:value] is a single term (it may contain spaces)
-            if (c == '[')
-            {
-                Flush();
-                var end = expression.IndexOf(']', i);
-                end = end < 0 ? expression.Length - 1 : end;
-                tokens.Add(expression[i..(end + 1)]);
-                i = end;
-                continue;
-            }
-
-            switch (c)
-            {
-                case ',' or '!' or '(' or ')':
-                    Flush();
-                    tokens.Add(c.ToString());
-                    break;
-                case '|':
-                    Flush();
-                    if (tokens.Count == 0 || tokens[^1] != "|")
-                    {
-                        tokens.Add("|");
-                    }
-                    break;
-                default:
-                    term.Append(c);
-                    break;
-            }
-        }
-
-        Flush();
-        return tokens;
     }
 }

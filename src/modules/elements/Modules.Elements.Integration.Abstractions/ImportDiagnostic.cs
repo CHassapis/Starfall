@@ -25,6 +25,9 @@ public sealed record ImportDiagnostic(ImportDiagnosticSeverity Severity, ImportD
     /// <summary>Set on the last entry of a code when more were found than are listed: how many more.</summary>
     public int? Omitted { get; init; }
 
+    /// <summary>A tally (entries left out for one reason): how many it stands for.</summary>
+    public int? Count { get; init; }
+
     /// <summary>The importer a file belongs to, by where it is filed.</summary>
     public static ImportDiagnosticImporter ImporterOf(string? file) =>
         file?.StartsWith("homebrew/", StringComparison.Ordinal) == true ? ImportDiagnosticImporter.Homebrew
@@ -125,4 +128,26 @@ public enum ImportDiagnosticCode
 
     /// <summary>The homebrew record changed (or was removed) after the preview this save was based on.</summary>
     [JsonStringEnumMemberName("stale-revision")] StaleRevision,
+
+    /// <summary>
+    /// Two files define the same id: the copy that counts is used (homebrew over a pull request over the content
+    /// repository; among equals the first read) and the other is left out. Info when a higher folder overrides on
+    /// purpose, a warning when the two are equals.
+    /// </summary>
+    [JsonStringEnumMemberName("duplicate-id")] DuplicateId,
+
+    /// <summary>An element has no id, name or type, so it was skipped.</summary>
+    [JsonStringEnumMemberName("element-incomplete")] ElementIncomplete,
+
+    /// <summary>
+    /// A requirement names an id that is not in the content, or a term Starfall cannot check: it never holds (so with a
+    /// "!" before it, it always does). The element is imported with it as written.
+    /// </summary>
+    [JsonStringEnumMemberName("requirement-unsupported")] RequirementUnsupported,
+
+    /// <summary>A feature, feat or trait with no rules: its description is shown, but nothing is applied from it.</summary>
+    [JsonStringEnumMemberName("text-only")] TextOnly,
+
+    /// <summary>5etools entries left out for one reason (<see cref="ImportDiagnostic.Detail"/>), how many in <see cref="ImportDiagnostic.Count"/>.</summary>
+    [JsonStringEnumMemberName("entries-skipped")] EntriesSkipped,
 }
