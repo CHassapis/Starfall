@@ -5623,6 +5623,15 @@
               "$ref": "#/components/schemas/CharacterResource"
             }
           },
+          "favoriteRolls": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/CharacterFavoriteRoll"
+            }
+          },
           "received": {
             "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": [
@@ -5957,6 +5966,20 @@
             "items": {
               "type": "string"
             }
+          }
+        }
+      },
+      "CharacterFavoriteRoll": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "formula": {
+            "type": "string"
           }
         }
       },
