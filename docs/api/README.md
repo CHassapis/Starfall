@@ -233,7 +233,7 @@ removal (`POST`/`DELETE /api/elements/homebrew`), and the content update's job s
   - `diagnostics`: the save's own checks.
 - `PUT` with `expectedRevision` set to the revision you read or previewed is refused with `409` and a fresh preview
   (`stale-revision`) when the record changed or was removed since. Without `expectedRevision`, the save works as
-  before.
+  before. An empty string means the record must still be absent; a concurrent creation returns `409`.
 
 ## Examples
 

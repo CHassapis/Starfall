@@ -64,18 +64,24 @@ describe("a homebrew edit's preview", () => {
 
   it("saves with the revision the form was opened on, the fresh one only after a refusal, and not when refused anyway", () => {
     expect(expectedRevisionOf(edit)).toBe("0123456789abcdef");
-    expect(expectedRevisionOf(fresh)).toBeNull();
+    expect(expectedRevisionOf(fresh)).toBe("");
     // opened on rev-1; a review made after someone saved rev-2 does not change what the save is based on
     expect(revisionToSend("rev-1")).toBe("rev-1");
     expect(revisionToSend("rev-1", null)).toBe("rev-1");
     expect(revisionToSend(undefined)).toBeNull();
     // the save was refused and its fresh review (rev-2, or the record gone) was shown: the next one is based on that
     expect(revisionToSend("rev-1", { ...edit, revision: "rev-2" })).toBe("rev-2");
-    expect(revisionToSend("rev-1", { ...edit, isNew: true, revision: null })).toBeNull();
+    expect(revisionToSend("rev-1", { ...edit, isNew: true, revision: null })).toBe("");
     expect(canSave(edit)).toBe(true);
     expect(canSave({ ...edit, diagnostics: [{ severity: "error", code: "invalid-value", importer: "homebrew", message: "It needs a name.", detail: "name" }] })).toBe(false);
     expect(canSave({ ...edit, diagnostics: [{ severity: "error", code: "stale-revision", importer: "homebrew", message: "Someone saved it." }] })).toBe(true);
     expect(canSave({ ...edit, diagnostics: [{ severity: "warning", code: "replaces-existing", importer: "homebrew", message: "There is already one." }] })).toBe(true);
+  });
+
+  it("guards a new form against creation or replacement after its review", () => {
+    expect(revisionToSend(undefined, null, fresh)).toBe("");
+    expect(revisionToSend(undefined, null, edit)).toBe(edit.revision);
+    expect(revisionToSend("opened", null, edit)).toBe("opened");
   });
 
   it("a refused save's answer (409) is read as a fresh preview", () => {

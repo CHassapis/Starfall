@@ -164,7 +164,7 @@ public sealed class SaveHomebrewSpellEndpoint : Endpoint<HomebrewSpellModel, Hom
             var document = HomebrewWorkshop.Load(Config, HomebrewWorkshop.SpellsFile);
             var id = string.IsNullOrWhiteSpace(req.Id) ? HomebrewWorkshopXml.IdFor("SPELL", req.Name) : req.Id!;
             var xml = HomebrewWorkshopXml.SpellToXml(req, id);
-            if (req.ExpectedRevision is { } expected && HomebrewWorkshopReview.Revision(document, id) is var current && current != expected)
+            if (req.ExpectedRevision is { } expected && HomebrewWorkshopReview.Revision(document, id) is var current && (current ?? string.Empty) != expected)
             {
                 var before = HomebrewWorkshop.Main(document, "Spell", id) is { } main ? HomebrewWorkshopXml.SpellFromXml(main) : null;
                 await HttpContext.Response.SendAsync(await HomebrewWorkshopReview.BuildAsync("spells", document, id, before, HomebrewWorkshopXml.SpellFromXml(xml), [xml],
@@ -272,7 +272,7 @@ public sealed class SaveHomebrewSubclassEndpoint : Endpoint<HomebrewSubclassMode
             var document = HomebrewWorkshop.Load(Config, HomebrewWorkshop.SubclassesFile);
             var id = string.IsNullOrWhiteSpace(req.Id) ? HomebrewWorkshopXml.IdFor("SUBCLASS", req.Name) : req.Id!;
             var record = HomebrewWorkshopXml.SubclassToXml(req, id);
-            if (req.ExpectedRevision is { } expected && HomebrewWorkshopReview.Revision(document, id) is var current && current != expected)
+            if (req.ExpectedRevision is { } expected && HomebrewWorkshopReview.Revision(document, id) is var current && (current ?? string.Empty) != expected)
             {
                 var before = HomebrewWorkshop.Main(document, "Archetype", id) is { } main ? HomebrewWorkshopXml.SubclassFromXml(document.Root!, main) : null;
                 await HttpContext.Response.SendAsync(await HomebrewWorkshopReview.BuildAsync("subclasses", document, id, before, HomebrewWorkshopXml.SubclassFromXml(HomebrewWorkshop.Root(record), record[0]), record,
@@ -345,7 +345,7 @@ public sealed class SaveHomebrewClassEndpoint : Endpoint<HomebrewClassModel, Hom
             var document = HomebrewWorkshop.Load(Config, HomebrewWorkshop.ClassesFile);
             var id = string.IsNullOrWhiteSpace(req.Id) ? HomebrewWorkshopXml.IdFor("CLASS", req.Name) : req.Id!;
             var (_, record) = HomebrewWorkshop.ClassRecord(document, req, id);
-            if (req.ExpectedRevision is { } expected && HomebrewWorkshopReview.Revision(document, id) is var current && current != expected)
+            if (req.ExpectedRevision is { } expected && HomebrewWorkshopReview.Revision(document, id) is var current && (current ?? string.Empty) != expected)
             {
                 var before = HomebrewWorkshop.Main(document, "Class", id) is { } main ? HomebrewWorkshopXml.ClassFromXml(document.Root!, main) : null;
                 await HttpContext.Response.SendAsync(await HomebrewWorkshopReview.BuildAsync("classes", document, id, before, HomebrewWorkshopXml.ClassFromXml(HomebrewWorkshop.Root(record), record[0]), record,

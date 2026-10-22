@@ -110,7 +110,7 @@ export function ReviewFooter<T extends { revision?: string | null }>({
   };
   const save = async () => {
     try {
-      await onSave({ ...model, expectedRevision: revisionToSend(model.revision, refused) });
+      await onSave({ ...model, expectedRevision: revisionToSend(model.revision, refused, preview) });
     } catch (e) {
       if (e instanceof StaleHomebrewError) {
         setRefused(e.preview);
