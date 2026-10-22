@@ -5614,6 +5614,15 @@
               "$ref": "#/components/schemas/CharacterCompanion"
             }
           },
+          "resources": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/CharacterResource"
+            }
+          },
           "received": {
             "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": [
@@ -6231,6 +6240,141 @@
               "null",
               "string"
             ]
+          }
+        }
+      },
+      "CharacterResource": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "max": {
+            "$ref": "#/components/schemas/CharacterResourceMax"
+          },
+          "recharge": {
+            "type": "string"
+          },
+          "pool": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "cost": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "effect": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/CharacterResourceEffect"
+              }
+            ]
+          },
+          "notes": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "CharacterResourceEffect": {
+        "type": "object",
+        "properties": {
+          "armorClass": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "speed": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "attackRolls": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "damage": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "CharacterResourceMax": {
+        "type": "object",
+        "properties": {
+          "from": {
+            "type": "string"
+          },
+          "value": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "ability": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "className": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "times": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "plus": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "atLeast": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
           }
         }
       },

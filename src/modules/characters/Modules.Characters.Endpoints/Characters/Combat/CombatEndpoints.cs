@@ -87,7 +87,8 @@ public sealed class UpdateCharacterCombatEndpoint : Endpoint<CharacterCombat>
             return;
         }
 
-        character.UpdateCombat(req with { Version = 1, Received = character.Combat.Received });
+        // a save from an app that does not know the player's own resources sends none: the stored ones are kept
+        character.UpdateCombat(req with { Version = 1, Received = character.Combat.Received, Resources = req.Resources ?? character.Combat.Resources });
         await _persistence.SaveChangesAsync();
         await locked.CommitAsync();
         await Send.OkAsync(character.Combat, ct);

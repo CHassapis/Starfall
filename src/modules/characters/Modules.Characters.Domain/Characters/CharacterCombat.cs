@@ -1,3 +1,5 @@
+using System.Text.RegularExpressions;
+
 namespace Starlights.Modules.Characters.Domain.Characters;
 
 /// <summary>
@@ -56,6 +58,13 @@ public sealed record CharacterCombat
     public List<CharacterCompanion> Companions { get; init; } = [];
 
     /// <summary>
+    /// Resources the player added by hand: a homebrew feature's uses, a pool of points, a switch with an effect. What
+    /// was spent of one is kept in <see cref="Uses"/> under "custom:&lt;id&gt;", its effect in <see cref="Effects"/> the
+    /// same way. Null in a save from an app that does not know them: the stored ones are kept.
+    /// </summary>
+    public List<CharacterResource>? Resources { get; init; }
+
+    /// <summary>
     /// How many times someone else changed this state (a party member's potion or charm healing the character).
     /// Kept by the server alone: a simulator that loaded an older count is refused when it saves, reloads and
     /// makes its change again, so it never undoes what the other character did.
@@ -97,6 +106,11 @@ public sealed record CharacterCombat
         {
             return Companions.Select(c => c.Validate()).FirstOrDefault(p => p is not null) ?? "At most 12 companions.";
         }
+        if (Resources is { } resources
+            && (resources.Count > 30 || resources.Select(r => r.Id).Distinct(StringComparer.Ordinal).Count() != resources.Count || resources.Any(r => r.Validate() is not null)))
+        {
+            return resources.Select(r => r.Validate()).FirstOrDefault(p => p is not null) ?? "At most 30 resources of your own, each with an id of its own.";
+        }
         if (Exhaustion is < 0 or > 10 || DeathSaveSuccesses is < 0 or > 3 || DeathSaveFailures is < 0 or > 3)
         {
             return "Exhaustion is 0 to 10; death saves 0 to 3 each.";
@@ -135,3 +149,98 @@ public sealed record CharacterCompanion
     }
 }
 
+
+/// <summary>
+/// A resource the player added by hand (see <see cref="CharacterCombat.Resources"/>): uses of its own with a maximum and
+/// a recharge, or spent from another resource (a shared pool), and what it changes while switched on.
+/// </summary>
+public sealed partial record CharacterResource
+{
+    private static readonly string[] Recharges = ["turn", "short", "long", "dawn", "never"];
+
+    /// <summary>Stable for the resource's life, so renaming it keeps what was spent.</summary>
+    public string Id { get; init; } = string.Empty;
+
+    public string Name { get; init; } = string.Empty;
+
+    public CharacterResourceMax Max { get; init; } = new();
+
+    /// <summary>"turn", "short" (a short or long rest), "long", "dawn" (a new day, which no rest is) or "never" (undone by hand).</summary>
+    public string Recharge { get; init; } = "long";
+
+    /// <summary>Spends from another resource instead: a feature's or another resource's name.</summary>
+    public string? Pool { get; init; }
+
+    /// <summary>What one use costs from the pool.</summary>
+    public int Cost { get; init; } = 1;
+
+    public CharacterResourceEffect? Effect { get; init; }
+
+    public string? Notes { get; init; }
+
+    [GeneratedRegex("^[A-Za-z0-9_-]{1,64}$")]
+    private static partial Regex IdPattern();
+
+    public string? Validate()
+    {
+        if (!IdPattern().IsMatch(Id) || string.IsNullOrWhiteSpace(Name) || Name.Length > 60 || !Recharges.Contains(Recharge)
+            || Pool is { Length: 0 or > 100 } || Cost is < 1 or > 99 || Notes is { Length: > 500 })
+        {
+            return "A resource needs an id (letters, digits, - or _), a name of up to 60 characters and a known recharge; a pool's name up to 100 characters, a cost of 1 to 99, notes up to 500.";
+        }
+        return Max.Validate() ?? Effect?.Validate();
+    }
+}
+
+/// <summary>How many uses a resource holds: a number, or what follows the character, times, plus, at least.</summary>
+public sealed record CharacterResourceMax
+{
+    private static readonly string[] Froms = ["number", "proficiency", "level", "class-level", "ability"];
+    private static readonly string[] Abilities = ["STR", "DEX", "CON", "INT", "WIS", "CHA"];
+
+    /// <summary>"number", "proficiency" (the proficiency bonus), "level", "class-level" or "ability" (its modifier).</summary>
+    public string From { get; init; } = "number";
+
+    /// <summary>"number": the uses.</summary>
+    public int Value { get; init; }
+
+    /// <summary>"ability": its abbreviation, "CHA".</summary>
+    public string? Ability { get; init; }
+
+    /// <summary>"class-level": the class.</summary>
+    public string? ClassName { get; init; }
+
+    public int Times { get; init; } = 1;
+
+    public int Plus { get; init; }
+
+    public int? AtLeast { get; init; }
+
+    public string? Validate() =>
+        !Froms.Contains(From) || Value is < 0 or > 999 || Times is < 1 or > 100 || Plus is < -99 or > 999 || AtLeast is < 0 or > 999
+        || (From == "ability" && !Abilities.Contains(Ability)) || (From == "class-level" && ClassName is null or { Length: 0 or > 60 })
+            ? "A resource's maximum follows a number (0 to 999), the proficiency bonus, the level, a class's level or an ability modifier, times 1 to 100, plus -99 to 999, at least 0 to 999."
+            : null;
+}
+
+/// <summary>What a resource changes while it is switched on.</summary>
+public sealed partial record CharacterResourceEffect
+{
+    public int ArmorClass { get; init; }
+
+    /// <summary>Feet.</summary>
+    public int Speed { get; init; }
+
+    public int AttackRolls { get; init; }
+
+    /// <summary>Extra damage on weapon hits: "1d6 fire", "1d4+1", "2".</summary>
+    public string? Damage { get; init; }
+
+    [GeneratedRegex(@"^(?:[1-9]\d?d(?:4|6|8|10|12)(?:\s*\+\s*\d{1,2})?|[1-9]\d?)(?: [a-z]{3,12})?$")]
+    private static partial Regex DamagePattern();
+
+    public string? Validate() =>
+        ArmorClass is < -20 or > 20 || Speed is < -120 or > 120 || AttackRolls is < -20 or > 20 || (Damage is not null && !DamagePattern().IsMatch(Damage))
+            ? "A resource's effect changes armor class and attack rolls by -20 to 20, speed by -120 to 120 feet, and adds damage like \"1d6 fire\"."
+            : null;
+}
