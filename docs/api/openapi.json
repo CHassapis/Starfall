@@ -9841,6 +9841,48 @@
               "string"
             ]
           },
+          "roll": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "saveAbility": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "halfOnSave": {
+            "type": "boolean"
+          },
+          "damage": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "healing": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "addsModifier": {
+            "type": "boolean"
+          },
+          "cantripScaling": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "slotScaling": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
           "revision": {
             "type": [
               "null",

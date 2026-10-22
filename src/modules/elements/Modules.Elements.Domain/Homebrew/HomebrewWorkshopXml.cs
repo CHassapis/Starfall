@@ -36,6 +36,29 @@ public sealed record HomebrewSpellModel
     /// <summary>What it does: plain text, paragraphs separated by blank lines.</summary>
     public string Description { get; init; } = string.Empty;
     public string? HigherLevels { get; init; }
+
+    // ---- what it rolls, said outright (optional): read instead of the text, so the numbers never depend on wording ----
+
+    /// <summary>
+    /// What it rolls: "melee-attack", "ranged-attack", "save", or "none" (nothing to roll: healing, a utility spell).
+    /// Empty: not said, and the simulator reads the spell's text as for any book spell.
+    /// </summary>
+    public string? Roll { get; init; }
+    /// <summary>A "save" spell: the ability the target saves with.</summary>
+    public string? SaveAbility { get; init; }
+    /// <summary>A "save" spell: a successful save still takes half the damage (else none).</summary>
+    public bool HalfOnSave { get; init; }
+    /// <summary>Its damage, terms separated by ";": "1d10 cold", "2d6 fire; 1d6 radiant".</summary>
+    public string? Damage { get; init; }
+    /// <summary>The hit points it restores: "2d8".</summary>
+    public string? Healing { get; init; }
+    /// <summary>The spellcasting ability modifier joins the damage (its first term) or the healing.</summary>
+    public bool AddsModifier { get; init; }
+    /// <summary>A cantrip: from a character level on, the first damage term (or the healing) rolls these dice: "5:2d10; 11:3d10; 17:4d10".</summary>
+    public string? CantripScaling { get; init; }
+    /// <summary>A leveled spell: the dice each slot level above its own adds to the first damage term (or the healing): "1d10".</summary>
+    public string? SlotScaling { get; init; }
+
     /// <summary>Set when read: the record as saved. A save that sends it back as <see cref="ExpectedRevision"/> is refused if the record changed since.</summary>
     public string? Revision { get; init; }
 
@@ -121,6 +144,19 @@ public static partial class HomebrewWorkshopXml
 {
     public static readonly string[] Schools = ["Abjuration", "Conjuration", "Divination", "Enchantment", "Evocation", "Illusion", "Necromancy", "Transmutation"];
     public static readonly string[] Abilities = ["Strength", "Dexterity", "Constitution", "Intelligence", "Wisdom", "Charisma"];
+    public static readonly string[] SpellRolls = ["none", "melee-attack", "ranged-attack", "save"];
+    public static readonly string[] DamageTypes = ["acid", "bludgeoning", "cold", "fire", "force", "lightning", "necrotic", "piercing", "poison", "psychic", "radiant", "slashing", "thunder"];
+
+    /// <summary>
+    /// The setters a spell's mechanics are written as (one each, so the compendium's setter map keeps them apart; several
+    /// values in one are separated by ";"). Only written when the spell says what it rolls.
+    /// </summary>
+    public static class SpellSetters
+    {
+        public const string Roll = "starlights-spell-roll", Save = "starlights-spell-save", SaveSuccess = "starlights-spell-save-success",
+            Damage = "starlights-spell-damage", Healing = "starlights-spell-healing", Modifier = "starlights-spell-modifier",
+            CantripScaling = "starlights-spell-cantrip-scaling", SlotScaling = "starlights-spell-slot-scaling";
+    }
     public static readonly string[] Skills =
     [
         "Acrobatics", "Animal Handling", "Arcana", "Athletics", "Deception", "History", "Insight", "Intimidation", "Investigation",
@@ -180,8 +216,50 @@ public static partial class HomebrewWorkshopXml
                 new XElement("set", new XAttribute("name", "hasMaterialComponent"), m.Material ? "true" : "false"),
                 new XElement("set", new XAttribute("name", "materialComponent"), m.Material ? m.MaterialText?.Trim() ?? string.Empty : string.Empty),
                 new XElement("set", new XAttribute("name", "isConcentration"), m.Concentration ? "true" : "false"),
-                new XElement("set", new XAttribute("name", "isRitual"), m.Ritual ? "true" : "false")));
+                new XElement("set", new XAttribute("name", "isRitual"), m.Ritual ? "true" : "false"),
+                SpellMechanicsXml(m)));
     }
+
+    /// <summary>The mechanics setters, when the spell says what it rolls; nothing otherwise (a spell saved before is written as it was).</summary>
+    private static IEnumerable<XElement> SpellMechanicsXml(HomebrewSpellModel m)
+    {
+        if (string.IsNullOrWhiteSpace(m.Roll))
+        {
+            yield break;
+        }
+        XElement Setter(string name, string value) => new("set", new XAttribute("name", name), value);
+        var roll = m.Roll.Trim();
+        yield return Setter(SpellSetters.Roll, roll);
+        if (roll == "save" && !string.IsNullOrWhiteSpace(m.SaveAbility))
+        {
+            yield return Setter(SpellSetters.Save, m.SaveAbility.Trim());
+            yield return Setter(SpellSetters.SaveSuccess, m.HalfOnSave ? "half" : "none");
+        }
+        if (Terms(m.Damage) is { Count: > 0 } damage)
+        {
+            yield return Setter(SpellSetters.Damage, string.Join("; ", damage));
+        }
+        if (!string.IsNullOrWhiteSpace(m.Healing))
+        {
+            yield return Setter(SpellSetters.Healing, m.Healing.Trim());
+        }
+        if (m.AddsModifier)
+        {
+            yield return Setter(SpellSetters.Modifier, "true");
+        }
+        if (m.Level == 0 && Terms(m.CantripScaling) is { Count: > 0 } tiers)
+        {
+            yield return Setter(SpellSetters.CantripScaling, string.Join("; ", tiers));
+        }
+        if (m.Level > 0 && !string.IsNullOrWhiteSpace(m.SlotScaling))
+        {
+            yield return Setter(SpellSetters.SlotScaling, m.SlotScaling.Trim());
+        }
+    }
+
+    /// <summary>The terms of a ";"-separated value, trimmed, empty ones left out.</summary>
+    public static List<string> Terms(string? value) =>
+        (value ?? string.Empty).Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
 
     public static HomebrewSpellModel SpellFromXml(XElement e)
     {
@@ -207,6 +285,14 @@ public static partial class HomebrewWorkshopXml
             Lists = (e.Element("supports")?.Value ?? string.Empty).Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList(),
             Description = string.Join("\n\n", paragraphs.Where(p => p.Length > 0)),
             HigherLevels = higher?.Value.Trim()["At Higher Levels.".Length..].Trim(),
+            Roll = Set(e, SpellSetters.Roll)?.Value,
+            SaveAbility = Set(e, SpellSetters.Save)?.Value,
+            HalfOnSave = Set(e, SpellSetters.SaveSuccess)?.Value == "half",
+            Damage = Set(e, SpellSetters.Damage)?.Value,
+            Healing = Set(e, SpellSetters.Healing)?.Value,
+            AddsModifier = Flag(e, SpellSetters.Modifier),
+            CantripScaling = Set(e, SpellSetters.CantripScaling)?.Value,
+            SlotScaling = Set(e, SpellSetters.SlotScaling)?.Value,
         };
     }
 
