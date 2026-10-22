@@ -17,7 +17,18 @@ export type SheetResponse = { id: number; ok: true; bytes: ArrayBuffer } | { id:
 self.addEventListener("message", (event: MessageEvent<SheetRequest>) => {
   const { id, data, paragraphs } = event.data;
   const answer = (response: SheetResponse, transfer: ArrayBuffer[] = []) => self.postMessage(response, { transfer });
-  buildAuroraSheet(data, paragraphs).then(
+  Promise.resolve().then(() => {
+    // Picture rendering deliberately skips unreadable images. Missing worker canvas support is different:
+    // fail the request before rendering so the client falls back instead of silently dropping every picture.
+    if (typeof OffscreenCanvas === "undefined" || typeof createImageBitmap !== "function") {
+      throw new Error("The sheet's worker cannot render pictures.");
+    }
+    const canvas = new OffscreenCanvas(1, 1);
+    if (!canvas.getContext("2d") || typeof canvas.convertToBlob !== "function") {
+      throw new Error("The sheet's worker cannot render pictures.");
+    }
+    return buildAuroraSheet(data, paragraphs);
+  }).then(
     (bytes) => {
       const buffer = (bytes.byteOffset === 0 && bytes.byteLength === bytes.buffer.byteLength ? bytes.buffer : bytes.slice().buffer) as ArrayBuffer;
       answer({ id, ok: true, bytes: buffer }, [buffer]);
