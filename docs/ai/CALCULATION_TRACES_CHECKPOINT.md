@@ -97,8 +97,10 @@ Commits:
    "Last roll" line. The battle view's `parseRoll` is for damage (never below 0, a total only), so it is not used.
    Flare's pinned rolls credited (idea only, MPL-2.0).
 4. Docs: API guide "Favorite rolls", this checkpoint, handoff Coordination.
+5. dc84c2e The server ignores the same spaces as JavaScript's `\s` (three more shared cases); empty entries are
+   refused with 400 at the endpoint (SQL Server test).
 
-Checks: backend with SQL Server 942: 918 passed, 24 skipped, 0 failed; web 356 passed, 5 skipped; TypeScript clean;
+Checks: backend with SQL Server 942: 918 passed, 24 skipped, 0 failed; web 365 passed, 5 skipped; TypeScript clean;
 ESLint 38 errors, 1 warning (as before); frontend Docker image builds; browser checks `favorite-rolls` 50,
 `sheet-pdf-worker` 21, `smoke` 90, `calculation-traces` 36, `accessibility`, `custom-resources` 50, `spell-mechanics`
 38, `homebrew-review` 48, `ornaments` 110, `units` 17; `sheet-performance` with `MAX_BLOCK_MS=500` passed.
