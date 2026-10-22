@@ -392,6 +392,7 @@ public sealed class PreviewHomebrewSpellEndpoint : Endpoint<HomebrewSpellModel, 
         {
             diagnostics.Add(HomebrewWorkshopReview.ReplacesExisting(id, (string?)main.Attribute("name") ?? id));
         }
+        HomebrewWorkshopReview.CheckOpened(diagnostics, document, id, req.Revision);
         var xml = diagnostics.Any(d => d.Severity == ImportDiagnosticSeverity.Error) ? null : HomebrewWorkshopXml.SpellToXml(req, id);
         await Send.OkAsync(await HomebrewWorkshopReview.BuildAsync("spells", document, id, main is null ? null : HomebrewWorkshopXml.SpellFromXml(main),
             xml is null ? null : HomebrewWorkshopXml.SpellFromXml(xml), xml is null ? null : [xml], diagnostics, _usage, ct), ct);
@@ -427,6 +428,7 @@ public sealed class PreviewHomebrewSubclassEndpoint : Endpoint<HomebrewSubclassM
         {
             diagnostics.Add(HomebrewWorkshopReview.ReplacesExisting(id, (string?)main.Attribute("name") ?? id));
         }
+        HomebrewWorkshopReview.CheckOpened(diagnostics, document, id, req.Revision);
         var record = diagnostics.Any(d => d.Severity == ImportDiagnosticSeverity.Error) ? null : HomebrewWorkshopXml.SubclassToXml(req, id);
         await Send.OkAsync(await HomebrewWorkshopReview.BuildAsync("subclasses", document, id, main is null ? null : HomebrewWorkshopXml.SubclassFromXml(document.Root!, main),
             record is null ? null : HomebrewWorkshopXml.SubclassFromXml(HomebrewWorkshop.Root(record), record[0]), record, diagnostics, _usage, ct), ct);
@@ -457,6 +459,7 @@ public sealed class PreviewHomebrewClassEndpoint : Endpoint<HomebrewClassModel, 
         {
             diagnostics.Add(HomebrewWorkshopReview.ReplacesExisting(id, (string?)main.Attribute("name") ?? id));
         }
+        HomebrewWorkshopReview.CheckOpened(diagnostics, document, id, req.Revision);
         var record = diagnostics.Any(d => d.Severity == ImportDiagnosticSeverity.Error) ? null : HomebrewWorkshop.ClassRecord(document, req, id).Record;
         await Send.OkAsync(await HomebrewWorkshopReview.BuildAsync("classes", document, id, main is null ? null : HomebrewWorkshopXml.ClassFromXml(document.Root!, main),
             record is null ? null : HomebrewWorkshopXml.ClassFromXml(HomebrewWorkshop.Root(record), record[0]), record, diagnostics, _usage, ct), ct);

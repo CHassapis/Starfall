@@ -4,7 +4,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { stalePreviewOf, StaleHomebrewError } from "@/lib/api/homebrew";
 import { EditPreview } from "@/pages/homebrew/edit-preview";
-import { canSave, expectedRevisionOf, fieldLabel, previewSummary, type HomebrewEditPreview } from "./homebrew-preview";
+import { canSave, expectedRevisionOf, fieldLabel, previewSummary, revisionToSend, type HomebrewEditPreview } from "./homebrew-preview";
 
 const SUBCLASS = "ID_STARLIGHTS_HOMEBREW_SUBCLASS_TEST_CIRCLE";
 const ECHO = `${SUBCLASS}_F_TEST_ECHO`;
@@ -40,9 +40,16 @@ describe("a homebrew edit's preview", () => {
     expect(["castingTime", "lists", "asiLevels", "someNewField"].map(fieldLabel)).toEqual(["Casting time", "Class spell lists", "Ability Score Improvement levels", "Some New Field"]);
   });
 
-  it("saves with the revision it saw, and not when the save would be refused", () => {
+  it("saves with the revision the form was opened on, the fresh one only after a refusal, and not when refused anyway", () => {
     expect(expectedRevisionOf(edit)).toBe("0123456789abcdef");
     expect(expectedRevisionOf(fresh)).toBeNull();
+    // opened on rev-1; a review made after someone saved rev-2 does not change what the save is based on
+    expect(revisionToSend("rev-1")).toBe("rev-1");
+    expect(revisionToSend("rev-1", null)).toBe("rev-1");
+    expect(revisionToSend(undefined)).toBeNull();
+    // the save was refused and its fresh review (rev-2, or the record gone) was shown: the next one is based on that
+    expect(revisionToSend("rev-1", { ...edit, revision: "rev-2" })).toBe("rev-2");
+    expect(revisionToSend("rev-1", { ...edit, isNew: true, revision: null })).toBeNull();
     expect(canSave(edit)).toBe(true);
     expect(canSave({ ...edit, diagnostics: [{ severity: "error", code: "invalid-value", importer: "homebrew", message: "It needs a name.", detail: "name" }] })).toBe(false);
     expect(canSave({ ...edit, diagnostics: [{ severity: "error", code: "stale-revision", importer: "homebrew", message: "Someone saved it." }] })).toBe(true);

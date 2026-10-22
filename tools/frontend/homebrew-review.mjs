@@ -57,21 +57,30 @@ try {
     const server = { level: 3, revision: "rev-2" };
     const puts = [];
     const previews = [];
+    let uploads = 0;
     await context.route((url) => url.pathname.startsWith("/api/"), async (route) => {
       const req = route.request();
       const url = new URL(req.url());
       const json = (status, body) => route.fulfill({ status, contentType: "application/json", body: JSON.stringify(body) });
       const p = url.pathname;
       if (p === "/api/elements/homebrew" && req.method() === "GET") return json(200, { files: [] });
-      if (p === "/api/elements/homebrew" && req.method() === "POST") return json(200, { file: "test-feats.xml", elementsImported: 1, elementsReplaced: 0, warnings: ["homebrew/test-feats.xml: append target ID_NOBODY was not found"], diagnostics: uploadDiagnostics });
+      // the first file's grant is reported by its own import only: the second import does not look at it again
+      if (p === "/api/elements/homebrew" && req.method() === "POST") {
+        uploads++;
+        return json(200, { file: req.postDataJSON().fileName, elementsImported: 1, elementsReplaced: 0, warnings: [], diagnostics: uploads === 1 ? uploadDiagnostics : uploadDiagnostics.slice(0, 1) });
+      }
       if (p === "/api/elements/homebrew/spells" && req.method() === "GET") return json(200, { spells: [spell(1, "rev-1")] });
       if (p === "/api/elements/homebrew/classes") return json(200, { classes: [] });
       if (p === "/api/elements/homebrew/subclasses") return json(200, { subclasses: [] });
       if (p === "/api/elements/homebrew/subclass-targets") return json(200, { targets: [] });
+      // as the server: compared with what is saved now, and a form opened on an older revision is told so
       if (p === "/api/elements/homebrew/spells/preview") {
         const body = req.postDataJSON();
         previews.push(body);
-        return json(200, preview(1, body.level, "rev-1"));
+        const opened = body.revision && body.revision !== server.revision
+          ? [{ severity: "warning", code: "stale-revision", importer: "homebrew", message: "Someone saved it after you opened it: the changes listed compare with what is saved now. Saving will ask you to confirm once more.", elementId: SPELL_ID }]
+          : [];
+        return json(200, preview(server.level, body.level, server.revision, opened));
       }
       if (p === "/api/elements/homebrew/spells" && req.method() === "PUT") {
         const body = req.postDataJSON();
@@ -102,10 +111,15 @@ try {
     // a file upload lists what the import ran into
     await page.goto(`${base}/homebrew?tab=files`);
     await page.getByRole("button", { name: "Add homebrew (.xml)" }).waitFor();
-    await page.locator('input[type="file"]').setInputFiles({ name: "test-feats.xml", mimeType: "text/xml", buffer: Buffer.from("<elements />") });
+    await page.locator('input[type="file"]').setInputFiles([
+      { name: "test-feats.xml", mimeType: "text/xml", buffer: Buffer.from("<elements />") },
+      { name: "test-more.xml", mimeType: "text/xml", buffer: Buffer.from("<elements />") },
+    ]);
     const status = page.getByRole("status").filter({ hasText: "Saved, but the homebrew needs attention: 2 warnings" });
     await status.waitFor();
-    ok(await status.getByText("Brew Feat grants ID_GONE").isVisible(), "each diagnostic's message");
+    await page.getByText("2 homebrew files added").waitFor();
+    ok(uploads === 2, `both files uploaded (${uploads})`);
+    ok(await status.getByText("Brew Feat grants ID_GONE").isVisible(), "the first file's grant stays listed after the second upload");
     ok(await status.getByText("Homebrew · homebrew/test-feats.xml · Brew Feat (ID_BREW_FEAT)").isVisible(), "where: importer, file, element");
     await noOverflow("upload diagnostics");
     await page.screenshot({ path: `${output}/homebrew-upload-diagnostics-${device.name}.png` });
@@ -119,9 +133,11 @@ try {
     const review = dialog.getByRole("region", { name: "What saving does" });
     await review.waitFor();
     ok(await review.getByText("1 change · 1 character uses it").isVisible(), "the summary");
-    ok(await review.getByText("Level:").isVisible(), "the field that changes");
+    const level = review.getByRole("listitem").filter({ hasText: "Level:" });
+    ok((await level.textContent()).replace(/\s+/g, " ").trim() === "Level: 3 → 2", "compared with what is saved now (level 3, saved since the form was opened)");
+    ok(await review.getByText("Someone saved it after you opened it: the changes listed compare").isVisible(), "the review says the form is out of date");
     ok(await review.getByText("Mira Vale").isVisible(), "who uses it");
-    ok(previews.at(-1)?.level === 2 && !previews.at(-1)?.expectedRevision, "the review sends the form as it is");
+    ok(previews.at(-1)?.level === 2 && previews.at(-1)?.revision === "rev-1" && !previews.at(-1)?.expectedRevision, "the review sends the form as it is, with the revision it was opened on");
     await review.scrollIntoViewIfNeeded();
     await noOverflow("review");
     await page.screenshot({ path: `${output}/homebrew-review-${device.name}.png` });
@@ -134,11 +150,11 @@ try {
     await dialog.getByRole("button", { name: "Review and save" }).click();
     await review.waitFor();
 
-    // saved elsewhere in the meantime: refused, and the fresh review says so
+    // saved elsewhere since the form was opened: the save (based on the form's revision) is refused, and the fresh
+    // review says so
     await dialog.getByRole("button", { name: "Save", exact: true }).click();
-    await dialog.getByText("Someone saved it after you opened it").waitFor();
-    ok(puts.at(-1) === "rev-1", `the save sends the revision the review saw (${puts.at(-1)})`);
-    const level = dialog.getByRole("region", { name: "What saving does" }).getByRole("listitem").filter({ hasText: "Level:" });
+    await dialog.getByText("Someone saved it after you opened it, so it was not saved").waitFor();
+    ok(puts.at(-1) === "rev-1", `the save sends the revision the form was opened on (${puts.at(-1)})`);
     ok((await level.textContent()).replace(/\s+/g, " ").trim() === "Level: 3 → 2", "the fresh review compares with what is saved now (level 3)");
     ok(await dialog.getByRole("button", { name: "Save", exact: true }).isEnabled(), "it can be saved again");
     await noOverflow("stale review");

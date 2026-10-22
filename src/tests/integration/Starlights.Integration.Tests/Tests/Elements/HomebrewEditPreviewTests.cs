@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json.Nodes;
 using AwesomeAssertions;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
@@ -29,7 +30,10 @@ namespace Starlights.Integration.Tests.Elements;
 [TestCategory("SqlServer")]
 public sealed class HomebrewEditPreviewTests : IntegrationTestBase
 {
-    private const string OldMessage = "A homebrew spell needs a name (100 characters at most), a level from 0 to 9, a school, and class lists made of letters.";
+    // what the saves said before the preview existed; they still do
+    private const string SpellMessage = "A homebrew spell needs a name (100 characters at most), a level from 0 to 9, a school, and class lists made of letters.";
+    private const string SubclassMessage = "A homebrew subclass needs a name, a class it belongs to, and features with a level from 1 to 20 and a name.";
+    private const string ClassMessage = "A homebrew class needs a name made of letters, a hit die (d6–d12), proficiencies from the lists, levels from 1 to 20, and a spellcasting ability when it casts.";
 
     private IntegrationHost _integration = default!;
     private string _connection = default!;
@@ -208,6 +212,12 @@ public sealed class HomebrewEditPreviewTests : IntegrationTestBase
         var second = await SavedAsync("spells", first with { Level = 3, Revision = null });
         var file = await File.ReadAllBytesAsync(SpellsFile);
 
+        // reviewed in a form opened on the first revision: the review says so, and compares with what is saved now
+        var reviewed = await PreviewAsync("spells", first with { Level = 2 });
+        reviewed.Revision.Should().Be(second.Revision);
+        reviewed.Changes.Should().Equal(new HomebrewFieldChange("level", "3", "2"));
+        reviewed.Diagnostics.Should().ContainSingle().Which.Should().BeEquivalentTo(new { Severity = ImportDiagnosticSeverity.Warning, Code = ImportDiagnosticCode.StaleRevision, ElementId = first.Id });
+
         var stale = await SaveAsync("spells", first with { Level = 2, ExpectedRevision = first.Revision });
         var preview = (await stale.Content.ReadFromJsonAsync<HomebrewEditPreview>(_integration.CancellationToken))!;
 
@@ -251,39 +261,95 @@ public sealed class HomebrewEditPreviewTests : IntegrationTestBase
         preview.Diagnostics.Should().ContainSingle().Which.Should().BeEquivalentTo(new { Severity = ImportDiagnosticSeverity.Warning, Code = ImportDiagnosticCode.ReplacesExisting, ElementId = saved.Id });
     }
 
+    /// <summary>The messages of a refused save's answer (FastEndpoints' errors), as written.</summary>
+    private async Task<List<string>> ErrorsAsync(HttpResponseMessage response) =>
+        (await response.Content.ReadFromJsonAsync<JsonObject>(_integration.CancellationToken))!["errors"]!.AsObject()
+            .SelectMany(e => e.Value!.AsArray().Select(m => m!.GetValue<string>())).ToList();
+
+    /// <summary>Each model previewed and saved: the save refuses it exactly when the preview reports an error, with its old message.</summary>
+    private async Task AgreeAsync<T>(string kind, string message, IEnumerable<(string Case, T Model)> cases) where T : class
+    {
+        foreach (var (name, model) in cases)
+        {
+            var preview = await PreviewAsync(kind, model);
+            var save = await SaveAsync(kind, model);
+            var refused = preview.Diagnostics.Any(d => d.Severity == ImportDiagnosticSeverity.Error);
+
+            (save.StatusCode == HttpStatusCode.BadRequest).Should().Be(refused, "the preview and the save agree on {0} ({1})", name, save.StatusCode);
+            preview.Diagnostics.Where(d => d.Severity == ImportDiagnosticSeverity.Error).Should().OnlyContain(d => d.Code == ImportDiagnosticCode.InvalidValue && d.Detail != null);
+            if (refused)
+            {
+                (await ErrorsAsync(save)).Should().Equal([message], "the save's message for {0} is as it was", name);
+                preview.Elements.Should().BeEmpty("nothing to compare when it cannot be saved");
+            }
+        }
+    }
+
     [TestMethod]
     public async Task ThePreviewAndTheSave_RefuseTheSameSpells()
     {
         await _integration.InitializeElements();
-        HomebrewSpellModel[] spells =
-        [
-            Spell(),
-            Spell(name: " "),
-            Spell(name: new string('x', 101)),
-            Spell(level: 10),
-            Spell() with { School = "Chronurgy" },
-            Spell() with { Range = new string('x', 101) },
-            Spell() with { MaterialText = new string('x', 301) },
-            Spell() with { HigherLevels = new string('x', 5_001) },
-            Spell() with { Lists = ["Wizard!"] },
-            Spell() with { Lists = [.. Enumerable.Range(0, 21).Select(i => $"List {i}")] },
-            Spell(name: "Test Second", level: 0) with { Lists = [], MaterialText = new string('x', 300) },
-        ];
-
-        foreach (var spell in spells)
+        await AgreeAsync("spells", SpellMessage, new (string, HomebrewSpellModel)[]
         {
-            var preview = await PreviewAsync("spells", spell);
-            var save = await SaveAsync("spells", spell);
-            var refused = preview.Diagnostics.Any(d => d.Severity == ImportDiagnosticSeverity.Error);
+            ("valid", Spell()),
+            ("blank name", Spell(name: " ")),
+            ("long name", Spell(name: new string('x', 101))),
+            ("level 10", Spell(level: 10)),
+            ("unknown school", Spell() with { School = "Chronurgy" }),
+            ("long range", Spell() with { Range = new string('x', 101) }),
+            ("long material", Spell() with { MaterialText = new string('x', 301) }),
+            ("long higher levels", Spell() with { HigherLevels = new string('x', 5_001) }),
+            ("bad list name", Spell() with { Lists = ["Wizard!"] }),
+            ("21 lists", Spell() with { Lists = [.. Enumerable.Range(0, 21).Select(i => $"List {i}")] }),
+            ("valid at the limits", Spell(name: "Test Second", level: 0) with { Lists = [], MaterialText = new string('x', 300) }),
+        });
+    }
 
-            (save.StatusCode == HttpStatusCode.BadRequest).Should().Be(refused, "the preview and the save agree on {0}", spell.Name);
-            preview.Diagnostics.Where(d => d.Severity == ImportDiagnosticSeverity.Error).Should().OnlyContain(d => d.Code == ImportDiagnosticCode.InvalidValue && d.Detail != null);
-            if (refused)
-            {
-                (await save.Content.ReadAsStringAsync(_integration.CancellationToken)).Should().Contain(OldMessage, "the save's message is as it was");
-                preview.Elements.Should().BeEmpty("nothing to compare when it cannot be saved");
-            }
-        }
+    private static HomebrewClassModel Class(string name = "Test Warden") =>
+        new() { Name = name, Source = "Test Homebrew", HitDie = 10, SavingThrows = ["Strength", "Wisdom"], Armor = ["Light"], Weapons = ["Simple"], Skills = ["Athletics"], SkillChoices = 1 };
+
+    [TestMethod]
+    public async Task ThePreviewAndTheSave_RefuseTheSameClasses()
+    {
+        await _integration.InitializeElements();
+        await AgreeAsync("classes", ClassMessage, new (string, HomebrewClassModel)[]
+        {
+            ("valid", Class()),
+            ("a d7", Class() with { HitDie = 7 }),
+            ("a name with a star", Class("Test*Warden")),
+            ("four saving throws", Class() with { SavingThrows = ["Strength", "Dexterity", "Wisdom", "Charisma"] }),
+            ("an unknown saving throw", Class() with { SavingThrows = ["Luck"] }),
+            ("multiclass armor it lacks", Class() with { MulticlassArmor = ["Heavy"] }),
+            ("an unknown skill", Class() with { Skills = ["Juggling"] }),
+            ("seven skill choices", Class() with { SkillChoices = 7 }),
+            ("an unknown multiclass ability", Class() with { MulticlassAbility = "Luck" }),
+            ("subclass at 21", Class() with { SubclassLevel = 21 }),
+            ("an improvement at 0", Class() with { AsiLevels = [0, 4] }),
+            ("casting without an ability", Class() with { Casting = "Full", CastingAbility = null }),
+            ("unknown casting", Class() with { Casting = "Quarter" }),
+            ("a bad spell list name", Class() with { SpellLists = ["Wizard!"] }),
+            ("seven cantrips", Class() with { Cantrips = 7 }),
+            ("a feature at 21", Class() with { Features = [new() { Level = 21, Name = "Late" }] }),
+            ("a casting class at the limits", Class("Test Seer") with { Casting = "Pact", CastingAbility = "Charisma", SpellLists = ["Wizard"], Cantrips = 6 }),
+        });
+    }
+
+    [TestMethod]
+    public async Task ThePreviewAndTheSave_RefuseTheSameSubclasses()
+    {
+        await _integration.InitializeElements();
+        var cls = await SavedAsync("classes", Class());
+        HomebrewSubclassModel Subclass() => new() { Name = "Test Circle", Source = "Test Homebrew", ClassSupports = cls.SubclassSupports!, ClassName = cls.Name, Features = [new() { Level = 3, Name = "Test Ward" }] };
+
+        await AgreeAsync("subclasses", SubclassMessage, new (string, HomebrewSubclassModel)[]
+        {
+            ("valid", Subclass()),
+            ("an unknown class", Subclass() with { ClassSupports = "Nobody Subclass" }),
+            ("a feature without a name", Subclass() with { Features = [new() { Level = 3, Name = " " }] }),
+            ("a feature at 0", Subclass() with { Features = [new() { Level = 0, Name = "Early" }] }),
+            ("a long name", Subclass() with { Name = new string('x', 101) }),
+            ("41 features", Subclass() with { Features = [.. Enumerable.Range(1, 41).Select(i => new HomebrewFeatureModel { Level = 3, Name = $"Feature {i}" })] }),
+        });
     }
 
     [TestMethod]

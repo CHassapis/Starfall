@@ -52,9 +52,17 @@ export function canSave(preview: HomebrewEditPreview): boolean {
   return !preview.diagnostics.some((d) => d.severity === "error" && d.code !== "stale-revision");
 }
 
-/** The revision to send with the save: the record's as the preview saw it; none for a new one. */
+/** The record's revision as a preview saw it; none for a new one. */
 export function expectedRevisionOf(preview: HomebrewEditPreview): string | null {
   return preview.isNew ? null : preview.revision;
+}
+
+/**
+ * The revision a save sends: the one the form was opened on, so a save someone made since is not overwritten
+ * unseen; once a save was refused and its fresh review shown, that review's.
+ */
+export function revisionToSend(opened: string | null | undefined, refused?: HomebrewEditPreview | null): string | null {
+  return refused ? expectedRevisionOf(refused) : (opened ?? null);
 }
 
 /** One line on what the save does: "2 changes, 1 removed · 3 characters use it, 1 loses something". */

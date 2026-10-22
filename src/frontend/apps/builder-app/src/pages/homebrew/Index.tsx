@@ -53,8 +53,9 @@ function FilesTab() {
           try {
             const result = await apiClient.post<{ fileName: string; content: string }, Partial<UploadHomebrewResponse>>("/api/elements/homebrew", { fileName: file.name, content: await file.text() });
             if (result.warnings?.length) setWarnings((current) => [...new Set([...current, ...result.warnings!])]);
-            // every upload imports the whole folder again, so each result says it all; the last one counts
-            if (result.diagnostics) setDiagnostics(arrangeDiagnostics(result.diagnostics));
+            // each upload reports what its import ran into: an element already imported is not looked at again, so
+            // the batch's results are kept together (the same diagnostic twice is listed once)
+            if (result.diagnostics?.length) setDiagnostics((current) => arrangeDiagnostics([...current, ...result.diagnostics!]));
           } catch (error) { throw new Error(`${file.name}: ${homebrewUploadError(error as Error)}`, { cause: error }); }
         }
       });

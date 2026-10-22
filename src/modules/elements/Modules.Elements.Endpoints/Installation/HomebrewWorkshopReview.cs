@@ -315,6 +315,26 @@ internal static class HomebrewWorkshopReview
             $"There is already a {name} ({id}); saving this as new would take its place. Edit that one instead, or choose another name.")
         { ElementId = id, ElementName = name };
 
+    /// <summary>
+    /// The form was opened on a revision that is no longer the saved one: what the preview lists compares with what is
+    /// saved now, and a save sending the form's revision is refused until it is looked at again.
+    /// </summary>
+    public static ImportDiagnostic OpenedOnAnOlderRevision(string id, string? current) =>
+        new(ImportDiagnosticSeverity.Warning, ImportDiagnosticCode.StaleRevision, ImportDiagnosticImporter.Homebrew,
+            current is null
+                ? "It was removed after you opened it; saving makes it again."
+                : "Someone saved it after you opened it: the changes listed compare with what is saved now. Saving will ask you to confirm once more.")
+        { ElementId = id };
+
+    /// <summary>A preview's warning when the form's revision (as it was read) is not the saved one.</summary>
+    public static void CheckOpened(List<ImportDiagnostic> diagnostics, XDocument document, string id, string? opened)
+    {
+        if (opened is not null && Revision(document, id) is var current && current != opened)
+        {
+            diagnostics.Add(OpenedOnAnOlderRevision(id, current));
+        }
+    }
+
     /// <summary>The record changed (or was removed) after the preview a save was based on.</summary>
     public static ImportDiagnostic Stale(string id, string? current) =>
         new(ImportDiagnosticSeverity.Error, ImportDiagnosticCode.StaleRevision, ImportDiagnosticImporter.Homebrew,

@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { DialogFooter } from "@/components/ui/dialog";
 import { Spinner } from "@/components/ui/spinner";
 import { previewHomebrew, StaleHomebrewError, type HomebrewKind } from "@/lib/api/homebrew";
-import { canSave, expectedRevisionOf, fieldLabel, previewSummary, type HomebrewEditPreview } from "@/lib/homebrew-preview";
+import { canSave, fieldLabel, previewSummary, revisionToSend, type HomebrewEditPreview } from "@/lib/homebrew-preview";
 import { cn } from "@/lib/utils";
 
 const CHANGE_LABEL = { added: "Added", changed: "Changed", removed: "Removed" } as const;
@@ -64,10 +64,11 @@ export function EditPreview({ preview }: { preview: HomebrewEditPreview }) {
 
 /**
  * A Homebrew page form's footer: "Review and save" asks the server what the save would do and shows it; "Save"
- * then saves with the revision the review saw, so a record someone changed in the meantime is not overwritten
- * (the review comes back, fresh, saying so). Changing the form after the review asks for a new one.
+ * then saves with the revision the form was opened on, so a record someone changed in the meantime is not
+ * overwritten unseen (the review comes back, fresh, saying so; saving again then goes through). Changing the form
+ * after the review asks for a new one.
  */
-export function ReviewFooter<T extends object>({
+export function ReviewFooter<T extends { revision?: string | null }>({
   kind,
   model,
   ready,
@@ -89,6 +90,8 @@ export function ReviewFooter<T extends object>({
   useEffect(() => {
     if (preview) shown.current?.scrollIntoView({ block: "nearest" });
   }, [preview]);
+  // set once a save was refused (409): its fresh review was shown, so the next save is based on it
+  const [refused, setRefused] = useState<HomebrewEditPreview | null>(null);
   const [checking, setChecking] = useState(false);
   const review = async () => {
     setChecking(true);
@@ -100,12 +103,14 @@ export function ReviewFooter<T extends object>({
       setChecking(false);
     }
   };
-  const save = async (seen: HomebrewEditPreview) => {
+  const save = async () => {
     try {
-      await onSave({ ...model, expectedRevision: expectedRevisionOf(seen) });
+      await onSave({ ...model, expectedRevision: revisionToSend(model.revision, refused) });
     } catch (e) {
-      if (e instanceof StaleHomebrewError) setReviewed({ preview: e.preview, model });
-      else toast.error("Could not save it", { description: (e as Error).message });
+      if (e instanceof StaleHomebrewError) {
+        setRefused(e.preview);
+        setReviewed({ preview: e.preview, model });
+      } else toast.error("Could not save it", { description: (e as Error).message });
     }
   };
   if (preview) {
@@ -116,7 +121,7 @@ export function ReviewFooter<T extends object>({
           <Button variant="outline" onClick={() => setReviewed(null)}>
             Back to editing
           </Button>
-          <Button disabled={busy || !canSave(preview)} onClick={() => save(preview)}>
+          <Button disabled={busy || !canSave(preview)} onClick={save}>
             {busy && <Spinner />} Save
           </Button>
         </DialogFooter>
