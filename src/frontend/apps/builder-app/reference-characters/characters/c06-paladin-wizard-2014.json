@@ -40,7 +40,8 @@
     "skills": {
       "Persuasion": { "value": 6, "why": "Cha +3 + proficiency 3" },
       "Religion": { "value": 4, "why": "Int +1 + proficiency 3" },
-      "Arcana": { "value": 1, "why": "Int +1, not proficient" }
+      "Arcana": { "value": 1, "why": "Int +1, not proficient" },
+      "Perception": { "value": 0, "why": "Wis +0, not proficient" }
     },
     "statistics": {
       "innate-speed": { "value": 30, "why": "Ref Plains Folk" }

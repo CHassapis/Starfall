@@ -53,7 +53,7 @@
     "speed": { "walk": 30, "why": "Ref Plains Folk" },
     "passivePerception": { "value": 12, "why": "10 + Perception +2" },
     "attacks": [
-      { "name": "Ref Longsword +1", "attack": "+8 vs AC", "damage": "1d10+6 slashing", "why": "Str +5 + proficiency 2 + 1 magic; two hands: versatile d10 + Str 5 + 1 magic" }
+      { "name": "Ref Longsword +1 (Ref Longsword)", "attack": "+8 vs AC", "damage": "1d10+6 slashing", "why": "Str +5 + proficiency 2 + 1 magic; two hands: versatile d10 + Str 5 + 1 magic; named with the base picked for it, in brackets (the item has no name format)" }
     ],
     "attacksPerAction": 1,
     "traces": [

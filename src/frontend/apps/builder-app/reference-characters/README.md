@@ -6,7 +6,10 @@ Ten synthetic characters whose figures were worked out by hand from the rules, u
   imports `content/` into an in-memory database, builds each character through the API step by step, and checks
   the server's figures, statistics, spellcasting and calculation traces;
 - the web suite (`src/lib/reference-characters.test.ts`) feeds the same characters' server figures and inventory
-  to the sheet's calculations and checks the sheet, the PDF fields, the battle view and their traces.
+  to the sheet's calculations (`src/lib/sheet-figures.ts`) and checks the sheet, the PDF fields, the battle view
+  (with the Shield spell on top, which changes the armor class shown in play but not the sheet's figure or its trace),
+  spell slots, and the traces: each ends at the figure shown, replays step by step, has the contract's shape, is the
+  same every time, and leaves the figures as they are without a recorder.
 
 Nothing here is book text or anyone's character. `content/` is invented Aurora-style content (names start with
 "Ref", ids with `ID_REF`), shaped like Aurora's rules so the same code paths run; the few ids that must match
@@ -80,6 +83,11 @@ Two lists must be complete, because the web suite works from the file alone:
   attack and damage bonuses, spell attack and DC bonuses) that the character has; `absentStatistics` names ones
   that must not be there;
 - `registered`: every registered element the sheet's calculations look for (weapon proficiencies, Extra Attack).
+
+`skills` must include Perception: passive Perception is worked out from it. The web suite names registered elements
+from `content/` (the sheet counts Extra Attack by its name). For c10 it reads the attributes of
+`aurora/imported-rogue.dnd5e` itself and runs what the import does with them (the attack list, the rolled hit
+points); the import's own reading of the file uses the browser's DOMParser and is not run by these tests.
 
 The server suite fails when the server has one the file does not list. `catalog.json` lists the reference items
 with the fields the sheet needs; the server suite checks that the server's item catalog agrees with it.
