@@ -529,7 +529,7 @@ internal sealed class AuroraImporter : IAuroraImporter
 
         // what the 5etools data has and all of the above lacks (a book Aurora Legacy has not added yet), translated
         if (_fiveETools.Available
-            && _fiveETools.ContentAsAurora(byId.Values.Select(e => new FiveETools.AuroraCatalogElement(e.Id, e.Name, e.Type, e.Source, e.Supports, e.Xml))) is { } content)
+            && _fiveETools.ContentAsAurora(byId.Values.Select(e => new FiveETools.AuroraCatalogElement(e.Id, e.Name, e.Type, e.Source, e.Supports, e.Xml)), diagnostics) is { } content)
         {
             AddDocument(FiveEToolsData.Prefix + "content.xml", content);
         }

@@ -1,6 +1,7 @@
 using System.Text.Json.Nodes;
 using System.Xml.Linq;
 using Microsoft.Extensions.Logging;
+using Starlights.Modules.Elements.Integration;
 
 namespace Starlights.Modules.Elements.Services.FiveETools;
 
@@ -25,13 +26,16 @@ internal sealed partial class FiveEToolsContent
     private readonly Dictionary<string, List<(string Id, string Source, bool Modern)>> _generatedByName = new(StringComparer.Ordinal);
     private readonly Dictionary<string, int> _counts = new(StringComparer.Ordinal);
     private readonly Dictionary<string, string> _sourceNames;
+    private readonly List<ImportDiagnostic>? _diagnostics;
 
-    public FiveEToolsContent(FiveEToolsJson json, FiveEToolsAuroraIndex aurora, IReadOnlyDictionary<string, (string Name, DateTime? Published)> books, ILogger logger)
+    public FiveEToolsContent(FiveEToolsJson json, FiveEToolsAuroraIndex aurora, IReadOnlyDictionary<string, (string Name, DateTime? Published)> books, ILogger logger,
+        List<ImportDiagnostic>? diagnostics = null)
     {
         _json = json;
         _aurora = aurora;
         _books = new Dictionary<string, (string, DateTime?)>(books, StringComparer.OrdinalIgnoreCase);
         _logger = logger;
+        _diagnostics = diagnostics;
         _sourceNames = aurora.Sources.GroupBy(NormalizeBook).ToDictionary(g => g.Key, g => g.First(), StringComparer.Ordinal);
     }
 
@@ -52,6 +56,16 @@ internal sealed partial class FiveEToolsContent
             string.Join(", ", _counts.OrderBy(c => c.Key, StringComparer.Ordinal).Select(c => $"{c.Value} {c.Key}")));
         return new XDocument(new XElement("elements", _generated));
     }
+
+    /// <summary>Something the data refers to and does not have, so part of an entry (or all of it) is left out.</summary>
+    private void Report(ImportDiagnosticCode code, string message, string? elementId, string elementName, string detail) =>
+        _diagnostics?.Add(new ImportDiagnostic(ImportDiagnosticSeverity.Warning, code, ImportDiagnosticImporter.FiveETools, message)
+        {
+            File = FiveEToolsData.Prefix + "content.xml",
+            ElementId = elementId,
+            ElementName = elementName,
+            Detail = detail,
+        });
 
     // ---- which entries count ----
 

@@ -48,7 +48,7 @@ public class AuroraImporterDiagnosticsTests
 
     private void Homebrew(string file, string content) => File.WriteAllText(Path.Combine(_root, "homebrew", file), content);
 
-    private async Task<AuroraImportResult> ImportAsync(string index)
+    private async Task<AuroraImportResult> ImportAsync(string index, string fiveETools = "no-5etools")
     {
         var repository = new Mock<IElementsRepository>();
         repository.Setup(x => x.GetElementSummariesAsync()).ReturnsAsync([]);
@@ -58,7 +58,7 @@ public class AuroraImporterDiagnosticsTests
             NullLogger<AuroraImporter>.Instance,
             persistence.Object,
             new AuroraImporterOptions(Path.Combine(_root, "content"), HomebrewPath: Path.Combine(_root, "homebrew")),
-            new FiveEToolsData(new FiveEToolsOptions(Path.Combine(_root, "no-5etools")), NullLogger<FiveEToolsData>.Instance));
+            new FiveEToolsData(new FiveEToolsOptions(Path.Combine(_root, fiveETools)), NullLogger<FiveEToolsData>.Instance));
         return await importer.ImportAsync(index);
     }
 
@@ -124,6 +124,56 @@ public class AuroraImporterDiagnosticsTests
 
         first.Diagnostics.Select(d => d.File).Should().Equal("homebrew/a.xml", "homebrew/b.xml", "homebrew/c.xml");
         second.Diagnostics.Should().Equal(first.Diagnostics);
+    }
+
+    // a made-up 5etools data folder: a class with a feature the data does not have, a subclass of it with the same, and a
+    // subclass of a class that is nowhere
+    private string FiveEToolsDataFolder()
+    {
+        var data = Directory.CreateDirectory(Path.Combine(_root, "5etools-data")).FullName;
+        Directory.CreateDirectory(Path.Combine(data, "class"));
+        File.WriteAllText(Path.Combine(data, "deities.json"), """{"deity": []}""");
+        File.WriteAllText(Path.Combine(data, "books.json"), """{"book": [{"id": "TST", "name": "Test Book", "published": "2020-01-01"}]}""");
+        File.WriteAllText(Path.Combine(data, "class", "class-tester.json"), """
+            {
+              "class": [{ "name": "Tester", "source": "TST", "hd": { "faces": 8 }, "classFeatures": ["Testing|Tester|TST|1", "Vanished|Tester|TST|2"] }],
+              "classFeature": [{ "name": "Testing", "source": "TST", "className": "Tester", "classSource": "TST", "level": 1, "entries": ["You test."] }],
+              "subclass": [
+                { "name": "Kept Path", "shortName": "Kept", "source": "TST", "className": "Tester", "classSource": "TST",
+                  "subclassFeatures": ["Kept Path|Tester|TST|Kept|TST|3", "Gone Thing|Tester|TST|Kept|TST|6"] },
+                { "name": "Lost Path", "shortName": "Lost", "source": "TST", "className": "Nobody", "classSource": "TST", "subclassFeatures": [] }
+              ],
+              "subclassFeature": [{ "name": "Kept Path", "source": "TST", "className": "Tester", "classSource": "TST", "subclassShortName": "Kept",
+                "subclassSource": "TST", "level": 3, "entries": ["You keep."] }]
+            }
+            """);
+        return "5etools-data";
+    }
+
+    [TestMethod]
+    public async Task FiveEToolsImport_ReportsWhatTheDataRefersToAndDoesNotHave()
+    {
+        var data = FiveEToolsDataFolder();
+
+        var result = await ImportAsync(AuroraImporterOptions.FiveEToolsIndex, data);
+
+        result.Diagnostics.Where(d => d.Importer == ImportDiagnosticImporter.FiveETools).Select(d => (d.Code, d.ElementId, d.ElementName, d.Detail)).Should().Equal(
+            (ImportDiagnosticCode.ClassFeatureMissing, "ID_5ETOOLS_CLASS_TST_TESTER", "Tester", "Vanished|Tester|TST|2"),
+            (ImportDiagnosticCode.ClassFeatureMissing, "ID_5ETOOLS_SUBCLASS_TST_TESTER_KEPT_PATH", "Kept Path", "Gone Thing|Tester|TST|Kept|TST|6"),
+            (ImportDiagnosticCode.SubclassClassMissing, (string?)null, "Lost Path", "Nobody|TST"));
+        result.Diagnostics.Should().OnlyContain(d => d.File == "5etools/content.xml" && d.Severity == ImportDiagnosticSeverity.Warning);
+        result.Diagnostics.Single(d => d.Code == ImportDiagnosticCode.SubclassClassMissing).Message
+            .Should().Be("Lost Path is a subclass of Nobody (Test Book), a class neither Aurora nor 5etools has here; it was left out.");
+    }
+
+    [TestMethod]
+    public async Task OtherImports_DoNotRepeatWhatThe5etoolsTranslationRanInto()
+    {
+        var data = FiveEToolsDataFolder();
+        Homebrew("fine.xml", """<elements><element name="Fine" type="Feat" source="Brew" id="ID_BREW_FINE" /></elements>""");
+
+        (await ImportAsync(AuroraImporterIndex.Homebrew, data)).Diagnostics.Should().BeEmpty();
+        (await ImportAsync("core/test.index", data)).Diagnostics.Should().NotContain(d => d.Importer == ImportDiagnosticImporter.FiveETools);
     }
 
     [TestMethod]

@@ -1,5 +1,6 @@
 using System.Text.Json.Nodes;
 using System.Xml.Linq;
+using Starlights.Modules.Elements.Integration;
 
 namespace Starlights.Modules.Elements.Services.FiveETools;
 
@@ -106,8 +107,14 @@ internal sealed partial class FiveEToolsContent
         {
             var reference = item is JsonObject o ? FiveEToolsJson.Str(o, "classFeature") : item?.ToString();
             var gainsSubclass = item is JsonObject g && FiveEToolsJson.Bool(g, "gainSubclassFeature");
-            if (reference is null || ClassFeature(reference) is not { } feature)
+            if (reference is null)
             {
+                continue;
+            }
+            if (ClassFeature(reference) is not { } feature)
+            {
+                Report(ImportDiagnosticCode.ClassFeatureMissing, $"{name} lists the feature {reference}, which is not in the 5etools data; it was left out.",
+                    (string?)element.Attribute("id"), name, reference);
                 continue;
             }
             var featureName = Name(feature);
@@ -385,14 +392,26 @@ internal sealed partial class FiveEToolsContent
             var support = SubclassSupport(className, classSource);
             if (support is null)
             {
+                Report(ImportDiagnosticCode.SubclassClassMissing, $"{name} is a subclass of {className} ({BookName(classSource)}), a class neither Aurora nor 5etools has here; it was left out.",
+                    null, name, $"{className}|{classSource}");
                 continue;
             }
 
-            var features = (subclass["subclassFeatures"] is JsonArray list ? list : [])
-                .Select(r => r?.ToString()).OfType<string>().Select(SubclassFeature).OfType<JsonObject>().ToList();
+            var id = IdOf("SUBCLASS", source, className, name);
+            var features = new List<JsonObject>();
+            foreach (var reference in (subclass["subclassFeatures"] is JsonArray list ? list : []).Select(r => r?.ToString()).OfType<string>())
+            {
+                if (SubclassFeature(reference) is { } found)
+                {
+                    features.Add(found);
+                }
+                else
+                {
+                    Report(ImportDiagnosticCode.ClassFeatureMissing, $"{name} lists the feature {reference}, which is not in the 5etools data; it was left out.", id, name, reference);
+                }
+            }
             // the first feature, named like the subclass, is its introduction
             var introduction = features.FirstOrDefault(f => Name(f) == shortName || Name(f) == name);
-            var id = IdOf("SUBCLASS", source, className, name);
             var element = NewElement("subclasses", name, "Archetype", source, id, modern,
                 Description(introduction is null ? null : new JsonArray(Plain(introduction).ToArray())));
             element.Add(new XElement("supports", support));
