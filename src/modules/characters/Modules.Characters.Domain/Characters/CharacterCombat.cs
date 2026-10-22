@@ -106,10 +106,12 @@ public sealed record CharacterCombat
         {
             return Companions.Select(c => c.Validate()).FirstOrDefault(p => p is not null) ?? "At most 12 companions.";
         }
+        // a list sent with an empty entry (null) is refused, not read
         if (Resources is { } resources
-            && (resources.Count > 30 || resources.Select(r => r.Id).Distinct(StringComparer.Ordinal).Count() != resources.Count || resources.Any(r => r.Validate() is not null)))
+            && (resources.Count > 30 || resources.Any(r => r is null) || resources.Select(r => r.Id).Distinct(StringComparer.Ordinal).Count() != resources.Count
+                || resources.Any(r => r.Validate() is not null)))
         {
-            return resources.Select(r => r.Validate()).FirstOrDefault(p => p is not null) ?? "At most 30 resources of your own, each with an id of its own.";
+            return resources.Select(r => r?.Validate()).FirstOrDefault(p => p is not null) ?? "At most 30 resources of your own, each with an id of its own.";
         }
         if (Exhaustion is < 0 or > 10 || DeathSaveSuccesses is < 0 or > 3 || DeathSaveFailures is < 0 or > 3)
         {
@@ -183,8 +185,8 @@ public sealed partial record CharacterResource
 
     public string? Validate()
     {
-        if (!IdPattern().IsMatch(Id) || string.IsNullOrWhiteSpace(Name) || Name.Length > 60 || !Recharges.Contains(Recharge)
-            || Pool is { Length: 0 or > 100 } || Cost is < 1 or > 99 || Notes is { Length: > 500 })
+        if (Id is null || !IdPattern().IsMatch(Id) || string.IsNullOrWhiteSpace(Name) || Name.Length > 60 || !Recharges.Contains(Recharge)
+            || Pool is { Length: 0 or > 100 } || Cost is < 1 or > 99 || Notes is { Length: > 500 } || Max is null)
         {
             return "A resource needs an id (letters, digits, - or _), a name of up to 60 characters and a known recharge; a pool's name up to 100 characters, a cost of 1 to 99, notes up to 500.";
         }
