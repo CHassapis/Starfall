@@ -61,7 +61,7 @@
     "attacksPerAction": 2,
     "traces": [
       { "value": "statistic:ac:calculation", "final": 16, "excluded": [{ "reason": "stacking", "value": 15 }] },
-      { "value": "proficiency-bonus", "final": 3, "excluded": [] }
+      { "value": "proficiency-bonus", "final": 3, "excluded": [{ "reason": "stacking", "value": 2 }], "why": "level 5: +3; the level 1 rule (+2) is the same kind of bonus and lower (as c01 at level 5)" }
     ]
   },
   "scenarios": [

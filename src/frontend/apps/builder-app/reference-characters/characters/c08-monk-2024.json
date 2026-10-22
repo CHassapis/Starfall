@@ -61,7 +61,7 @@
     "attacksPerAction": 1,
     "traces": [
       { "value": "statistic:ac:calculation", "final": 16, "excluded": [] },
-      { "value": "armor-class", "final": 16, "excluded": [] },
+      { "value": "armor-class", "final": 16, "excluded": [{ "reason": "lower-alternative", "value": 13 }], "why": "10 + Dex 3 = 13 without the defense; the server's ac:calculation names the same defense at the same 16, so it is no alternative of its own" },
       { "value": "speed:walk", "final": 40, "excluded": [] }
     ]
   },

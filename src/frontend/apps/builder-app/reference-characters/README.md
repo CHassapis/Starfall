@@ -67,6 +67,13 @@ the same character (a level-up, armor taken off, an item un-attuned, an export a
 changes, merged over the expectations before it (abilities, saving throws, skills, statistics and spellcastings one
 by one; anything else replaced), and the merged expectations are checked in full.
 
+`traces` name values whose trace is checked: its `final`, its own exclusions (`excluded`: reason and value of each
+value that was considered for it and left out; the exclusions of the values it is made from are in their own traces),
+and `operations` that must appear in it or the traces of what it is made from. Alternatives the calculation weighed and
+did not take are exclusions too (`lower-alternative`: Strength for a finesse weapon when Dexterity is higher, 10 +
+Dexterity when an unarmored defense is higher; `condition-not-met`: a monk's defense with a shield). Server keys are
+checked by the server suite, the sheet's own keys (armor-class, hit-points, attack:…) by the web suite.
+
 Two lists must be complete, because the web suite works from the file alone:
 
 - `statistics`: every statistic the sheet reads (armor class parts, speeds, initiative, hit point bonuses,

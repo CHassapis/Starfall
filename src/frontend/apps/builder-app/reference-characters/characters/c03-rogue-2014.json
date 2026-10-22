@@ -65,7 +65,8 @@
     ],
     "attacksPerAction": 1,
     "traces": [
-      { "value": "skill:stealth", "final": 8, "excluded": [{ "reason": "stacking", "value": 2 }] },
+      { "value": "skill:stealth", "final": 8, "excluded": [] },
+      { "value": "statistic:stealth:proficiency", "final": 4, "excluded": [{ "reason": "stacking", "value": 2 }], "why": "proficiency 2 (Ref Rogue) + expertise 2; Ref Urchin's proficiency is the same kind and is left out" },
       { "value": "attack:rapier:to-hit", "final": 6, "excluded": [{ "reason": "lower-alternative", "value": -1 }] }
     ]
   },

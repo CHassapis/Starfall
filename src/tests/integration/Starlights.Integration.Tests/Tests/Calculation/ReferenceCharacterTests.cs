@@ -1,10 +1,12 @@
 using System.Net.Http.Json;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 using AwesomeAssertions;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Starlights.Modules.Characters.Data.EntityFramework;
+using Starlights.Modules.Characters.Services.Calculation;
 using Starlights.Modules.Elements.Data.EntityFramework;
 
 namespace Starlights.Integration.Tests.Calculation;
@@ -47,6 +49,7 @@ public sealed partial class ReferenceCharacterTests : IntegrationTestBase
         }
         var expected = (JsonObject)spec["expected"]!.DeepClone();
         var failures = await CheckAsync(builder, expected, "built");
+        failures.AddRange(await CheckTracesAsync(builder, api, expected, "built"));
 
         foreach (var scenario in spec["scenarios"]?.AsArray() ?? [])
         {
@@ -56,6 +59,7 @@ public sealed partial class ReferenceCharacterTests : IntegrationTestBase
             }
             expected = Merge(expected, (JsonObject)scenario["expected"]!);
             failures.AddRange(await CheckAsync(builder, expected, scenario["id"]!.GetValue<string>()));
+            failures.AddRange(await CheckTracesAsync(builder, api, expected, scenario["id"]!.GetValue<string>()));
         }
 
         failures.Should().BeEmpty();
@@ -93,6 +97,37 @@ public sealed partial class ReferenceCharacterTests : IntegrationTestBase
         }
         served.Keys.Except(catalog.Select(i => i!["auroraId"]!.GetValue<string>())).Should().BeEmpty("catalog.json lists every reference item");
         failures.Should().BeEmpty();
+    }
+
+    [TestMethod]
+    [Timeout(600_000, CooperativeCancellation = true)]
+    public async Task TracingACharacter_ChangesNothingInTheDatabase()
+    {
+        // the wizard: an item sets Strength, items stack and do not; the calculation changes the loaded character
+        var spec = JsonNode.Parse(await File.ReadAllTextAsync(ReferenceFile("characters", "c05-wizard-2014.json")))!;
+        await using var host = await StartAsync();
+        using var api = host.Integration.CreateClient();
+        var builder = new ReferenceCharacterBuilder(host.Integration, api);
+        await builder.CreateAsync("No mutation");
+        foreach (var step in spec["steps"]!.AsArray())
+        {
+            await builder.ApplyAsync(step!);
+        }
+
+        // a stale score, as if the character had not been worked out since: a calculation that was saved would fix it
+        await host.ExecuteAsync("UPDATE characters.ability_scores SET additional_score = additional_score + 3, calculated_score = calculated_score + 3 WHERE name = 'Strength'");
+        var before = await host.SnapshotAsync();
+
+        foreach (var key in new[] { "ability-score:strength", "skill:athletics", "saving-throw:wisdom", "statistic:ac:misc", "spell-attack:ref-wizard", "proficiency-bonus", "armor-class", "statistic:nothing" })
+        {
+            (await api.GetAsync($"/api/characters/{builder.CharacterId}/calculation/trace?value={Uri.EscapeDataString(key)}")).IsSuccessStatusCode.Should().BeTrue(key);
+        }
+
+        (await host.SnapshotAsync()).Should().Equal(before, "tracing writes nothing: no row and no event");
+
+        // and the check would see a write: the statistics endpoint saves its calculation, which puts the score right
+        (await api.GetAsync($"/api/characters/{builder.CharacterId}/statistics")).EnsureSuccessStatusCode();
+        (await host.SnapshotAsync()).Should().NotEqual(before);
     }
 
     // ---- checks
@@ -220,6 +255,112 @@ public sealed partial class ReferenceCharacterTests : IntegrationTestBase
         return failures;
     }
 
+    private static readonly JsonSerializerOptions Web = new(JsonSerializerDefaults.Web);
+
+    /// <summary>
+    /// The server's traces: every one comes to the figure the other endpoints give (ability scores and modifiers,
+    /// saving throws, skills, the proficiency bonus, every statistic, each spellcasting's attack and DC), every step
+    /// replays to its own trace's value, and the character file's traces have their final value, exclusions and
+    /// operations.
+    /// </summary>
+    private static async Task<List<string>> CheckTracesAsync(ReferenceCharacterBuilder builder, HttpClient api, JsonObject expected, string stage)
+    {
+        var failures = new List<string>();
+        var traced = new Dictionary<string, CalculationTraceResponse>();
+        async Task<CalculationTrace?> Trace(string key)
+        {
+            if (!traced.TryGetValue(key, out var response))
+            {
+                var http = await api.GetAsync($"/api/characters/{builder.CharacterId}/calculation/trace?value={Uri.EscapeDataString(key)}");
+                if (!http.IsSuccessStatusCode)
+                {
+                    failures.Add($"[{stage}] trace {key}: {(int)http.StatusCode} {await http.Content.ReadAsStringAsync()}");
+                    return null;
+                }
+                traced[key] = response = (await http.Content.ReadFromJsonAsync<CalculationTraceResponse>(Web))!;
+            }
+            if (response.Status != TraceStatus.Traced)
+            {
+                failures.Add($"[{stage}] trace {key}: {response.Status} ({response.Reason})");
+                return null;
+            }
+            foreach (var t in All(response.Trace!))
+            {
+                if (t.Notes.Count > 0 || CalculationTraceBuilder.Replay(t.Steps) != t.Final)
+                {
+                    failures.Add($"[{stage}] trace {key}: {t.Key} replays to {CalculationTraceBuilder.Replay(t.Steps)}, not {t.Final} {string.Join(" ", t.Notes)}");
+                }
+            }
+            return response.Trace;
+        }
+        async Task Same(string key, int figure, string what)
+        {
+            if (await Trace(key) is { } t && t.Final != figure)
+            {
+                failures.Add($"[{stage}] trace {key} comes to {t.Final}, {what} is {figure}");
+            }
+        }
+
+        foreach (var a in (await builder.GetCharacterAsync("/ability-scores"))["abilityScores"]!.AsArray())
+        {
+            var ability = a!["name"]!.GetValue<string>().ToLowerInvariant();
+            await Same($"ability-score:{ability}", a["calculatedScore"]!.GetValue<int>(), "the ability score");
+            await Same($"ability-modifier:{ability}", a["calculatedModifier"]!.GetValue<int>(), "the ability modifier");
+        }
+        var abilities = new Dictionary<string, string> { ["STR"] = "strength", ["DEX"] = "dexterity", ["CON"] = "constitution", ["INT"] = "intelligence", ["WIS"] = "wisdom", ["CHA"] = "charisma" };
+        foreach (var save in (await builder.GetCharacterAsync("/saving-throws"))["savingThrows"]!.AsArray())
+        {
+            await Same($"saving-throw:{abilities[save!["abilityScoreAbbreviation"]!.GetValue<string>()]}", save["calculatedBonus"]!.GetValue<int>(), "the saving throw");
+        }
+        foreach (var skill in (await builder.GetCharacterAsync("/skills"))["skills"]!.AsArray())
+        {
+            await Same($"skill:{skill!["name"]!.GetValue<string>().ToLowerInvariant().Replace(' ', '-')}", skill["calculatedBonus"]!.GetValue<int>(), "the skill");
+        }
+        foreach (var statistic in (await builder.GetCharacterAsync("/statistics"))["statistics"]!.AsArray())
+        {
+            var name = statistic!["groupName"]!.GetValue<string>();
+            await Same(name == "proficiency" ? "proficiency-bonus" : $"statistic:{name}", statistic["totalValue"]!.GetValue<int>(), $"statistic {name}");
+        }
+        foreach (var caster in (await builder.GetCharacterAsync("/spellcasting"))["casters"]!.AsArray())
+        {
+            var slug = caster!["name"]!.GetValue<string>().Trim().ToLowerInvariant().Replace(' ', '-');
+            await Same($"spell-attack:{slug}", caster["attack"]!.GetValue<int>(), "the spell attack");
+            await Same($"spell-save-dc:{slug}", caster["dc"]!.GetValue<int>(), "the spell save DC");
+        }
+
+        // the character file's own trace expectations (the sheet's keys are the web suite's)
+        foreach (var want in expected["traces"]?.AsArray() ?? [])
+        {
+            var key = want!["value"]!.GetValue<string>();
+            if (!CalculationTraceKeys.IsServerKey(key) || await Trace(key) is not { } t)
+            {
+                continue;
+            }
+            if (t.Final != want["final"]!.GetValue<int>())
+            {
+                failures.Add($"[{stage}] trace {key}: final {t.Final}, expected {want["final"]}");
+            }
+            var excluded = string.Join(", ", t.Excluded.Select(e => $"{JsonSerializer.Serialize(e.Reason).Trim('"')} {e.Value}").Order(StringComparer.Ordinal));
+            var wantExcluded = string.Join(", ", want["excluded"]!.AsArray().Select(e => $"{e!["reason"]} {e["value"]}").Order(StringComparer.Ordinal));
+            if (excluded != wantExcluded)
+            {
+                failures.Add($"[{stage}] trace {key}: excluded [{excluded}], expected [{wantExcluded}]");
+            }
+            var operations = All(t).SelectMany(x => x.Steps).Select(x => JsonSerializer.Serialize(x.Operation).Trim('"')).ToHashSet();
+            foreach (var operation in want["operations"]?.AsArray().Select(o => o!.GetValue<string>()) ?? [])
+            {
+                if (!operations.Contains(operation))
+                {
+                    failures.Add($"[{stage}] trace {key}: no {operation} step (it has {string.Join(", ", operations)})");
+                }
+            }
+        }
+        return failures;
+    }
+
+    private static IEnumerable<CalculationTrace> All(CalculationTrace trace) =>
+        new[] { trace }.Concat(trace.Steps.Where(s => s.Input is not null).SelectMany(s => All(s.Input!)));
+
     private static IEnumerable<JsonNode> Flatten(JsonArray registrations) =>
         registrations.SelectMany(r => new[] { r! }.Concat(r!["children"] is JsonArray children ? Flatten(children) : []));
 
@@ -333,6 +474,39 @@ public sealed partial class ReferenceCharacterTests : IntegrationTestBase
     private sealed class ReferenceHost(IntegrationHost integration, string connection, string root) : IAsyncDisposable
     {
         public IntegrationHost Integration => integration;
+
+        public async Task ExecuteAsync(string sql)
+        {
+            await using var connected = new SqlConnection(connection);
+            await connected.OpenAsync();
+            await using var command = new SqlCommand(sql, connected);
+            await command.ExecuteNonQueryAsync();
+        }
+
+        /// <summary>Every table of the characters schema: its row count and a checksum of its rows.</summary>
+        public async Task<List<string>> SnapshotAsync()
+        {
+            await using var connected = new SqlConnection(connection);
+            await connected.OpenAsync();
+            var tables = new List<string>();
+            await using (var list = new SqlCommand("SELECT name FROM sys.tables WHERE schema_id = SCHEMA_ID('characters') ORDER BY name", connected))
+            await using (var reader = await list.ExecuteReaderAsync())
+            {
+                while (await reader.ReadAsync())
+                {
+                    tables.Add(reader.GetString(0));
+                }
+            }
+            var snapshot = new List<string>();
+            foreach (var table in tables)
+            {
+                await using var sum = new SqlCommand($"SELECT COUNT(*), CHECKSUM_AGG(BINARY_CHECKSUM(*)) FROM characters.[{table}]", connected);
+                await using var reader = await sum.ExecuteReaderAsync();
+                await reader.ReadAsync();
+                snapshot.Add($"{table} {reader.GetInt32(0)} {(reader.IsDBNull(1) ? "-" : reader.GetInt32(1))}");
+            }
+            return snapshot;
+        }
 
         public async ValueTask DisposeAsync()
         {
