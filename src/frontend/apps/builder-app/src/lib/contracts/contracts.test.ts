@@ -3,6 +3,7 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { checkShape, contractTypes, type OpenApiDocument } from "./openapi-contract";
 import { CALCULATION_TRACE_HEADER, CALCULATION_TRACE_SCHEMAS } from "./calculation-trace-schemas";
+import { IMPORT_DIAGNOSTIC_HEADER, IMPORT_DIAGNOSTIC_SCHEMAS } from "./import-diagnostic-schemas";
 
 // the API description the server's tests write (OpenApiDocumentTests), from the repository root
 const description = new URL("../../../../../../../docs/api/openapi.json", import.meta.url);
@@ -37,5 +38,37 @@ describe("the calculation trace contract", () => {
       "CalculationTrace.extra: not in the contract",
     ]);
     expect(checkShape(document, "CalculationTraceResponse", { characterId: "x", value: "skill:stealth" })).toEqual(["CalculationTraceResponse.status: missing"]);
+  });
+});
+
+describe("the import diagnostics contract", () => {
+  it("is the types the API description gives (regenerate with STARLIGHTS_UPDATE_CONTRACTS=1)", () => {
+    const file = new URL("./import-diagnostics.ts", import.meta.url);
+    const generated = contractTypes(document, IMPORT_DIAGNOSTIC_SCHEMAS, IMPORT_DIAGNOSTIC_HEADER);
+    if (process.env.STARLIGHTS_UPDATE_CONTRACTS === "1") writeFileSync(file, generated);
+    expect(readFileSync(file, "utf8")).toBe(generated);
+  });
+
+  it("names the severities, importers and codes the server does", () => {
+    const values = (name: string) => document.components.schemas[name].enum;
+    expect(values("ImportDiagnosticSeverity")).toEqual(["error", "warning", "info"]);
+    expect(values("ImportDiagnosticImporter")).toEqual(["aurora", "5etools", "homebrew", "aurora-character"]);
+    expect(values("ImportDiagnosticCode")).toEqual([
+      "unreadable-file", "index-entry-missing", "append-target-missing", "grant-unresolved", "class-feature-missing", "subclass-class-missing",
+      "element-missing", "choice-unmatched", "invalid-value", "replaces-existing", "stale-revision",
+    ]);
+  });
+
+  it("the job status and the import result carry them, and the old text warnings stay", () => {
+    const property = (schema: string, name: string) => document.components.schemas[schema].properties?.[name];
+    expect(property("ContentJobStatus", "diagnostics")?.items?.$ref).toBe("#/components/schemas/ImportDiagnostic");
+    expect(property("AuroraImportResult", "diagnostics")?.items?.$ref).toBe("#/components/schemas/ImportDiagnostic");
+    expect(property("ContentJobStatus", "log")?.items?.type).toBe("string");
+    expect(property("UploadHomebrewResponse", "warnings")?.items?.type).toBe("string");
+    expect(checkShape(document, "ImportDiagnostic", { severity: "warning", code: "grant-unresolved", importer: "aurora", message: "x", omitted: null })).toEqual([]);
+    expect(checkShape(document, "ImportDiagnostic", { severity: "fatal", code: "grant-unresolved", importer: "aurora" })).toEqual([
+      "ImportDiagnostic.message: missing",
+      'ImportDiagnostic.severity: "fatal" is not one of error, warning, info',
+    ]);
   });
 });

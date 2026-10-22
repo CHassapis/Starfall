@@ -85,7 +85,7 @@ internal sealed class AuroraImporter : IAuroraImporter
         using var _ = ElementsInstrumentation.StartActivity();
 
         var root = Path.GetFullPath(_options.ContentPath);
-        var (byId, byFile, warnings) = BuildCatalog(root);
+        var (byId, byFile, warnings, catalogDiagnostics) = BuildCatalog(root);
         var repository = _persistence.GetRepository<IElementsRepository>();
         var homebrewImport = string.Equals(indexPath, AuroraImporterOptions.HomebrewIndex, StringComparison.OrdinalIgnoreCase);
         var storedXml = homebrewImport && (update || replace) ? await repository.GetAuroraXmlAsync() : null;
@@ -93,21 +93,18 @@ internal sealed class AuroraImporter : IAuroraImporter
         // "homebrew" imports every file of the homebrew folder, "5etools" what is generated from the 5etools data;
         // anything else is an .index of the content repository
         var files = new List<string>();
-        if (string.Equals(indexPath, AuroraImporterOptions.HomebrewIndex, StringComparison.OrdinalIgnoreCase))
+        var diagnostics = new List<ImportDiagnostic>();
+        var folder = indexPath.ToLowerInvariant() switch
         {
-            files.AddRange(byFile.Keys.Where(f => f.StartsWith(HomebrewPrefix, StringComparison.Ordinal)));
-        }
-        else if (string.Equals(indexPath, AuroraImporterOptions.FiveEToolsIndex, StringComparison.OrdinalIgnoreCase))
+            AuroraImporterOptions.HomebrewIndex => HomebrewPrefix,
+            AuroraImporterOptions.FiveEToolsIndex => FiveEToolsData.Prefix,
+            AuroraImporterOptions.PullRequestsIndex => PullRequestsPrefix,
+            AuroraImporterOptions.BuiltInIndex => BuiltIn.BuiltInContent.Prefix,
+            _ => null,
+        };
+        if (folder is not null)
         {
-            files.AddRange(byFile.Keys.Where(f => f.StartsWith(FiveEToolsData.Prefix, StringComparison.Ordinal)));
-        }
-        else if (string.Equals(indexPath, AuroraImporterOptions.PullRequestsIndex, StringComparison.OrdinalIgnoreCase))
-        {
-            files.AddRange(byFile.Keys.Where(f => f.StartsWith(PullRequestsPrefix, StringComparison.Ordinal)));
-        }
-        else if (string.Equals(indexPath, AuroraImporterOptions.BuiltInIndex, StringComparison.OrdinalIgnoreCase))
-        {
-            files.AddRange(byFile.Keys.Where(f => f.StartsWith(BuiltIn.BuiltInContent.Prefix, StringComparison.Ordinal)));
+            files.AddRange(byFile.Keys.Where(f => f.StartsWith(folder, StringComparison.Ordinal)));
         }
         else
         {
@@ -116,8 +113,12 @@ internal sealed class AuroraImporter : IAuroraImporter
             {
                 throw new FileNotFoundException($"The index '{indexPath}' was not found in the content repository.");
             }
-            CollectIndexFiles(root, indexFile, files, []);
+            CollectIndexFiles(root, indexFile, files, [], diagnostics);
         }
+        // what reading every file ran into, as far as it concerns the files this import is about: a broken file in the
+        // content repository is not news on a homebrew upload
+        var listed = files.ToHashSet(StringComparer.Ordinal);
+        diagnostics.AddRange(catalogDiagnostics.Where(d => d.File is null || (folder is null ? listed.Contains(d.File) : d.File.StartsWith(folder, StringComparison.Ordinal))));
 
         // the requested elements, then (transitively) everything they grant from anywhere in the repository,
         // plus the options for choices that nothing in the import can satisfy (e.g. gaming sets for the Soldier)
@@ -310,6 +311,9 @@ internal sealed class AuroraImporter : IAuroraImporter
                         if (grantId is null || !(toImport.ContainsKey(grantId) || existing.Contains(ToElementId(grantId).Value)))
                         {
                             skippedUnresolved++;
+                            diagnostics.Add(new ImportDiagnostic(ImportDiagnosticSeverity.Warning, ImportDiagnosticCode.GrantUnresolved, ImportDiagnostic.ImporterOf(aurora.File),
+                                grantId is null ? $"{aurora.Name} has a grant without an id; it was left out." : $"{aurora.Name} grants {grantId}, which is not in the content; that grant was left out.")
+                            { File = aurora.File, ElementId = aurora.Id, ElementName = aurora.Name, Detail = grantId });
                             break;
                         }
                         Attach($"grant:{grantId}:{level}", id => new IncludeRuleComponent(id, ToElementId(grantId), level)).UpdateRequirements(requirements);
@@ -358,7 +362,11 @@ internal sealed class AuroraImporter : IAuroraImporter
         _logger.LogInformation("imported aurora index '{Index}': {Imported} elements ({Replaced} replaced, {Dependencies} pulled in as grant dependencies), {Existing} already present, {Conditional} conditional rules and {Unresolved} unresolved grants skipped",
             indexPath, imported, replaced, dependencies, alreadyImported, skippedConditional, skippedUnresolved);
 
-        return new AuroraImportResult(files.Count, imported, replaced, dependencies, alreadyImported, skippedConditional, skippedUnresolved, importedByType) { Warnings = warnings };
+        return new AuroraImportResult(files.Count, imported, replaced, dependencies, alreadyImported, skippedConditional, skippedUnresolved, importedByType)
+        {
+            Warnings = warnings,
+            Diagnostics = ImportDiagnostic.Arrange(diagnostics),
+        };
     }
 
     public async Task<int> RemoveAsync(string pathPrefix, CancellationToken cancellationToken = default)
@@ -389,8 +397,9 @@ internal sealed class AuroraImporter : IAuroraImporter
     /// Every element of the content repository and of the homebrew folder (under "homebrew/"), so grants and
     /// choices resolve across both.
     /// </summary>
-    private (Dictionary<string, AuroraElement> ById, Dictionary<string, List<AuroraElement>> ByFile, List<string> Warnings) BuildCatalog(string root)
+    private (Dictionary<string, AuroraElement> ById, Dictionary<string, List<AuroraElement>> ByFile, List<string> Warnings, List<ImportDiagnostic> Diagnostics) BuildCatalog(string root)
     {
+        var diagnostics = new List<ImportDiagnostic>();
         var byId = new Dictionary<string, AuroraElement>(StringComparer.Ordinal);
         var byFile = new Dictionary<string, List<AuroraElement>>(StringComparer.Ordinal);
         var duplicates = 0;
@@ -475,6 +484,8 @@ internal sealed class AuroraImporter : IAuroraImporter
             catch (XmlException ex)
             {
                 _logger.LogWarning("skipping unreadable aurora file '{File}': {Error}", file, ex.Message);
+                diagnostics.Add(new ImportDiagnostic(ImportDiagnosticSeverity.Warning, ImportDiagnosticCode.UnreadableFile, ImportDiagnostic.ImporterOf(file),
+                    $"{file} is not valid XML and was skipped: {ex.Message}") { File = file, Detail = ex.Message });
                 continue;
             }
 
@@ -532,11 +543,16 @@ internal sealed class AuroraImporter : IAuroraImporter
 
         _logger.LogInformation("aurora catalog: {Elements} elements in {Files} files ({Duplicates} duplicate ids ignored, {Appended} appends applied, {Unmatched} appends for elements not loaded)",
             byId.Count, byFile.Count, duplicates, appended, unmatched);
-        var warnings = documents.Where(d => d.File.StartsWith(HomebrewPrefix, StringComparison.Ordinal))
+        var missingTargets = documents.Where(d => d.File.StartsWith(HomebrewPrefix, StringComparison.Ordinal))
             .SelectMany(d => HomebrewUploadXml.AppendTargets(d.Document).Where(id => !byId.TryGetValue(id, out var target) || target.Xml.Attribute(HomebrewAppendMarker) is null)
-                .Select(id => $"{d.File}: append target {id} was not found in the loaded Aurora source files. Install its source content, then upload this patch again."))
+                .Select(id => (d.File, Id: id)))
             .ToList();
-        return (byId, byFile, warnings);
+        var warnings = missingTargets
+            .Select(m => $"{m.File}: append target {m.Id} was not found in the loaded Aurora source files. Install its source content, then upload this patch again.")
+            .ToList();
+        diagnostics.AddRange(missingTargets.Select(m => new ImportDiagnostic(ImportDiagnosticSeverity.Warning, ImportDiagnosticCode.AppendTargetMissing, ImportDiagnosticImporter.Homebrew,
+            $"The append to {m.Id} was not applied: {m.Id} is not in the loaded content. Install the content it belongs to, then upload this file again.") { File = m.File, ElementId = m.Id }));
+        return (byId, byFile, warnings, diagnostics);
     }
 
     /// <summary>
@@ -632,7 +648,7 @@ internal sealed class AuroraImporter : IAuroraImporter
     /// <summary>
     /// Walks an .index file and the .index files it lists, collecting the element files (relative to the root).
     /// </summary>
-    private void CollectIndexFiles(string root, string indexFile, List<string> files, HashSet<string> visited)
+    private void CollectIndexFiles(string root, string indexFile, List<string> files, HashSet<string> visited, List<ImportDiagnostic> diagnostics)
     {
         if (!visited.Add(indexFile) || _options.IsExcluded(Path.GetRelativePath(root, indexFile).Replace('\\', '/')))
         {
@@ -652,12 +668,15 @@ internal sealed class AuroraImporter : IAuroraImporter
             if (path is null)
             {
                 _logger.LogWarning("index '{Index}' lists '{Name}' which is not in the content repository", Path.GetRelativePath(root, indexFile), name);
+                var index = Path.GetRelativePath(root, indexFile).Replace('\\', '/');
+                diagnostics.Add(new ImportDiagnostic(ImportDiagnosticSeverity.Warning, ImportDiagnosticCode.IndexEntryMissing, ImportDiagnosticImporter.Aurora,
+                    $"{index} lists {name}, which is not in the content repository; it was left out.") { File = index, Detail = name });
                 continue;
             }
 
             if (path.EndsWith(".index", StringComparison.OrdinalIgnoreCase))
             {
-                CollectIndexFiles(root, path, files, visited);
+                CollectIndexFiles(root, path, files, visited, diagnostics);
             }
             else
             {

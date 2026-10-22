@@ -166,8 +166,15 @@
           "required": true
         },
         "responses": {
-          "204": {
-            "description": "No Content"
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UploadHomebrewResponse"
+                }
+              }
+            }
           }
         }
       }
@@ -179,8 +186,15 @@
         ],
         "operationId": "StarlightsModulesElementsEndpointsInstallationDeleteHomebrewEndpoint",
         "responses": {
-          "204": {
-            "description": "No Content"
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteHomebrewResponse"
+                }
+              }
+            }
           }
         }
       }
@@ -379,8 +393,15 @@
           "required": true
         },
         "responses": {
-          "204": {
-            "description": "No Content"
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuroraImportResult"
+                }
+              }
+            }
           }
         }
       }
@@ -4443,6 +4464,100 @@
           }
         }
       },
+      "AuroraImportResult": {
+        "required": [
+          "filesRead",
+          "elementsImported",
+          "elementsReplaced",
+          "dependenciesImported",
+          "alreadyImported",
+          "skippedConditionalRules",
+          "skippedUnresolvedGrants",
+          "importedByType"
+        ],
+        "type": "object",
+        "properties": {
+          "filesRead": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "elementsImported": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "elementsReplaced": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "dependenciesImported": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "alreadyImported": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "skippedConditionalRules": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "skippedUnresolvedGrants": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "importedByType": {
+            "type": "object",
+            "additionalProperties": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "diagnostics": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ImportDiagnostic"
+            }
+          }
+        }
+      },
       "AuroraLookupRequest": {
         "type": "object",
         "properties": {
@@ -6510,6 +6625,12 @@
               "null",
               "boolean"
             ]
+          },
+          "diagnostics": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ImportDiagnostic"
+            }
           }
         }
       },
@@ -7742,6 +7863,36 @@
             "items": {
               "type": "string",
               "format": "uuid"
+            }
+          }
+        }
+      },
+      "DeleteHomebrewResponse": {
+        "required": [
+          "removed",
+          "warnings",
+          "diagnostics"
+        ],
+        "type": "object",
+        "properties": {
+          "removed": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "diagnostics": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ImportDiagnostic"
             }
           }
         }
@@ -9460,6 +9611,92 @@
             "type": "boolean"
           }
         }
+      },
+      "ImportDiagnostic": {
+        "required": [
+          "severity",
+          "code",
+          "importer",
+          "message"
+        ],
+        "type": "object",
+        "properties": {
+          "severity": {
+            "$ref": "#/components/schemas/ImportDiagnosticSeverity"
+          },
+          "code": {
+            "$ref": "#/components/schemas/ImportDiagnosticCode"
+          },
+          "importer": {
+            "$ref": "#/components/schemas/ImportDiagnosticImporter"
+          },
+          "message": {
+            "type": "string"
+          },
+          "file": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "elementId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "elementName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "detail": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "omitted": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "ImportDiagnosticCode": {
+        "enum": [
+          "unreadable-file",
+          "index-entry-missing",
+          "append-target-missing",
+          "grant-unresolved",
+          "class-feature-missing",
+          "subclass-class-missing",
+          "element-missing",
+          "choice-unmatched",
+          "invalid-value",
+          "replaces-existing",
+          "stale-revision"
+        ]
+      },
+      "ImportDiagnosticImporter": {
+        "enum": [
+          "aurora",
+          "5etools",
+          "homebrew",
+          "aurora-character"
+        ]
+      },
+      "ImportDiagnosticSeverity": {
+        "enum": [
+          "error",
+          "warning",
+          "info"
+        ]
       },
       "IncludeRuleItem": {
         "required": [
@@ -12753,6 +12990,49 @@
           },
           "content": {
             "type": "string"
+          }
+        }
+      },
+      "UploadHomebrewResponse": {
+        "required": [
+          "file",
+          "elementsImported",
+          "elementsReplaced",
+          "warnings",
+          "diagnostics"
+        ],
+        "type": "object",
+        "properties": {
+          "file": {
+            "type": "string"
+          },
+          "elementsImported": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "elementsReplaced": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "diagnostics": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ImportDiagnostic"
+            }
           }
         }
       },
