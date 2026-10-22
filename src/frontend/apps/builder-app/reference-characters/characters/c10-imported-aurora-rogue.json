@@ -2,8 +2,7 @@
   "id": "c10-imported-aurora-rogue",
   "title": "a rogue as the Aurora import builds it: rolled hit points and an attack written by hand",
   "edition": "2014",
-  "source": "../aurora/imported-rogue.dnd5e",
-  "covers": ["what the Aurora import produces (the same picks, rolls and attack list as ../aurora/imported-rogue.dnd5e)", "rolled hit points instead of the average", "an attack written by hand: shown as written, marked as entered by the user", "expertise from level 1"],
+  "covers": ["what the Aurora import produces from a character's attack list and rolled hit points (the file's parts are in the web suite)", "rolled hit points instead of the average", "an attack written by hand: shown as written, marked as entered by the user", "expertise from level 1"],
   "steps": [
     { "abilities": { "Strength": 10, "Dexterity": 15, "Constitution": 14, "Intelligence": 12, "Wisdom": 13, "Charisma": 8 } },
     { "pick": "Class", "option": "Ref Rogue" },

@@ -62,7 +62,7 @@ and say why in the commit message, with the rule it follows).
 | c07-ranger-cleric-2024 | multiclass, 2024 half-caster rounding, medium armor's Dexterity cap, archery, initiative feat |
 | c08-monk-2024 | an unarmored defense needing no shield, speed while unarmored, picking up a shield |
 | c09-barbarian-2024 | two unarmored defenses competing (and tying), Extra Attack, d12 hit points |
-| c10-imported-aurora-rogue | what the Aurora import produces from `aurora/imported-rogue.dnd5e`: rolled hit points, a hand-written attack |
+| c10-imported-aurora-rogue | what the Aurora import produces from a character's attack list and rolled hit points: rolled hit points, a hand-written attack |
 
 Each spec lists its build `steps` (what a player does in the builder, in an order the builder allows: it offers
 no skill the character already has), the `expected` figures, and `scenarios`. Scenarios run one after another on
@@ -85,9 +85,10 @@ Two lists must be complete, because the web suite works from the file alone:
 - `registered`: every registered element the sheet's calculations look for (weapon proficiencies, Extra Attack).
 
 `skills` must include Perception: passive Perception is worked out from it. The web suite names registered elements
-from `content/` (the sheet counts Extra Attack by its name). For c10 it reads the attributes of
-`aurora/imported-rogue.dnd5e` itself and runs what the import does with them (the attack list, the rolled hit
-points); the import's own reading of the file uses the browser's DOMParser and is not run by these tests.
+from `content/` (the sheet counts Extra Attack by its name). For c10 it holds the parts of an Aurora character file
+the import reads (attack list, rolled hit points; synthetic, in the test, since character files stay out of the
+repository) and runs what the import does with them; the import's own reading of a file uses the browser's
+DOMParser and is not run by these tests.
 
 The server suite fails when the server has one the file does not list. `catalog.json` lists the reference items
 with the fields the sheet needs; the server suite checks that the server's item catalog agrees with it.

@@ -290,10 +290,21 @@ describe("reference characters through the web app's calculations", () => {
     });
   }
 
-  it("c10's Aurora file gives the attack list and rolled hit points its steps use", () => {
-    // the importer reads the file with the browser's DOMParser, which these tests do not have: the attributes are read
-    // here, and what the importer does with them (lib/rules/items auroraAttackList) runs as it does in the browser
-    const file = read("aurora/imported-rogue.dnd5e");
+  it("c10's steps are what the Aurora import makes of its attack list and rolled hit points", () => {
+    // the parts of an Aurora character file (.dnd5e) the import reads for c10, synthetic and written for this test
+    // (character files stay out of the repository). The import reads a file with the browser's DOMParser, which
+    // these tests do not have: the attributes are read here, and what the import does with them
+    // (lib/rules/items auroraAttackList, the level element's rndhp) runs as it does in the browser.
+    const file = `
+      <attacks>
+        <attack identifier="4b0e7a10-5c1d-4f2e-9a3b-000000000c12" name="Ref Rapier" range="5 ft" attack="+5" damage="1d8+3 piercing" ability="Dexterity" displayed="true" />
+        <attack identifier="4b0e7a10-5c1d-4f2e-9a3b-000000000c10" name="Ref Hidden Blade" range="5 ft" attack="+7 vs AC" damage="1d4+5 piercing" ability="Dexterity" displayed="true">
+          <description>a figure entered by hand in Aurora</description>
+        </attack>
+      </attacks>
+      <element type="Level" name="Level 1" id="ID_INTERNAL_LEVEL_1" rndhp="8,7" />
+      <item identifier="4b0e7a10-5c1d-4f2e-9a3b-000000000c11" id="ID_REF_ARMOR_LEATHER" name="Ref Leather Armor" amount="1" />
+      <item identifier="4b0e7a10-5c1d-4f2e-9a3b-000000000c12" id="ID_REF_WEAPON_RAPIER" name="Ref Rapier" amount="1" />`;
     const attr = (tag: string, name: string) => tag.match(new RegExp(`\\b${name}="([^"]*)"`))?.[1];
     const attacks: AuroraAttack[] = [...file.matchAll(/<attack\b([^>]*?)(?:\/>|>([\s\S]*?)<\/attack>)/g)].map((m) => ({
       identifier: attr(m[1], "identifier") ?? "",
