@@ -78,7 +78,9 @@ try {
       // the first file's grant is reported by its own import only: the second import does not look at it again
       if (p === "/api/elements/homebrew" && req.method() === "POST") {
         uploads++;
-        return json(200, { file: req.postDataJSON().fileName, elementsImported: 1, elementsReplaced: 0, warnings: [], diagnostics: uploads === 1 ? uploadDiagnostics : uploadDiagnostics.slice(0, 1) });
+        // each file: one element in full, one in part (its grant)
+        return json(200, { file: req.postDataJSON().fileName, elementsImported: 2, elementsReplaced: 0, warnings: [], diagnostics: uploads === 1 ? uploadDiagnostics : uploadDiagnostics.slice(0, 1),
+          entries: { complete: 1, partial: 1, textOnly: 0, skipped: 0 } });
       }
       if (p === "/api/elements/homebrew/spells" && req.method() === "GET") return json(200, { spells: [spell(1, "rev-1")] });
       if (p === "/api/elements/homebrew/classes") return json(200, { classes: [] });
@@ -132,6 +134,7 @@ try {
     ok(uploads === 2, `both files uploaded (${uploads})`);
     ok(await status.getByText("Brew Feat grants ID_GONE").isVisible(), "the first file's grant stays listed after the second upload");
     ok(await status.getByText("Homebrew · homebrew/test-feats.xml · Brew Feat (ID_BREW_FEAT)").isVisible(), "where: importer, file, element");
+    ok(await status.getByText("Entries: 2 in full · 2 in part").isVisible(), "what the two imports made, added up");
     await noOverflow("upload diagnostics");
     await page.screenshot({ path: `${output}/homebrew-upload-diagnostics-${device.name}.png` });
 

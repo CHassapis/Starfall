@@ -6,7 +6,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { ImportDiagnostics } from "@/components/import-diagnostics";
 import { checkShape, type OpenApiDocument } from "@/lib/contracts/openapi-contract";
-import { arrangeDiagnostics, diagnosticCounts, diagnosticSummary, diagnosticWhere, missingPickDiagnostic, unmatchedPickDiagnostic, type ImportDiagnostic } from "./import-diagnostics";
+import { addEntries, arrangeDiagnostics, diagnosticCounts, diagnosticSummary, diagnosticWhere, entrySummary, missingPickDiagnostic, unmatchedPickDiagnostic, type ImportDiagnostic } from "./import-diagnostics";
 
 const document = JSON.parse(readFileSync(new URL("../../../../../../docs/api/openapi.json", import.meta.url), "utf8")) as OpenApiDocument;
 
@@ -53,5 +53,24 @@ describe("import diagnostics in the web app", () => {
     expect(html).not.toContain("<details open");
     expect(renderToStaticMarkup(<ImportDiagnostics diagnostics={[{ severity: "error", code: "invalid-value", importer: "homebrew", message: "A name is needed." }]} />)).toContain('role="alert"');
     expect(renderToStaticMarkup(<ImportDiagnostics diagnostics={[]} />)).toBe("");
+  });
+
+  it("say what the import made: in full, in part, text only, skipped (the parts that are not 0)", () => {
+    expect(entrySummary({ complete: 4, partial: 2, textOnly: 1, skipped: 3 })).toBe("4 in full · 2 in part · 1 text only · 3 skipped");
+    expect(entrySummary({ complete: 0, partial: 0, textOnly: 2, skipped: 0 })).toBe("2 text only");
+    expect(entrySummary({ complete: 0, partial: 0, textOnly: 0, skipped: 0 })).toBeNull();
+    expect(entrySummary(undefined)).toBeNull();
+    // two homebrew files of one upload
+    expect(addEntries(null, { complete: 1, partial: 0, textOnly: 2, skipped: 0 })).toEqual({ complete: 1, partial: 0, textOnly: 2, skipped: 0 });
+    expect(addEntries({ complete: 1, partial: 0, textOnly: 2, skipped: 0 }, { complete: 3, partial: 1, textOnly: 0, skipped: 5 })).toEqual({ complete: 4, partial: 1, textOnly: 2, skipped: 5 });
+
+    const story: ImportDiagnostic = { severity: "info", code: "text-only", importer: "homebrew", message: "Brew Story has no rules: Starfall shows its description, but applies nothing from it.", file: "homebrew/a.xml", elementId: "ID_BREW_STORY", elementName: "Brew Story" };
+    const notes = renderToStaticMarkup(<ImportDiagnostics diagnostics={[story]} entries={{ complete: 4, partial: 0, textOnly: 1, skipped: 0 }} />);
+    expect(notes).toContain("Entries: 4 in full · 1 text only");
+    expect(notes).toContain("1 note");
+    expect(notes).not.toContain("border-amber-500/50");
+    const warned = renderToStaticMarkup(<ImportDiagnostics diagnostics={[story, grant(1)]} />);
+    expect(warned).toContain("border-amber-500/50");
+    expect(warned).not.toContain("Entries:");
   });
 });

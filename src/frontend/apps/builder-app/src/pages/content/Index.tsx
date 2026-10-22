@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { apiClient } from "@/lib/api-client";
-import type { ImportDiagnostic } from "@/lib/import-diagnostics";
+import type { ImportDiagnostic, ImportEntryCounts } from "@/lib/import-diagnostics";
 import { useIsAdmin } from "@/lib/player";
 import { ContentStatusSection, ServerSection, type ContentStatus } from "./status";
 
@@ -22,7 +22,7 @@ interface ContentSources {
   settings: { auroraLink: string; fiveEToolsLink: string; auroraCommit?: string | null; fiveEToolsCommit?: string | null; updatedAt?: string | null };
   defaultAurora: string;
   defaultFiveETools: string;
-  job: { running: boolean; step?: string | null; log: string[]; startedAt?: string | null; finishedAt?: string | null; succeeded?: boolean | null; diagnostics?: ImportDiagnostic[] };
+  job: { running: boolean; step?: string | null; log: string[]; startedAt?: string | null; finishedAt?: string | null; succeeded?: boolean | null; diagnostics?: ImportDiagnostic[]; entries?: ImportEntryCounts };
   status: ContentStatus;
 }
 
@@ -170,7 +170,7 @@ function Job({ job }: { job: ContentSources["job"] }) {
         {job.running ? (job.step ?? "Working…") : job.succeeded ? "The content is up to date" : "The update stopped"}
       </h2>
       <pre className="max-h-80 overflow-auto rounded-md bg-muted p-3 font-mono text-xs leading-relaxed">{job.log.join("\n")}</pre>
-      <ImportDiagnostics diagnostics={job.diagnostics ?? []} title="What the imports could not use" />
+      <ImportDiagnostics diagnostics={job.diagnostics ?? []} entries={job.entries} title="What the imports noticed" />
     </section>
   );
 }

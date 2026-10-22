@@ -12,9 +12,9 @@ import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { apiClient } from "@/lib/api-client";
 import { withNewBooksOff } from "@/lib/api/homebrew";
-import type { DeleteHomebrewResponse, ImportDiagnostic, UploadHomebrewResponse } from "@/lib/contracts/import-diagnostics";
+import type { DeleteHomebrewResponse, ImportDiagnostic, ImportEntryCounts, UploadHomebrewResponse } from "@/lib/contracts/import-diagnostics";
 import { homebrewUploadError } from "@/lib/homebrew-upload-error";
-import { arrangeDiagnostics } from "@/lib/import-diagnostics";
+import { addEntries, arrangeDiagnostics } from "@/lib/import-diagnostics";
 import { isAdmin } from "@/lib/player";
 
 interface HomebrewFile {
@@ -33,6 +33,7 @@ function FilesTab() {
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [warnings, setWarnings] = useState<string[]>([]);
   const [diagnostics, setDiagnostics] = useState<ImportDiagnostic[]>([]);
+  const [entries, setEntries] = useState<ImportEntryCounts | null>(null);
   const admin = isAdmin();
   const { data, isLoading } = useQuery({ queryKey: ["homebrew"], queryFn: () => apiClient.get<{ files: HomebrewFile[] }>("/api/elements/homebrew") });
 
@@ -47,6 +48,7 @@ function FilesTab() {
     mutationFn: async (files: File[]) => {
       setWarnings([]);
       setDiagnostics([]);
+      setEntries(null);
       setUploadError(null);
       await withNewBooksOff(async () => {
         for (const file of files) {
@@ -56,6 +58,7 @@ function FilesTab() {
             // each upload reports what its import ran into: an element already imported is not looked at again, so
             // the batch's results are kept together (the same diagnostic twice is listed once)
             if (result.diagnostics?.length) setDiagnostics((current) => arrangeDiagnostics([...current, ...result.diagnostics!]));
+            if (result.entries) setEntries((current) => addEntries(current, result.entries));
           } catch (error) { throw new Error(`${file.name}: ${homebrewUploadError(error as Error)}`, { cause: error }); }
         }
       });
@@ -70,6 +73,7 @@ function FilesTab() {
     onSuccess: (result) => {
       setWarnings(result.warnings ?? []);
       setDiagnostics(result.diagnostics ?? []);
+      setEntries(result.entries ?? null);
     },
     onError: (e) => toast.error("Could not remove it", { description: e.message }),
     onSettled: refresh,
@@ -107,7 +111,13 @@ function FilesTab() {
 
       <p className="text-sm text-muted-foreground">Files can define new elements or use &lt;append id="…"&gt; to change existing ones. Wrap them in one &lt;elements&gt; root. Patches affect their original source content; they do not create a separate Homebrew book. Upload the same filename to replace a patch.</p>
       {uploadError && <p role="alert" className="rounded-md border border-destructive/40 p-3 text-sm text-destructive">{uploadError}</p>}
-      {diagnostics.length > 0 && <ImportDiagnostics diagnostics={diagnostics} title="Saved, but the homebrew needs attention" />}
+      {diagnostics.length > 0 && (
+        <ImportDiagnostics
+          diagnostics={diagnostics}
+          entries={entries}
+          title={diagnostics.some((d) => d.severity !== "info") ? "Saved, but the homebrew needs attention" : "Saved"}
+        />
+      )}
       {diagnostics.length === 0 && warnings.length > 0 && <div role="status" className="space-y-2 rounded-md border border-amber-500/50 bg-amber-500/5 p-3 text-sm">
         <p className="font-medium">Files saved, but some patches need attention</p>
         <ul className="list-inside list-disc break-words">{warnings.map((warning) => <li key={warning}>{warning}</li>)}</ul>

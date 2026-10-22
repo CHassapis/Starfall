@@ -1,6 +1,6 @@
-import { ImportDiagnosticCodeValues, ImportDiagnosticSeverityValues, type ImportDiagnostic } from "@/lib/contracts/import-diagnostics";
+import { ImportDiagnosticCodeValues, ImportDiagnosticSeverityValues, type ImportDiagnostic, type ImportEntryCounts } from "@/lib/contracts/import-diagnostics";
 
-export type { ImportDiagnostic } from "@/lib/contracts/import-diagnostics";
+export type { ImportDiagnostic, ImportEntryCounts } from "@/lib/contracts/import-diagnostics";
 
 const order = <T extends string>(values: readonly T[], value: T) => {
   const i = values.indexOf(value);
@@ -57,6 +57,28 @@ export function diagnosticSummary(diagnostics: ImportDiagnostic[]): string {
   const c = diagnosticCounts(diagnostics);
   const part = (n: number, one: string, many: string) => (n ? `${n} ${n === 1 ? one : many}` : null);
   return [part(c.error, "problem", "problems"), part(c.warning, "warning", "warnings"), part(c.info, "note", "notes")].filter(Boolean).join(", ");
+}
+
+/**
+ * What an import did with its entries, the parts that are not 0: "4 in full · 2 in part · 1 text only · 3 skipped"
+ * (text only: a feature with no rules, shown but not applied); null when it made and skipped nothing.
+ */
+export function entrySummary(e: ImportEntryCounts | null | undefined): string | null {
+  if (!e) return null;
+  const parts = [
+    e.complete ? `${e.complete} in full` : null,
+    e.partial ? `${e.partial} in part` : null,
+    e.textOnly ? `${e.textOnly} text only` : null,
+    e.skipped ? `${e.skipped} skipped` : null,
+  ].filter(Boolean);
+  return parts.length ? parts.join(" · ") : null;
+}
+
+/** Two imports' counts added up (a batch of homebrew files). */
+export function addEntries(a: ImportEntryCounts | null | undefined, b: ImportEntryCounts | null | undefined): ImportEntryCounts {
+  const zero: ImportEntryCounts = { complete: 0, partial: 0, textOnly: 0, skipped: 0 };
+  const [x, y] = [a ?? zero, b ?? zero];
+  return { complete: x.complete + y.complete, partial: x.partial + y.partial, textOnly: x.textOnly + y.textOnly, skipped: x.skipped + y.skipped };
 }
 
 const IMPORTER_NAMES: Record<ImportDiagnostic["importer"], string> = { aurora: "Aurora content", "5etools": "5etools", homebrew: "Homebrew", "aurora-character": "Aurora character file" };
