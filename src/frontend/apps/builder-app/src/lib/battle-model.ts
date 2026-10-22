@@ -5,7 +5,26 @@
  * bonus or save DC of the spellcasting they belong to. Only what the sheet says the character has is listed.
  */
 import type { SheetData, SheetFeature, SheetSpell } from "@/lib/api/sheet";
-import { attackBonusOf, castingAction, findPool, itemRiders, type ItemRider, parseRoll, parseUsage, poolFromText, regainsOneOnShortRest, signed, ABILITIES, type Roll, type Usage } from "@/lib/rules/battle";
+import {
+  attackBonusOf,
+  castingAction,
+  customKey,
+  findPool,
+  itemRiders,
+  type CustomResource,
+  type ItemRider,
+  parseRoll,
+  parseUsage,
+  poolFromText,
+  regainsOneOnShortRest,
+  resourceMax,
+  type ResourceFacts,
+  signed,
+  ABILITIES,
+  type Roll,
+  type Usage,
+} from "@/lib/rules/battle";
+import { TraceRecorder } from "@/lib/rules/trace";
 
 export type Slot = "Action" | "Bonus Action" | "Reaction" | "Attack" | "Other";
 
@@ -40,6 +59,10 @@ export interface BattleFeature extends SheetFeature {
   cost: number;
   /** dice in its text, e.g. Sneak Attack's "2d6" */
   dice: string | null;
+  /** where its spent uses are kept, when not under its title (a resource of the player's own: "custom:<id>") */
+  usesKey?: string;
+  /** the player's own resource it is */
+  resource?: CustomResource;
 }
 
 export interface StandardAction {
@@ -169,7 +192,46 @@ function standardActions(edition: "2014" | "2024", data: SheetData, speed: numbe
   return both;
 }
 
-export function buildBattleModel(data: SheetData): BattleModel {
+/** What a resource's maximum can follow, from the sheet: proficiency bonus, level, each class's level, ability modifiers. */
+export function resourceFacts(data: SheetData): ResourceFacts {
+  return {
+    proficiencyBonus: data.proficiencyBonus,
+    level: data.level,
+    classLevel: (name) => (data.classLevels ?? []).find((c) => c.name.toLowerCase() === name.trim().toLowerCase())?.level ?? 0,
+    mod: (abbreviation) => data.abilities.find((a) => a.abbreviation === abbreviation)?.calculatedModifier ?? 0,
+  };
+}
+
+/** How a resource's maximum was worked out, for its "Why?". */
+export const explainResource = (data: SheetData, r: CustomResource) => (key: string) => {
+  const trace = new TraceRecorder();
+  resourceMax(r, resourceFacts(data), trace);
+  return trace.get(key);
+};
+
+/** The player's own resources as features: a counter of its own uses, or one that spends from a pool. */
+function resourceFeatures(data: SheetData, resources: CustomResource[]): BattleFeature[] {
+  const facts = resourceFacts(data);
+  return resources.map((r) => {
+    const pool = r.pool?.trim();
+    const cost = Math.max(1, r.cost ?? 1);
+    return {
+      title: r.name,
+      text: r.notes ?? "",
+      usage: null,
+      slot: "Other" as Slot,
+      parsedUsage: pool ? { kind: "pool" as const, pool, cost } : { kind: "count" as const, max: resourceMax(r, facts), recharge: r.recharge },
+      regainOnShort: false,
+      cost: pool ? cost : 1,
+      dice: null,
+      usesKey: customKey(r.id),
+      resource: r,
+    };
+  });
+}
+
+/** `resources`: the player's own (CombatState.resources), listed with the sheet's features in every view. */
+export function buildBattleModel(data: SheetData, resources?: CustomResource[] | null): BattleModel {
   const edition = data.edition;
   const mod = (abbreviation: string) => data.abilities.find((a) => a.abbreviation === abbreviation)?.calculatedModifier ?? 0;
   const str = mod("STR");
@@ -242,6 +304,7 @@ export function buildBattleModel(data: SheetData): BattleModel {
     })(),
     dice: f.text.match(/\b(\d+d\d+)\b/)?.[1] ?? null,
   }));
+  features.push(...resourceFeatures(data, resources ?? []));
   // pools other features spend from but no feature counts ("You have 4 Sorcery Points"): a resource of their own
   for (const f of [...features]) {
     const u = f.parsedUsage;

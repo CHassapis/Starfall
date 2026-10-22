@@ -2,6 +2,7 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import type { HomebrewSpell } from "@/lib/api/homebrew";
+import type { CombatState, CustomResource, ResourceEffect, ResourceMax } from "@/lib/rules/battle";
 import { checkShape, contractTypes, type OpenApiDocument } from "./openapi-contract";
 import { CALCULATION_TRACE_HEADER, CALCULATION_TRACE_SCHEMAS } from "./calculation-trace-schemas";
 import { HOMEBREW_PREVIEW_HEADER, HOMEBREW_PREVIEW_SCHEMAS } from "./homebrew-preview-schemas";
@@ -107,5 +108,19 @@ describe("the homebrew edit preview contract", () => {
       expect(Object.keys(paths[`/api/elements/homebrew/${kind}/preview`].post.responses)).toEqual(["200"]);
       expect(Object.keys(paths[`/api/elements/homebrew/${kind}`].put.responses)).toEqual(expect.arrayContaining(["200", "409"]));
     }
+  });
+});
+
+describe("the player's own resources", () => {
+  it("are the fields the API description gives the combat state (CombatState is written by hand)", () => {
+    const schemas = document.components.schemas;
+    const keys = (name: string) => Object.keys(schemas[name].properties ?? {}).sort();
+    expect(keys("CharacterCombat")).toEqual(expect.arrayContaining(["resources" satisfies keyof CombatState]));
+    const resource = ["id", "name", "max", "recharge", "pool", "cost", "effect", "notes"] as const satisfies readonly (keyof CustomResource)[];
+    const max = ["from", "value", "ability", "className", "times", "plus", "atLeast"] as const satisfies readonly (keyof ResourceMax)[];
+    const effect = ["armorClass", "speed", "attackRolls", "damage"] as const satisfies readonly (keyof ResourceEffect)[];
+    expect(keys("CharacterResource")).toEqual([...resource].sort());
+    expect(keys("CharacterResourceMax")).toEqual([...max].sort());
+    expect(keys("CharacterResourceEffect")).toEqual([...effect].sort());
   });
 });

@@ -114,6 +114,8 @@ export interface SheetData {
   portraitUrl?: string | null;
   level: number;
   classLine: string;
+  /** each class and its level (a resource's maximum can follow one) */
+  classLevels?: { name: string; level: number }[];
   background: string;
   alignment: string;
   deity: string;
@@ -655,6 +657,7 @@ export function useSheetData(characterId: string): {
       proficienciesInOrder: summarizeProficiencies(registrations.data?.registrations ?? [], "gained"),
       attacksPerAction: figures.attacksPerAction,
       defenses: defenses.data ?? { resistances: [], immunities: [], vulnerabilities: [] },
+      classLevels: classDice.map((c) => ({ name: c.name, level: c.level })),
       hitDice: multiclass ? classDice.map((c) => `${c.level}d${c.die}`).join(" + ") : hitDie ? `${level}d${hitDie}` : "",
       hitDie,
       hitDicePools: [...classDice.reduce((m, c) => m.set(c.die, (m.get(c.die) ?? 0) + c.level), new Map<number, number>())]

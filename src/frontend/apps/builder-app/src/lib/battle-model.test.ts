@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { SheetData } from "@/lib/api/sheet";
-import { buildBattleModel } from "@/lib/battle-model";
+import { buildBattleModel, explainResource } from "@/lib/battle-model";
+import { resourceTraceKey, type CustomResource } from "@/lib/rules/battle";
 import { sheetAttackLines } from "@/lib/sheet-model";
 import { attackModes, type CharacterFacts, type Inventory, type ItemInfo } from "@/lib/rules/items";
 
@@ -64,4 +65,31 @@ it("uses edited custom figures in the sheet/PDF data and battle, then removes de
   const removed = { ...edited, ...removeCustomAttack(edited, "custom-1") };
   expect(sheet(removed).attacks.map((a) => a.name)).toEqual(["Longsword"]);
   expect(buildBattleModel(sheet(removed)).weapons.some((a) => a.name === "Frost Gauntlets")).toBe(false);
+});
+
+describe("the player's own resources", () => {
+  // a made-up level 7 character: Paladin 5, Wizard 2, Charisma +2
+  const data = { ...sheet({ ...inventory, items: [] }), level: 7, classLevels: [{ name: "Paladin", level: 5 }, { name: "Wizard", level: 2 }], abilities: [{ abbreviation: "CHA", calculatedModifier: 2 }], features: [{ title: "Lucky", usage: "3/Long Rest", text: "" }] } as SheetData;
+  const pool: CustomResource = { id: "p1", name: "Test Hands", max: { from: "class-level", className: "paladin", times: 5 }, recharge: "long" };
+  const spender: CustomResource = { id: "s1", name: "Test Touch", max: { from: "number", value: 1 }, recharge: "long", pool: "Test Hands", cost: 5 };
+  const lucky: CustomResource = { id: "l1", name: "Lucky", max: { from: "ability", ability: "CHA", atLeast: 1 }, recharge: "dawn" };
+
+  it("are listed with the sheet's features, the same in every view that builds the model", () => {
+    const model = buildBattleModel(data, [pool, spender, lucky]);
+    const own = model.features.filter((f) => f.resource);
+    // 5 × Paladin level 5 = 25; Charisma +2
+    expect(own.map((f) => [f.title, f.usesKey, f.parsedUsage, f.cost])).toEqual([
+      ["Test Hands", "custom:p1", { kind: "count", max: 25, recharge: "long" }, 1],
+      ["Test Touch", "custom:s1", { kind: "pool", pool: "Test Hands", cost: 5 }, 5],
+      ["Lucky", "custom:l1", { kind: "count", max: 2, recharge: "dawn" }, 1],
+    ]);
+    expect(model.features.filter((f) => f.title === "Lucky").map((f) => f.usesKey ?? f.title)).toEqual(["Lucky", "custom:l1"]);
+    expect(buildBattleModel(data).features.some((f) => f.resource)).toBe(false);
+    expect(buildBattleModel(data, null).features).toEqual(buildBattleModel(data).features);
+  });
+
+  it("explain their maximum as the model works it out", () => {
+    const t = explainResource(data, pool)(resourceTraceKey("p1"))!;
+    expect([t.label, t.final, t.steps!.map((s) => s.label)]).toEqual(["Test Hands: maximum uses", 25, ["paladin level", "Times 5"]]);
+  });
 });

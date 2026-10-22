@@ -8,7 +8,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { useSheetData } from "@/lib/api/sheet";
 import { useCombat, useSaveCombat } from "@/lib/api/combat";
 import { useMagic, useSaveMagic, useSpellcasting } from "@/lib/api/magic";
-import { buildBattleModel } from "@/lib/battle-model";
+import { buildBattleModel, explainResource } from "@/lib/battle-model";
 import {
   CONDITIONS,
   currentHitPoints,
@@ -23,10 +23,12 @@ import {
   takeDamage,
   type BattleEffect,
   type CombatState,
+  resourceTraceKey,
+  usesKeyOf,
 } from "@/lib/rules/battle";
 import { pactSlots } from "@/lib/rules/magic";
 import { slugOf } from "@/lib/rules/trace";
-import { Vitals, Status, RestDialog } from "@/pages/battle/battle-page";
+import { Vitals, Status, RestDialog, type RestKind } from "@/pages/battle/battle-page";
 import { MagicTab } from "../builder/magic-tab";
 import { EquipmentTab } from "../builder/equipment-tab";
 
@@ -50,6 +52,9 @@ function Section({ id, title, children, open, onToggle }: { id: string; title: s
 }
 
 /** Same character, inventory, magic and combat state as the builder and simulator; PDF remains a separate route. */
+/** When a resource of the player's own comes back, in the sheet's words. */
+const RECHARGE_TEXT: Record<string, string> = { turn: "each turn", short: "back on a short or long rest", long: "back on a long rest", rage: "back with a new Rage", dawn: "back at dawn", never: "back when undone" };
+
 export function InteractiveSheetPage() {
   const u = useUnits();
   const { id = "" } = useParams();
@@ -65,7 +70,7 @@ export function InteractiveSheetPage() {
     open: expanded[sectionId] ?? false,
     onToggle: (open: boolean) => setExpanded((previous) => previous[sectionId] === open ? previous : { ...previous, [sectionId]: open }),
   });
-  const [rest, setRest] = useState<"short" | "long" | null>(null);
+  const [rest, setRest] = useState<RestKind | null>(null);
   if (sheet.error || combat.error || magic.error || casting.error)
     return (
       <div role="alert" className="mx-auto max-w-lg space-y-4 p-8">
@@ -86,8 +91,9 @@ export function InteractiveSheetPage() {
   const data = sheet.data;
   const explain = sheet.explain;
   const state = combat.data;
-  const model = buildBattleModel(data);
-  const effectCtx = { edition: model.edition, mod: model.mod, proficiencyBonus: data.proficiencyBonus, rageDamage: data.rageDamage ?? 0 };
+  // the sheet's features and the player's own resources, as the battle view lists them
+  const model = buildBattleModel(data, state.resources);
+  const effectCtx = { edition: model.edition, mod: model.mod, proficiencyBonus: data.proficiencyBonus, rageDamage: data.rageDamage ?? 0, resources: state.resources };
   const effects = (state.effects ?? []).map((key) => effectFor(key, effectCtx)).filter((e): e is BattleEffect => !!e);
   const ac = effectiveArmorClass(
     { total: data.armorClass, base: data.armor.base ?? data.armorClass, armorKind: data.armor.armorKind, shield: data.armor.hasShield },
@@ -330,6 +336,9 @@ export function InteractiveSheetPage() {
               Short rest
             </Button>
             <Button onClick={() => setRest("long")}>Long rest</Button>
+            <Button variant="outline" onClick={() => setRest("dawn")}>
+              Dawn
+            </Button>
           </div>
           <p className="my-3 text-sm text-muted-foreground">Rest controls use the simulator's existing rules, including multiclass hit dice.</p>
           <div className="grid gap-3 sm:grid-cols-2">
@@ -338,12 +347,15 @@ export function InteractiveSheetPage() {
               .map((f) => {
                 const usage = f.parsedUsage;
                 if (usage?.kind !== "count") return null;
-                const spent = state.uses[f.title] ?? 0;
+                const spent = state.uses[usesKeyOf(f)] ?? 0;
                 return (
-                  <div key={f.title} className="rounded-lg bg-muted p-3">
+                  <div key={usesKeyOf(f)} className="rounded-lg bg-muted p-3">
                     <p className="font-medium">{f.title}</p>
                     <p className="text-sm">
-                      {Math.max(0, usage.max - spent)} / {usage.max} remaining · {f.usage}
+                      {Math.max(0, usage.max - spent)} / {usage.max} remaining · {f.resource ? `your own, ${RECHARGE_TEXT[usage.recharge]}` : f.usage}
+                      {f.resource && (
+                        <WhyValue characterId={id} traceKey={resourceTraceKey(f.resource.id)} label={`${f.title} maximum uses`} explain={explainResource(data, f.resource)} shown={usage.max} className="ml-1" />
+                      )}
                     </p>
                   </div>
                 );
