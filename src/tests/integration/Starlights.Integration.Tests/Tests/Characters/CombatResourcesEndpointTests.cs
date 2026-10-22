@@ -192,7 +192,7 @@ public sealed class CombatResourcesEndpointTests : IntegrationTestBase
 
     [TestMethod]
     [Timeout(TestConstants.Timeout, CooperativeCancellation = true)]
-    public async Task FavoriteRollsThatAreNotDice_AreRefused_AndChangeNothing()
+    public async Task FavoriteRollsThatAreNotDice_AndEmptyEntries_AreRefused_AndChangeNothing()
     {
         var characterId = await _integration.GetDriver<CharacterCreationDriver>().CreateCharacterAsync();
         using var client = _integration.CreateClient();
@@ -205,7 +205,23 @@ public sealed class CombatResourcesEndpointTests : IntegrationTestBase
             refused.StatusCode.Should().Be(HttpStatusCode.BadRequest, formula);
             (await refused.Content.ReadAsStringAsync(_integration.CancellationToken)).Should().Contain("favorite roll");
         }
-        (await client.GetFromJsonAsync<CharacterCombat>(url, _integration.CancellationToken))!.FavoriteRolls.Should().BeEquivalentTo(FavoriteRolls, o => o.WithStrictOrdering());
+
+        // a list with an empty entry, or a roll or resource without its fields: refused with a message, not a server error
+        var empties = new object[]
+        {
+            new { favoriteRolls = new object?[] { null } },
+            new { resources = new object?[] { null } },
+            new { favoriteRolls = new[] { new { id = (string?)null, name = (string?)null, formula = (string?)null } } },
+            new { resources = new[] { new { id = "r9", name = "Test Empty", max = (object?)null } } },
+        };
+        foreach (var body in empties)
+        {
+            var refused = await client.PutAsJsonAsync(url, body, _integration.CancellationToken);
+            refused.StatusCode.Should().Be(HttpStatusCode.BadRequest, await refused.Content.ReadAsStringAsync(_integration.CancellationToken));
+        }
+        var read = (await client.GetFromJsonAsync<CharacterCombat>(url, _integration.CancellationToken))!;
+        read.FavoriteRolls.Should().BeEquivalentTo(FavoriteRolls, o => o.WithStrictOrdering());
+        read.Resources.Should().BeNullOrEmpty();
     }
 
     [TestMethod]

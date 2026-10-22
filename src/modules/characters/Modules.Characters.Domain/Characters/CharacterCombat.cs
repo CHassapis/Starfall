@@ -281,7 +281,8 @@ public sealed partial record CharacterFavoriteRoll
     [GeneratedRegex("([+-]?)([0-9]*d[0-9]+|[0-9]+)")]
     private static partial Regex Term();
 
-    [GeneratedRegex(@"\s+")]
+    // JavaScript's \s, which is not .NET's (JavaScript's has U+FEFF, .NET's has U+0085)
+    [GeneratedRegex("[\t\n\v\f\r \u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000\ufeff]+")]
     private static partial Regex Spaces();
 
     /// <summary>
