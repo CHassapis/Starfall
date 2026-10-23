@@ -19,6 +19,7 @@ import {
   RotateCcwIcon,
   ShieldIcon,
   SparklesIcon,
+  SunriseIcon,
   SwordIcon,
   TimerIcon,
   ZapIcon,
@@ -46,10 +47,19 @@ import { useSheetData, type SheetData } from "@/lib/api/sheet";
 import { buildBattleModel, type BattleFeature, type BattleModel, type BattleSpell, type Slot, type WeaponAttack } from "@/lib/battle-model";
 import { useLoreLookup } from "@/lib/lore/lookup";
 import { attackRoll, failChanceWith, inOrder, MARKS, targetSave, type AttackRoll, type Combatant, type FightCondition } from "@/lib/rules/encounter";
+import { WhyValue } from "@/components/why-value";
+import { TraceRecorder } from "@/lib/rules/trace";
 import {
   average,
   averageGreatWeapon,
+  comesBackOn,
+  customKey,
   effectFor,
+  newDay,
+  removeResource,
+  saveResource,
+  spellTraceKey,
+  usesKeyOf,
   effectiveArmorClass,
   effectiveSpeed,
   hitChanceWithDie,
@@ -85,6 +95,7 @@ import {
 import { expended, expendSlot, isCastable, longRest as slotsLong, ordinal, pactSlots, restoreSlot, setPactSpent, shortRest as slotsShort, spellSlots, type Caster, type MagicState } from "@/lib/rules/magic";
 import { cn } from "@/lib/utils";
 import { BattleBackdrop } from "./battle-index";
+import { AddResource, ResourceControls } from "./custom-resources";
 import { Companions } from "./companions";
 import { Items, ItemUses } from "./items";
 
@@ -140,7 +151,7 @@ export function CharacterBattlePage() {
   // spells the player forgot to prepare and casts anyway, once they say so (the DM's call)
   const [forgotten, setForgotten] = useState<string[]>([]);
   const [advantage, setAdvantage] = useState<Advantage>("normal");
-  const [rest, setRest] = useState<"short" | "long" | null>(null);
+  const [rest, setRest] = useState<RestKind | null>(null);
   // encounter mode: the fights this character's party is in, and the creature it aims at (or one described by hand)
   const fights = useActiveFights(id);
   const markFight = useMarkFight();
@@ -163,8 +174,9 @@ export function CharacterBattlePage() {
     );
 
   const data = sheet.data;
-  const model = buildBattleModel(data);
   const state = combat.data ?? ({} as CombatState);
+  // the sheet's features and the player's own resources, as the sheet lists them
+  const model = buildBattleModel(data, state.resources);
   const magicState = magic.data;
   const casters = casting.data?.casters ?? [];
   const failed = (e: Error) => toast.error("Could not save", { description: e.message });
@@ -173,7 +185,7 @@ export function CharacterBattlePage() {
 
   const edition = model.edition;
   // spells, features and situations in effect (Shield, Bladesong, Bless…): they change AC, attacks, speed, hit points
-  const effectCtx = { edition, mod: model.mod, proficiencyBonus: data.proficiencyBonus, rageDamage: data.rageDamage ?? 0 };
+  const effectCtx = { edition, mod: model.mod, proficiencyBonus: data.proficiencyBonus, rageDamage: data.rageDamage ?? 0, resources: state.resources };
   const effects = (state.effects ?? []).map((k) => effectFor(k, effectCtx)).filter((e): e is BattleEffect => e !== null);
   const ac = effectiveArmorClass({ total: data.armorClass, base: data.armor.base ?? data.armorClass, armorKind: data.armor.armorKind ?? null, shield: !!data.armor.hasShield }, effects);
   const fx: Fx = {
@@ -253,12 +265,13 @@ export function CharacterBattlePage() {
     const u = f.parsedUsage;
     const owner = u?.kind === "count" ? f : u?.kind === "pool" ? findPool(model.features, u.pool) : undefined;
     if (owner) {
-      const left = usesLeft(owner.parsedUsage, state.uses, owner.title) ?? 0;
+      const key = usesKeyOf(owner);
+      const left = usesLeft(owner.parsedUsage, state.uses, key) ?? 0;
       if (left < amount) return toast.error(left > 0 ? `Only ${left} ${u?.kind === "pool" ? u.pool : `use${left === 1 ? "" : "s"} of ${f.title}`} left` : `No ${u?.kind === "pool" ? u.pool : `uses of ${f.title}`} left`);
-      updateCombat((c) => ({ ...c, uses: { ...c.uses, [owner.title]: (c.uses[owner.title] ?? 0) + amount } }));
+      updateCombat((c) => ({ ...c, uses: { ...c.uses, [key]: (c.uses[key] ?? 0) + amount } }));
     }
     // a feature that changes the numbers while it lasts (Rage, Bladesong) starts its effect
-    if (effectFor(f.title, effectCtx)) {
+    if (!f.resource && effectFor(f.title, effectCtx)) {
       setEffect(f.title, true);
       toast.info(`${f.title}: ${effectFor(f.title, effectCtx)!.summary}`);
     }
@@ -347,7 +360,7 @@ export function CharacterBattlePage() {
         slots: slotTotals,
         pact,
         spells: model.spells.map((sp) => {
-          const e = withBonus(spellEffect(sp, sp.level, data.level, sp.modifier), sp.damageBonus);
+          const e = spellEffect(sp, sp.level, data.level, sp.modifier, { damageBonus: sp.damageBonus, damageBonusFrom: sp.damageBonusFrom });
           return {
             name: sp.name,
             level: sp.level,
@@ -383,7 +396,7 @@ export function CharacterBattlePage() {
 
   const applyToAlly = async (target: PartyMemberChoice, kind: "heal" | "tempHp", amount: number) =>
     (await itemEffect.mutateAsync({ campaignId: target.campaignId, toCharacterId: target.characterId, kind, amount })).name;
-  const ctx: Ctx = { data, model, state, targetAc: usedAc, rollFor, targetSaveFor, d20Penalty, turn, incapacitated, noReactions, use: markUsed, spendFeature, cast, castable, castAnyway, casters, magicState, slotsLeft, slotTotals, pact, pactLeft, updateMagic, updateCombat, setCharges, consume, chargedItemOf, fx, effects, setEffect, effectCtx, party: party.choices, applyToAlly };
+  const ctx: Ctx = { characterId: id, data, model, state, targetAc: usedAc, rollFor, targetSaveFor, d20Penalty, turn, incapacitated, noReactions, use: markUsed, spendFeature, cast, castable, castAnyway, casters, magicState, slotsLeft, slotTotals, pact, pactLeft, updateMagic, updateCombat, setCharges, consume, chargedItemOf, fx, effects, setEffect, effectCtx, party: party.choices, applyToAlly };
 
   return (
     <Shell>
@@ -441,6 +454,7 @@ interface Fx {
 }
 
 interface Ctx {
+  characterId: string;
   data: SheetData;
   model: BattleModel;
   state: CombatState;
@@ -536,7 +550,7 @@ function Chip({ children, tone = "neutral", className }: { children: ReactNode; 
   return <span className={cn("inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-sm", tones[tone], className)}>{children}</span>;
 }
 
-function Header({ id, data, model, onRest }: { id: string; data: SheetData; model: BattleModel; onRest: (k: "short" | "long") => void }) {
+function Header({ id, data, model, onRest }: { id: string; data: SheetData; model: BattleModel; onRest: (k: RestKind) => void }) {
   return (
     <div className="flex flex-wrap items-end gap-4 pt-2">
       <Link to="/battle" className="absolute left-3 top-2 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground sm:left-4">
@@ -575,6 +589,9 @@ function Header({ id, data, model, onRest }: { id: string; data: SheetData; mode
         </Button>
         <Button size="sm" onClick={() => onRest("long")} className="bg-primary text-primary-foreground hover:bg-primary/90">
           <BedDoubleIcon /> Long rest
+        </Button>
+        <Button size="sm" variant="secondary" onClick={() => onRest("dawn")}>
+          <SunriseIcon /> Dawn
         </Button>
       </div>
     </div>
@@ -983,7 +1000,12 @@ function SpellInfo({ spell, effect, spellKey }: { spell: BattleSpell; effect: Re
             </div>
           ))}
       </dl>
-      {reads.length > 0 && <p className="rounded-md bg-muted px-2 py-1 text-sm">In a fight: {reads.join(" · ")}</p>}
+      {reads.length > 0 && (
+        <p className="rounded-md bg-muted px-2 py-1 text-sm">
+          In a fight: {reads.join(" · ")}
+          <span className="block text-xs text-muted-foreground">{effect.from === "mechanics" ? "From the spell's mechanics." : "Read from the spell's text."}</span>
+        </p>
+      )}
       <p className="whitespace-pre-line text-sm leading-relaxed">{plainSpellText(spell.description)}</p>
       {spellKey && (
         <p className="text-sm">
@@ -1247,6 +1269,9 @@ function Choices({ ctx, speed }: { ctx: Ctx; speed: number }) {
         <SlotsPanel ctx={ctx} />
         <Panel title="Limited uses" icon={<SparklesIcon className="size-4 text-[var(--warning)]" />}>
           {limited.length === 0 ? <p className="text-sm text-muted-foreground">No features with limited uses.</p> : <FeatureList ctx={ctx} features={limited} />}
+          <div className="mt-2">
+            <AddResource data={data} features={model.features} onSave={(r) => ctx.updateCombat((c) => saveResource(c, r))} />
+          </div>
         </Panel>
       </TabsContent>
 
@@ -1412,14 +1437,14 @@ function UsePips({ max, spent }: { max: number; spent: number }) {
   );
 }
 
-const RECHARGE: Record<string, string> = { turn: "per turn", short: "per short rest", long: "per long rest", rage: "per Rage" };
+const RECHARGE: Record<string, string> = { turn: "per turn", short: "per short rest", long: "per long rest", rage: "per Rage", dawn: "per day (dawn)", never: "until undone" };
 
 function FeatureList({ ctx, features, note }: { ctx: Ctx; features: BattleFeature[]; note?: string }) {
   return (
     <ul className="mt-1 space-y-2">
       {note && <li className="text-sm uppercase tracking-wider text-muted-foreground">{note}</li>}
       {features.map((f) => (
-        <FeatureItem key={f.title} ctx={ctx} f={f} />
+        <FeatureItem key={usesKeyOf(f)} ctx={ctx} f={f} />
       ))}
     </ul>
   );
@@ -1429,7 +1454,7 @@ function FeatureItem({ ctx, f }: { ctx: Ctx; f: BattleFeature }) {
   const u = f.parsedUsage;
   const pool = u?.kind === "pool" ? findPool(ctx.model.features, u.pool) : undefined;
   const counted = u?.kind === "count" ? u : pool?.parsedUsage?.kind === "count" ? pool.parsedUsage : null;
-  const owner = u?.kind === "count" ? f.title : pool?.title;
+  const owner = u?.kind === "count" ? usesKeyOf(f) : pool && usesKeyOf(pool);
   const regainOne = u?.kind === "count" ? f.regainOnShort : !!pool?.regainOnShort;
   const spent = owner ? (ctx.state.uses[owner] ?? 0) : 0;
   const left = counted ? Math.max(0, counted.max - spent) : null;
@@ -1462,6 +1487,18 @@ function FeatureItem({ ctx, f }: { ctx: Ctx; f: BattleFeature }) {
           <Button size="sm" variant="secondary" className="h-9 min-w-16 sm:h-7" disabled={!!blocked || (left !== null && left < (many ? n : 1))} onClick={() => ctx.spendFeature(f, many ? n : 1)}>
             {many ? "Spend" : "Use"}
           </Button>
+        )}
+        {f.resource && (
+          <ResourceControls
+            characterId={ctx.characterId}
+            data={ctx.data}
+            features={ctx.model.features}
+            feature={f}
+            effectOn={(ctx.state.effects ?? []).includes(customKey(f.resource.id))}
+            onSwitch={(on) => ctx.setEffect(customKey(f.resource!.id), on)}
+            onSave={(r) => ctx.updateCombat((c) => saveResource(c, r))}
+            onRemove={(id) => ctx.updateCombat((c) => removeResource(c, id))}
+          />
         )}
         {counted && spent > 0 && owner && (
           <Button size="sm" variant="ghost" className="h-9 text-muted-foreground sm:h-7" onClick={() => ctx.updateCombat((c) => ({ ...c, uses: { ...c.uses, [owner]: Math.max(0, (c.uses[owner] ?? 0) - (many ? n : 1)) } }))}>
@@ -1604,7 +1641,15 @@ function SpellCard({ ctx, spell }: { ctx: Ctx; spell: BattleSpell }) {
   const [choice, setChoice] = useState<string>(spell.item ? String(spell.item.level) : pactUsable && ctx.pactLeft > 0 ? "pact" : String(firstFree ?? spell.level));
   const usePact = choice === "pact";
   const castAt = usePact && ctx.pact ? ctx.pact.level : Number(choice);
-  const effect = withBonus(spellEffect(spell, castAt, ctx.data.level, spell.modifier), spell.damageBonus);
+  const cast = { damageBonus: spell.damageBonus, damageBonusFrom: spell.damageBonusFrom };
+  const effect = spellEffect(spell, castAt, ctx.data.level, spell.modifier, cast);
+  // how the spell's growing term is worked out at this level, written down when asked for
+  const explain = (key: string) => {
+    const trace = new TraceRecorder();
+    spellEffect(spell, castAt, ctx.data.level, spell.modifier, { ...cast, trace });
+    return trace.get(key);
+  };
+  const traced = effect.damage[0] ?? effect.healing;
   const key = lookup("spells", spell.name, ctx.model.edition);
   const ready = ctx.castable(spell);
   const field = SLOT_FIELD[spell.slot];
@@ -1689,6 +1734,15 @@ function SpellCard({ ctx, spell }: { ctx: Ctx; spell: BattleSpell }) {
         ))}
         {effect.beams > 1 && effect.damage[0] && <Chip>{(effect.beams * average(effect.damage[0])).toFixed(1)} if all hit</Chip>}
         {effect.healing && <Chip tone="green">Heals {formatRoll(effect.healing, false)} ({average(effect.healing)} avg)</Chip>}
+        {traced && (
+          <WhyValue
+            characterId={ctx.characterId}
+            traceKey={spellTraceKey(spell.name, castAt, "dice")}
+            label={`${spell.name} ${effect.damage.length ? "damage" : "healing"} dice`}
+            explain={explain}
+            shown={traced.dice.reduce((n, d) => n + d.count, 0)}
+          />
+        )}
         {effect.temporary && <Chip tone="blue">{formatRoll(effect.temporary, false)} temporary hit points</Chip>}
         {castAt > spell.level && spell.level > 0 && (effect.upcastDice.length > 0 || effect.upcastHealing.length > 0) && <Chip tone="blue">upcast +{castAt - spell.level} level{castAt - spell.level > 1 ? "s" : ""}</Chip>}
         {spell.damageBonusFrom && <Chip tone="gold">+{spell.damageBonus} {spell.damageBonusFrom}</Chip>}
@@ -1717,12 +1771,6 @@ function itemLevels(spell: BattleSpell, chargesLeft: number): number[] {
   return Array.from({ length: Math.min(9, it.level + most - it.cost) - it.level + 1 }, (_, i) => it.level + i);
 }
 
-/** A feature's bonus to a spell's damage, added to its first damage roll (each beam's, for Eldritch Blast). */
-function withBonus(effect: ReturnType<typeof spellEffect>, bonus: number) {
-  if (!bonus || effect.damage.length === 0) return effect;
-  return { ...effect, damage: [{ ...effect.damage[0], bonus: effect.damage[0].bonus + bonus }, ...effect.damage.slice(1)] };
-}
-
 // ---- rests
 
 /**
@@ -1740,7 +1788,10 @@ function hitDiceOf(data: SheetData, state: CombatState, total: number) {
   return { pools, multi, leftOf, key };
 }
 
-export function RestDialog({ kind, onClose, ctx, totalHitDice }: { kind: "short" | "long" | null; onClose: () => void; ctx: Pick<Ctx, "data" | "model" | "state" | "updateCombat" | "updateMagic" | "effectCtx" | "pact">; totalHitDice: number }) {
+/** A rest, or a new day: dawn brings back what is once a day, and no rest does. */
+export type RestKind = "short" | "long" | "dawn";
+
+export function RestDialog({ kind, onClose, ctx, totalHitDice }: { kind: RestKind | null; onClose: () => void; ctx: Pick<Ctx, "data" | "model" | "state" | "updateCombat" | "updateMagic" | "effectCtx" | "pact">; totalHitDice: number }) {
   const { data, model, state } = ctx;
   const [dice, setDice] = useState(0);
   const [rolled, setRolled] = useState<number[] | null>(null);
@@ -1751,8 +1802,10 @@ export function RestDialog({ kind, onClose, ctx, totalHitDice }: { kind: "short"
   const die = size ?? pools.find((p) => leftOf(p.sides) > 0)?.sides ?? pools[0]?.sides ?? 8;
   const left = leftOf(die);
   const averageHeal = dice * Math.max(0, Math.floor(die / 2) + 1 + con);
-  const shortBack = model.features.filter((f) => f.parsedUsage?.kind === "count" && (f.parsedUsage.recharge === "short" || f.parsedUsage.recharge === "turn" || f.regainOnShort) && (state.uses[f.title] ?? 0) > 0);
-  const longBack = model.features.filter((f) => f.parsedUsage?.kind === "count" && (state.uses[f.title] ?? 0) > 0);
+  const spent = (f: BattleFeature) => (state.uses[usesKeyOf(f)] ?? 0) > 0;
+  const shortBack = model.features.filter((f) => comesBackOn(f, "short") && spent(f));
+  const longBack = model.features.filter((f) => comesBackOn(f, "long") && spent(f));
+  const dawnBack = model.features.filter((f) => comesBackOn(f, "dawn") && spent(f));
   const close = () => {
     setDice(0);
     setRolled(null);
@@ -1788,10 +1841,28 @@ export function RestDialog({ kind, onClose, ctx, totalHitDice }: { kind: "short"
     toast("Saving long rest…");
     close();
   };
+  const finishDawn = () => {
+    ctx.updateCombat((c) => newDay(c, model.features));
+    toast("Saving the new day…");
+    close();
+  };
   return (
     <Dialog open={kind !== null} onOpenChange={(o) => !o && close()}>
       <DialogContent>
-        {kind === "short" ? (
+        {kind === "dawn" ? (
+          <>
+            <DialogHeader>
+              <DialogTitle>Dawn</DialogTitle>
+              <DialogDescription>A new day. What works once a day comes back; this is not a rest.</DialogDescription>
+            </DialogHeader>
+            <ul className="list-disc space-y-1 pl-5 text-sm">
+              <li>Comes back: {dawnBack.length ? dawnBack.map((f) => f.title).join(", ") : "nothing that comes back at dawn is spent"}.</li>
+            </ul>
+            <DialogFooter>
+              <Button onClick={finishDawn}>A new day</Button>
+            </DialogFooter>
+          </>
+        ) : kind === "short" ? (
           <>
             <DialogHeader>
               <DialogTitle>Short rest</DialogTitle>
@@ -1862,6 +1933,7 @@ export function RestDialog({ kind, onClose, ctx, totalHitDice }: { kind: "short"
               <li>All spell slots back{ctx.pact ? ", pact slots too" : ""}.</li>
               <li>{model.edition === "2024" ? "All spent hit dice back." : `Half your hit dice back (${Math.max(1, Math.floor(totalHitDice / 2))}).`}</li>
               <li>Features back: {longBack.length ? longBack.map((f) => f.title).join(", ") : "none are spent"}.</li>
+              {dawnBack.length > 0 && <li>At dawn, not now: {dawnBack.map((f) => f.title).join(", ")}.</li>}
               {state.exhaustion > 0 && <li>Exhaustion goes down by one (to {state.exhaustion - 1}).</li>}
               {state.concentration && <li>Concentration on {state.concentration} ends.</li>}
             </ul>

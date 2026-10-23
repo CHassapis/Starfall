@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
+using System.Text.RegularExpressions;
 using System.Xml.Linq;
 using Starlights.Modules.Elements.Domain.Homebrew;
 using Starlights.Modules.Elements.Integration;
@@ -153,7 +154,74 @@ internal static class HomebrewWorkshopReview
         Length(problems, "description", "What it does", m.Description, 20_000);
         Length(problems, "higherLevels", "At higher levels", m.HigherLevels, 5_000);
         Lists(problems, "lists", m.Lists, 20);
+        SpellMechanics(problems, m);
         return problems;
+    }
+
+    /// <summary>The spell form's mechanics fields: a save refused only for these answers with <see cref="SpellMechanicsMessage"/>.</summary>
+    public static readonly HashSet<string> SpellMechanicsFields = ["roll", "saveAbility", "halfOnSave", "damage", "healing", "addsModifier", "cantripScaling", "slotScaling"];
+
+    public const string SpellMechanicsMessage =
+        "A homebrew spell's mechanics need a known roll, the ability a saving throw uses, damage like \"2d6 fire\", healing like \"2d8\", cantrip scaling like \"5:2d10\" (cantrips only) and slot scaling like \"1d6\" (leveled spells only).";
+
+    private const string DicePattern = @"[1-9]\d?d(?:4|6|8|10|12|20)";
+    private static readonly Regex DamageTerm = new($@"^{DicePattern}(?:\s*\+\s*\d{{1,2}})?\s+(?<type>[a-z]+)$", RegexOptions.IgnoreCase);
+    private static readonly Regex HealingDice = new($@"^{DicePattern}(?:\s*\+\s*\d{{1,2}})?$", RegexOptions.IgnoreCase);
+    private static readonly Regex SlotDice = new($@"^{DicePattern}$", RegexOptions.IgnoreCase);
+    private static readonly Regex CantripTier = new($@"^(?<level>\d{{1,2}})\s*:\s*{DicePattern}$", RegexOptions.IgnoreCase);
+
+    /// <summary>What it rolls, said outright: each field is checked against what the simulator can read.</summary>
+    private static void SpellMechanics(List<ImportDiagnostic> problems, HomebrewSpellModel m)
+    {
+        var roll = m.Roll?.Trim();
+        var damage = HomebrewWorkshopXml.Terms(m.Damage);
+        var tiers = HomebrewWorkshopXml.Terms(m.CantripScaling);
+        if (string.IsNullOrEmpty(roll))
+        {
+            if (!string.IsNullOrWhiteSpace(m.SaveAbility) || damage.Count > 0 || !string.IsNullOrWhiteSpace(m.Healing) || tiers.Count > 0
+                || !string.IsNullOrWhiteSpace(m.SlotScaling) || m.AddsModifier || m.HalfOnSave)
+            {
+                problems.Add(Invalid("roll", "Say what it rolls (an attack, a saving throw, or nothing) to give it damage, healing or scaling."));
+            }
+            return;
+        }
+        if (!HomebrewWorkshopXml.SpellRolls.Contains(roll))
+        {
+            problems.Add(Invalid("roll", $"What it rolls is one of {string.Join(", ", HomebrewWorkshopXml.SpellRolls)}."));
+        }
+        if (roll == "save" && !HomebrewWorkshopXml.Abilities.Contains(m.SaveAbility?.Trim()))
+        {
+            problems.Add(Invalid("saveAbility", $"A saving throw spell names the ability saved with: one of {string.Join(", ", HomebrewWorkshopXml.Abilities)}."));
+        }
+        if (roll != "save" && (!string.IsNullOrWhiteSpace(m.SaveAbility) || m.HalfOnSave))
+        {
+            problems.Add(Invalid("saveAbility", "Only a saving throw spell has an ability to save with, or half damage on a save."));
+        }
+        if (damage.Count > 4)
+        {
+            problems.Add(Invalid("damage", "At most 4 damage terms."));
+        }
+        foreach (var term in damage.Where(t => DamageTerm.Match(t) is not { Success: true } match || !HomebrewWorkshopXml.DamageTypes.Contains(match.Groups["type"].Value.ToLowerInvariant())))
+        {
+            problems.Add(Invalid("damage", $"Damage \"{term}\" is dice and a type, like \"2d6 fire\" (types: {string.Join(", ", HomebrewWorkshopXml.DamageTypes)})."));
+        }
+        if (!string.IsNullOrWhiteSpace(m.Healing) && !HealingDice.IsMatch(m.Healing.Trim()))
+        {
+            problems.Add(Invalid("healing", $"Healing \"{m.Healing.Trim()}\" is dice, like \"2d8\" or \"1d4 + 4\"."));
+        }
+        var scales = damage.Count > 0 || !string.IsNullOrWhiteSpace(m.Healing);
+        if (tiers.Count > 0)
+        {
+            var levels = tiers.Select(t => CantripTier.Match(t)).Select(t => t.Success ? int.Parse(t.Groups["level"].Value) : -1).ToList();
+            if (m.Level != 0 || !scales || levels.Any(l => l is < 1 or > 20) || levels.Zip(levels.Skip(1)).Any(p => p.First >= p.Second))
+            {
+                problems.Add(Invalid("cantripScaling", "Cantrip scaling is for a cantrip with damage or healing: levels from 1 to 20 going up, each with its dice, like \"5:2d10; 11:3d10; 17:4d10\"."));
+            }
+        }
+        if (!string.IsNullOrWhiteSpace(m.SlotScaling) && (m.Level == 0 || !scales || !SlotDice.IsMatch(m.SlotScaling.Trim())))
+        {
+            problems.Add(Invalid("slotScaling", "Slot scaling is for a spell of level 1 or more with damage or healing: the dice each higher slot adds, like \"1d6\"."));
+        }
     }
 
     /// <summary>What the save of a subclass refuses; empty when it saves.</summary>

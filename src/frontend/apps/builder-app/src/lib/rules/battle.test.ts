@@ -25,8 +25,22 @@ import {
   regainsOneOnShortRest,
   shortRest,
   spellEffect,
+  spellMechanicsOf,
+  spellTraceKey,
   takeDamage,
+  comesBackOn,
+  customKey,
+  newDay,
+  removeResource,
+  resourceMax,
+  resourceTraceKey,
+  saveResource,
+  usesKeyOf,
+  RESOURCE_DAMAGE,
+  type CustomResource,
+  type ResourceFacts,
 } from "./battle";
+import { TraceRecorder } from "./trace";
 
 // spell texts below are written for these tests in the shape of the books' wording, not copied from them
 const blastAt = (level: number) => ({ level: 0, description: `<p>Make a ranged spell attack. On a hit it takes 1d10 force damage.</p><p>The spell makes two beams at ${level === 1 ? "5th level" : "level 5"}, three at 11th and four at 17th.</p>` });
@@ -142,7 +156,9 @@ describe("limited uses and rests", () => {
   it("reads usage lines", () => {
     expect(parseUsage("2/Long Rest")).toEqual({ kind: "count", max: 2, recharge: "long" });
     expect(parseUsage("1/Short or Long Rest")).toEqual({ kind: "count", max: 1, recharge: "short" });
-    expect(parseUsage("1/Day")).toEqual({ kind: "count", max: 1, recharge: "long" });
+    // once a day is its own recharge, back at dawn and not on a rest (the Stage 3 brief: dawn/day apart from rests); it read as a long rest before
+    expect(parseUsage("1/Day")).toEqual({ kind: "count", max: 1, recharge: "dawn" });
+    expect(parseUsage("3/Dawn")).toEqual({ kind: "count", max: 3, recharge: "dawn" });
     expect(parseUsage("1/Turn")).toEqual({ kind: "count", max: 1, recharge: "turn" });
     expect(parseUsage("1/1d4 Long Rests")).toEqual({ kind: "count", max: 1, recharge: "long" });
     expect(parseUsage("Channel Divinity")).toEqual({ kind: "pool", pool: "Channel Divinity" });
@@ -201,6 +217,190 @@ describe("limited uses and rests", () => {
     const wind = [{ title: "Second Wind", usage: "3/Long Rest", regainOnShort: true }];
     expect(shortRest({ ...EMPTY_COMBAT, uses: { "Second Wind": 2 } }, wind, 0, 0).uses).toEqual({ "Second Wind": 1 });
     expect(longRest({ ...EMPTY_COMBAT, uses: { "Second Wind": 2 } }, wind, 4, "2024").uses).toEqual({});
+  });
+});
+
+// made-up facts: proficiency +3, level 7 (Paladin 5, Wizard 2), Charisma +2, Constitution −1
+const facts: ResourceFacts = {
+  proficiencyBonus: 3,
+  level: 7,
+  classLevel: (name) => ({ paladin: 5, wizard: 2 })[name.toLowerCase() as "paladin" | "wizard"] ?? 0,
+  mod: (a) => ({ CHA: 2, CON: -1 })[a as "CHA" | "CON"] ?? 0,
+};
+const resource = (id: string, patch: Partial<CustomResource> = {}): CustomResource => ({ id, name: id, max: { from: "number", value: 1 }, recharge: "long", ...patch });
+// a resource as the battle model lists it (lib/battle-model): its uses under its id, its usage already read
+const asFeature = (r: CustomResource, max: number) => ({ title: r.name, usesKey: customKey(r.id), parsedUsage: { kind: "count" as const, max, recharge: r.recharge } });
+
+describe("resources of the player's own", () => {
+  it("a maximum follows a number or the character, times, plus, at least; written down step by step", () => {
+    const cases: [CustomResource["max"], number, [number, number][]][] = [
+      [{ from: "number", value: 3 }, 3, [[3, 3]]],
+      // Charisma +2, at least 1: 2
+      [{ from: "ability", ability: "CHA", atLeast: 1 }, 2, [[2, 2]]],
+      // Constitution −1, at least 1: 1
+      [{ from: "ability", ability: "CON", atLeast: 1 }, 1, [[-1, -1], [1, 1]]],
+      // 5 × Paladin level 5 = 25
+      [{ from: "class-level", className: "Paladin", times: 5 }, 25, [[5, 5], [5, 25]]],
+      // a class not taken: 0
+      [{ from: "class-level", className: "Bard" }, 0, [[0, 0]]],
+      // proficiency +3, plus 1 = 4
+      [{ from: "proficiency", plus: 1 }, 4, [[3, 3], [1, 4]]],
+      [{ from: "level" }, 7, [[7, 7]]],
+    ];
+    for (const [max, expected, steps] of cases) {
+      const trace = new TraceRecorder();
+      const r = resource("r1", { name: "Test Pool", max });
+      expect(resourceMax(r, facts, trace)).toBe(expected);
+      expect(resourceMax(r, facts)).toBe(expected);
+      const t = trace.get(resourceTraceKey("r1"))!;
+      expect([t.final, t.steps!.map((s) => [s.value, s.result])]).toEqual([expected, steps]);
+    }
+    const cha = new TraceRecorder();
+    resourceMax(resource("r1", { max: { from: "ability", ability: "CHA" } }), facts, cha);
+    expect(cha.get("resource:r1:max")!.steps![0]).toMatchObject({ label: "Charisma modifier", source: { kind: "calculated", refers: "charisma:modifier" } });
+  });
+
+  it("dawn is not a rest: a long rest leaves once-a-day uses spent, a new day brings them back", () => {
+    const daily = resource("d1", { name: "Test Daily", recharge: "dawn" });
+    const kept = resource("k1", { name: "Test Keep", recharge: "never" });
+    const list = [{ title: "Ink Cloud", usage: "1/Day" }, { title: "Lucky", usage: "3/Long Rest" }, asFeature(daily, 1), asFeature(kept, 2)];
+    const used = { ...EMPTY_COMBAT, uses: { "Ink Cloud": 1, Lucky: 2, "custom:d1": 1, "custom:k1": 2 } };
+    expect(longRest(used, list, 5, "2024").uses).toEqual({ "Ink Cloud": 1, "custom:d1": 1, "custom:k1": 2 });
+    expect(shortRest(used, list, 0, 0).uses).toEqual(used.uses);
+    expect(newDay(used, list).uses).toEqual({ Lucky: 2, "custom:k1": 2 });
+    expect(list.map((f) => [comesBackOn(f, "short"), comesBackOn(f, "long"), comesBackOn(f, "dawn")])).toEqual([
+      [false, false, true],
+      [false, true, false],
+      [false, false, true],
+      [false, false, false],
+    ]);
+  });
+
+  it("are kept under their id, apart from a feature of the same name", () => {
+    const lucky = resource("l1", { name: "Lucky", recharge: "short" });
+    const list = [{ title: "Lucky", usage: "3/Long Rest" }, asFeature(lucky, 2)];
+    expect(list.map(usesKeyOf)).toEqual(["Lucky", "custom:l1"]);
+    const used = { ...EMPTY_COMBAT, uses: { Lucky: 3, "custom:l1": 2 } };
+    expect(shortRest(used, list, 0, 0).uses).toEqual({ Lucky: 3 });
+  });
+
+  it("a shared pool: a resource and a sheet feature both spend from another resource", () => {
+    const vigor = resource("vp", { name: "Vigor Points", max: { from: "proficiency" } });
+    const surge = { title: "Test Surge", usesKey: "custom:surge", parsedUsage: { kind: "pool" as const, pool: "Vigor Points", cost: 2 } };
+    const list = [asFeature(vigor, 3), surge, { title: "Test Mend", usage: "1 Vigor Point" }];
+    expect(usesKeyOf(findPool(list, surge.parsedUsage.pool)!)).toBe("custom:vp");
+    expect(usesKeyOf(findPool(list, (parseUsage("1 Vigor Point") as { pool: string }).pool)!)).toBe("custom:vp");
+  });
+
+  it("an effect applies only while switched on, and rests switch it off", () => {
+    const stance = resource("st", { name: "Test Stance", effect: { armorClass: 1, speed: 10, damage: "1d6 fire" } });
+    const ctx = { edition: "2024" as const, mod: () => 0, proficiencyBonus: 3, rageDamage: 0, resources: [stance] };
+    const on = effectFor(customKey("st"), ctx)!;
+    expect(on).toMatchObject({ name: "Test Stance", acBonus: 1, speedBonus: 10, weaponDamage: { dice: [{ count: 1, sides: 6 }], bonus: 0, type: "fire" } });
+    expect(on.summary).toBe("+1 AC, +10 ft speed, +1d6 fire on weapon hits");
+    // 15 + 1 = 16; 30 + 10 = 40
+    expect(effectiveArmorClass({ total: 15, base: 15, armorKind: null, shield: false }, [on]).total).toBe(16);
+    expect(effectiveSpeed(30, [on])).toBe(40);
+    expect(effectFor(customKey("st"), { ...ctx, resources: [] })).toBeNull();
+    // what the server takes as damage
+    expect(["1d6 fire", "1d4+1", "2", "12d12 radiant"].every((d) => RESOURCE_DAMAGE.test(d))).toBe(true);
+    expect(["1d7 fire", "lots", "0", "1d6 Fire"].some((d) => RESOURCE_DAMAGE.test(d))).toBe(false);
+    expect(effectFor(customKey("st"), { ...ctx, resources: [{ ...stance, effect: {} }] })).toBeNull();
+    // a short rest keeps only long-lasting effects (the rest dialog's filter); a long rest ends them all
+    expect(on.longLasting).toBeFalsy();
+    expect(longRest({ ...EMPTY_COMBAT, effects: ["custom:st"] }, [], 1, "2024").effects).toEqual([]);
+  });
+
+  it("changing one keeps what was spent; removing one forgets that and its effect", () => {
+    const a = resource("a", { name: "Test A" });
+    const state = { ...EMPTY_COMBAT, uses: { "custom:a": 1, Lucky: 1 }, effects: ["custom:a", "Bless"], resources: [a, resource("b")] };
+    const renamed = saveResource(state, { ...a, name: "Test A2" });
+    expect([renamed.resources!.map((r) => r.name), renamed.uses]).toEqual([["Test A2", "b"], state.uses]);
+    expect(saveResource(EMPTY_COMBAT, a).resources).toEqual([a]);
+    const removed = removeResource(state, "a");
+    expect([removed.resources!.map((r) => r.id), removed.uses, removed.effects]).toEqual([["b"], { Lucky: 1 }, ["Bless"]]);
+  });
+});
+
+// a homebrew spell's mechanics as the server writes them: setters of their own, ";" between terms
+const mechanics = (setters: Record<string, string>) => spellMechanicsOf(Object.fromEntries(Object.entries(setters).map(([k, v]) => [`starlights-spell-${k}`, v])));
+const spark = {
+  name: "Test Spark",
+  level: 0,
+  description: "<p>A mote of light.</p>",
+  mechanics: mechanics({ roll: "ranged-attack", damage: "1d10 fire", "cantrip-scaling": "5:2d10; 11:3d10; 17:4d10" }),
+};
+const salve = { name: "Test Salve", level: 1, description: "<p>A warm touch.</p>", mechanics: mechanics({ roll: "none", healing: "2d8", modifier: "true", "slot-scaling": "1d8" }) };
+// its text also reads as damage (8d6 fire, 2d6 cold, +1d6 a slot level): only the mechanics count
+const flare = {
+  name: "Test Flare",
+  level: 3,
+  description:
+    "<p>Each creature in the area must make a Dexterity saving throw, taking 8d6 fire damage on a failed save, or half as much damage on a successful one. Creatures in the centre also take 2d6 cold damage.</p><p><strong>At Higher Levels.</strong> The damage increases by 1d6 for each slot level above 3rd.</p>",
+  mechanics: mechanics({ roll: "save", save: "Constitution", "save-success": "half", damage: "8d6 fire", "slot-scaling": "1d6" }),
+};
+
+describe("homebrew spells that state their mechanics", () => {
+  it("reads the setters, and nothing from a spell without a known roll", () => {
+    expect(flare.mechanics).toEqual({ roll: "save", saveAbility: "Constitution", halfOnSave: true, damage: [{ dice: [{ count: 8, sides: 6 }], bonus: 0, type: "fire" }], healing: null, addsModifier: false, cantripTiers: [], slotDice: [{ count: 1, sides: 6 }] });
+    expect(mechanics({ roll: "melee-attack", save: "Strength", "save-success": "half", damage: "1d6 cold; 1d4 fire" })).toMatchObject({ saveAbility: null, halfOnSave: false, damage: [{ type: "cold" }, { type: "fire" }] });
+    expect(mechanics({ damage: "1d6 fire" })).toBeNull();
+    expect(mechanics({ roll: "touch", damage: "1d6 fire" })).toBeNull();
+    expect(spellMechanicsOf(undefined)).toBeNull();
+  });
+
+  it("a cantrip rolls the tier the character has reached", () => {
+    // 1d10 to level 4, 2d10 from 5, 3d10 from 11, 4d10 from 17
+    expect([1, 4, 5, 10, 11, 16, 17, 20].map((lv) => formatRoll(spellEffect(spark, 0, lv, 3).damage[0]))).toEqual(["1d10 fire", "1d10 fire", "2d10 fire", "2d10 fire", "3d10 fire", "3d10 fire", "4d10 fire", "4d10 fire"]);
+    const e = spellEffect(spark, 0, 11, 3);
+    expect([e.attack, e.save, e.beams, e.from]).toEqual(["ranged", null, 1, "mechanics"]);
+  });
+
+  it("healing adds the modifier once and its dice for each slot level above", () => {
+    // 2d8 at 1st; at 3rd, 2 slot levels above: 2d8 + 2 × 1d8 = 4d8, +3 for the modifier
+    expect(formatRoll(spellEffect(salve, 1, 1, 3).healing!, false)).toBe("2d8+3");
+    const at3 = spellEffect(salve, 3, 5, 3);
+    expect(formatRoll(at3.healing!, false)).toBe("4d8+3");
+    expect([at3.damage, at3.upcastHealing, at3.upcastDice]).toEqual([[], [{ count: 2, sides: 8 }], []]);
+  });
+
+  it("never reads the text as well: no second damage, no upcast twice", () => {
+    // read from the text alone this would be 10d6 fire at 5th (and the cold damage); the mechanics give 8d6 + 2 × 1d6 = 10d6 fire, nothing else
+    const at5 = spellEffect(flare, 5, 9, 3);
+    expect(at5.damage.map((r) => formatRoll(r))).toEqual(["10d6 fire"]);
+    expect([at5.save, at5.halfOnSave, at5.attack, at5.from]).toEqual(["Constitution", true, null, "mechanics"]);
+    // without mechanics the same spell is read from its text, as before
+    const text = spellEffect({ ...flare, mechanics: null }, 5, 9, 3);
+    expect([text.from, text.save, text.damage.map((r) => formatRoll(r))]).toEqual(["text", "Dexterity", ["10d6 fire", "2d6 cold"]]);
+  });
+
+  it("a feature's damage bonus is added once, to the first damage roll", () => {
+    const e = spellEffect(spark, 0, 5, 3, { damageBonus: 3, damageBonusFrom: "Test Blast Boost" });
+    expect(formatRoll(e.damage[0])).toBe("2d10+3 fire");
+  });
+
+  it("writes down how the dice and the bonus came about, and recording changes nothing", () => {
+    const trace = new TraceRecorder();
+    expect(spellEffect(spark, 0, 11, 3, { damageBonus: 3, damageBonusFrom: "Test Blast Boost", trace })).toEqual(spellEffect(spark, 0, 11, 3, { damageBonus: 3, damageBonusFrom: "Test Blast Boost" }));
+    const dice = trace.get(spellTraceKey("Test Spark", 0, "dice"))!;
+    expect(dice.steps!.map((s) => [s.value, s.result])).toEqual([[1, 1], [2, 3]]);
+    expect(dice.final).toBe(3);
+    const bonus = trace.get(spellTraceKey("Test Spark", 0, "bonus"))!;
+    expect(bonus.steps!.map((s) => [s.value, s.result])).toEqual([[0, 0], [3, 3]]);
+    expect(bonus.notes).toEqual(["Plus the dice, 3d10 fire."]);
+
+    const healing = new TraceRecorder();
+    spellEffect(salve, 3, 5, 3, { trace: healing });
+    expect(healing.get("spell:test-salve:3:dice")!.steps!.map((s) => s.result)).toEqual([2, 4]);
+    expect(healing.get("spell:test-salve:3:bonus")!.steps!.map((s) => s.result)).toEqual([0, 3]);
+    expect(healing.get("spell:test-salve:3:dice")!.label).toBe("Test Salve healing dice at 3rd level");
+  });
+
+  it("a spell read from its text writes down where its dice came from too", () => {
+    const trace = new TraceRecorder();
+    spellEffect({ ...burst, name: "Test Burst" }, 5, 9, 3, { trace });
+    // 8d6 from the text, +2d6 for 2 slot levels above 3rd
+    expect(trace.get("spell:test-burst:5:dice")!.steps!.map((s) => [s.value, s.result])).toEqual([[8, 8], [2, 10]]);
   });
 });
 

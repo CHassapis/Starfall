@@ -3,7 +3,7 @@
  * (for characters with Homebrew ticked in their Sources). Everyone can read them; making them needs the admin.
  */
 import { PencilIcon, PlusIcon, Trash2Icon, XIcon } from "lucide-react";
-import { useState, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import { RichText } from "@/components/rich-text";
 import { Badge } from "@/components/ui/badge";
@@ -19,8 +19,10 @@ import {
   useSubclassTargets,
   type HomebrewClass,
   type HomebrewFeature,
+  fittingSpellMechanics,
   type HomebrewSpell,
   type HomebrewSubclass,
+  type SpellRoll,
 } from "@/lib/api/homebrew";
 import { ordinal } from "@/lib/rules/magic";
 import { isAdmin } from "@/lib/player";
@@ -30,6 +32,13 @@ import { area, select } from "./form-styles";
 import { Field } from "./homebrew-tabs";
 
 import { useUnits } from "@/components/units-provider";
+const ROLLS: { value: SpellRoll | ""; label: string }[] = [
+  { value: "", label: "Not said: read from the text" },
+  { value: "ranged-attack", label: "Ranged spell attack" },
+  { value: "melee-attack", label: "Melee spell attack" },
+  { value: "save", label: "Saving throw" },
+  { value: "none", label: "No roll (healing, or no damage)" },
+];
 const SCHOOLS = ["Abjuration", "Conjuration", "Divination", "Enchantment", "Evocation", "Illusion", "Necromancy", "Transmutation"];
 const ABILITIES = ["Strength", "Dexterity", "Constitution", "Intelligence", "Wisdom", "Charisma"];
 const SKILLS = ["Acrobatics", "Animal Handling", "Arcana", "Athletics", "Deception", "History", "Insight", "Intimidation", "Investigation", "Medicine", "Nature", "Perception", "Performance", "Persuasion", "Religion", "Sleight of Hand", "Stealth", "Survival"];
@@ -194,6 +203,8 @@ function SpellDialog({ spell, lists, busy, onClose, onSave }: { spell: HomebrewS
   const u = useUnits();
   const [f, setF] = useState<HomebrewSpell>(spell);
   const set = (patch: Partial<HomebrewSpell>) => setF((x) => ({ ...x, ...patch }));
+  // what is reviewed and saved: the mechanics that fit the roll and level (a review holds while the form is unchanged)
+  const model = useMemo(() => fittingSpellMechanics(f), [f]);
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
@@ -245,16 +256,72 @@ function SpellDialog({ spell, lists, busy, onClose, onSave }: { spell: HomebrewS
             </Field>
           )}
           <Checks label="Class spell lists" options={[...new Set(lists)]} value={f.lists} onChange={(v) => set({ lists: v })} hint="Characters of these classes can choose it." />
-          <Field label="What it does" hint="Plain text. Leave a blank line between paragraphs. Write damage as dice (2d8 fire damage) so the simulator reads it." wide>
+          <Field label="What it does" hint="Plain text. Leave a blank line between paragraphs. Write damage as dice (2d8 fire damage) so the simulator reads it, or say it under What it rolls." wide>
             <textarea rows={7} className={area} value={f.description} onChange={(e) => set({ description: e.target.value })} maxLength={20000} />
           </Field>
           <Field label="At higher levels (optional)" wide>
             <textarea rows={2} className={area} value={f.higherLevels ?? ""} onChange={(e) => set({ higherLevels: e.target.value || null })} maxLength={5000} />
           </Field>
+          <SpellMechanicsFields f={f} set={set} />
         </div>
-        <ReviewFooter kind="spells" model={f} busy={busy} ready={!!f.name.trim()} onClose={onClose} onSave={onSave} />
+        <ReviewFooter kind="spells" model={model} busy={busy} ready={!!f.name.trim()} onClose={onClose} onSave={onSave} />
       </DialogContent>
     </Dialog>
+  );
+}
+
+/** What a spell rolls, said outright: the battle view reads these instead of its text, so they never apply twice. */
+function SpellMechanicsFields({ f, set }: { f: HomebrewSpell; set: (patch: Partial<HomebrewSpell>) => void }) {
+  return (
+    <fieldset className="grid gap-3 rounded-md border p-3 sm:col-span-2 sm:grid-cols-2">
+      <legend className="px-1 text-sm font-medium">What it rolls (optional)</legend>
+      <p className="text-xs text-muted-foreground sm:col-span-2">Said here, the battle view and its &ldquo;Why?&rdquo; use these numbers and no longer read them from the text.</p>
+      <Field label="Roll">
+        <select className={select} value={f.roll ?? ""} onChange={(e) => set({ roll: (e.target.value || null) as SpellRoll | null })}>
+          {ROLLS.map((r) => (
+            <option key={r.value} value={r.value}>
+              {r.label}
+            </option>
+          ))}
+        </select>
+      </Field>
+      {f.roll === "save" && (
+        <Field label="Saving throw">
+          <select className={select} value={f.saveAbility ?? ""} onChange={(e) => set({ saveAbility: e.target.value || null })}>
+            <option value="">Choose an ability</option>
+            {ABILITIES.map((a) => (
+              <option key={a}>{a}</option>
+            ))}
+          </select>
+        </Field>
+      )}
+      {f.roll && (
+        <>
+          <Field label="Damage" hint='Dice and type, e.g. "2d6 fire"; several with ";", e.g. "2d6 fire; 1d6 radiant"'>
+            <Input value={f.damage ?? ""} onChange={(e) => set({ damage: e.target.value || null })} maxLength={200} />
+          </Field>
+          <Field label="Healing" hint='Dice, e.g. "2d8"'>
+            <Input value={f.healing ?? ""} onChange={(e) => set({ healing: e.target.value || null })} maxLength={50} />
+          </Field>
+          {f.level === 0 ? (
+            <Field label="Cantrip dice by character level" hint='The first damage (or the healing) from a level on, e.g. "5:2d10; 11:3d10; 17:4d10"'>
+              <Input value={f.cantripScaling ?? ""} onChange={(e) => set({ cantripScaling: e.target.value || null })} maxLength={200} />
+            </Field>
+          ) : (
+            <Field label="Dice for each slot level above" hint={`Added to the first damage (or the healing) for each slot level above ${ordinal(f.level)}, e.g. "1d6"`}>
+              <Input value={f.slotScaling ?? ""} onChange={(e) => set({ slotScaling: e.target.value || null })} maxLength={50} />
+            </Field>
+          )}
+          <Checks
+            label="Also"
+            options={[...(f.roll === "save" ? ["Half damage on a successful save"] : []), "Adds the spellcasting modifier"]}
+            value={[f.roll === "save" && f.halfOnSave && "Half damage on a successful save", f.addsModifier && "Adds the spellcasting modifier"].filter((x): x is string => !!x)}
+            onChange={(v) => set({ halfOnSave: v.includes("Half damage on a successful save"), addsModifier: v.includes("Adds the spellcasting modifier") })}
+            hint="The modifier joins the first damage, or the healing."
+          />
+        </>
+      )}
+    </fieldset>
   );
 }
 

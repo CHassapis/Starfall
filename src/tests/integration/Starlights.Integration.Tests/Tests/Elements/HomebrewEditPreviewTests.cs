@@ -309,6 +309,55 @@ public sealed class HomebrewEditPreviewTests : IntegrationTestBase
         }
     }
 
+    private const string SpellMechanicsMessage =
+        "A homebrew spell's mechanics need a known roll, the ability a saving throw uses, damage like \"2d6 fire\", healing like \"2d8\", cantrip scaling like \"5:2d10\" (cantrips only) and slot scaling like \"1d6\" (leveled spells only).";
+
+    [TestMethod]
+    public async Task ThePreviewAndTheSave_RefuseTheSameSpellMechanics()
+    {
+        await _integration.InitializeElements();
+        await AgreeAsync("spells", SpellMechanicsMessage, new (string, HomebrewSpellModel)[]
+        {
+            ("an attack with damage", Spell() with { Roll = "ranged-attack", Damage = "1d10 cold" }),
+            ("healing that grows with the slot", Spell() with { Roll = "none", Healing = "2d8", AddsModifier = true, SlotScaling = "1d8" }),
+            ("a cantrip whose damage grows", Spell(level: 0) with { Roll = "ranged-attack", Damage = "1d10 cold", CantripScaling = "5:2d10; 11:3d10; 17:4d10" }),
+            ("an unknown roll", Spell() with { Roll = "fireball" }),
+            ("a save without its ability", Spell() with { Roll = "save", Damage = "8d6 fire" }),
+            ("an ability without a save", Spell() with { Roll = "melee-attack", SaveAbility = "Dexterity" }),
+            ("a damage type there is not", Spell() with { Roll = "save", SaveAbility = "Dexterity", Damage = "2d6 frost" }),
+            ("damage without a roll", Spell() with { Damage = "2d6 fire" }),
+            ("cantrip scaling on a 1st-level spell", Spell() with { Roll = "ranged-attack", Damage = "1d10 cold", CantripScaling = "5:2d10" }),
+            ("slot scaling on a cantrip", Spell(level: 0) with { Roll = "ranged-attack", Damage = "1d10 cold", SlotScaling = "1d10" }),
+            ("cantrip levels going down", Spell(level: 0) with { Roll = "ranged-attack", Damage = "1d10 cold", CantripScaling = "11:3d10; 5:2d10" }),
+            ("healing that is not dice", Spell() with { Roll = "none", Healing = "lots" }),
+        });
+
+        // a field of the form and one of the mechanics: the message the save always gave, then the mechanics' own
+        var both = await SaveAsync("spells", Spell(name: " ") with { Roll = "fireball" });
+        both.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await ErrorsAsync(both)).Should().Equal(SpellMessage, SpellMechanicsMessage);
+    }
+
+    [TestMethod]
+    public async Task ASpellsMechanics_AreSavedAndRead_AndASpellWithoutThemKeepsItsRevision()
+    {
+        await _integration.InitializeElements();
+        var plain = await SavedAsync("spells", Spell());
+        var again = await SavedAsync("spells", plain with { ExpectedRevision = plain.Revision });
+        again.Revision.Should().Be(plain.Revision, "saved again as it was, it is written as it was");
+
+        var mechanics = plain with { Roll = "save", SaveAbility = "Dexterity", HalfOnSave = true, Damage = "3d6 fire" };
+        var preview = await PreviewAsync("spells", mechanics);
+        preview.Changes.Should().Equal(
+            new HomebrewFieldChange("roll", null, "save"), new HomebrewFieldChange("saveAbility", null, "Dexterity"),
+            new HomebrewFieldChange("halfOnSave", "no", "yes"), new HomebrewFieldChange("damage", null, "3d6 fire"));
+
+        var saved = await SavedAsync("spells", mechanics with { ExpectedRevision = plain.Revision });
+        saved.Should().BeEquivalentTo(new { Roll = "save", SaveAbility = "Dexterity", HalfOnSave = true, Damage = "3d6 fire", Healing = (string?)null });
+        saved.Revision.Should().NotBe(plain.Revision);
+        (await SpellsAsync()).Single().Should().BeEquivalentTo(new { Roll = "save", Damage = "3d6 fire" });
+    }
+
     [TestMethod]
     public async Task ThePreviewAndTheSave_RefuseTheSameSpells()
     {

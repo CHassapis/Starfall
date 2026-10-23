@@ -257,6 +257,13 @@ public sealed class CalculationTraceTests
         CalculationTraceKeys.IsWebKey("speed:walk").Should().BeTrue();
         CalculationTraceKeys.IsWebKey("attack:4b0e7a10-5c1d-4f2e-9a3b-000000000c10:to-hit").Should().BeTrue();
         CalculationTraceKeys.IsWebKey("attack:x:range").Should().BeFalse();
+        CalculationTraceKeys.IsWebKey("spell:test-spark:0:dice").Should().BeTrue();
+        CalculationTraceKeys.IsWebKey("spell:test-salve:3:bonus").Should().BeTrue();
+        CalculationTraceKeys.IsWebKey("spell:test spark:0:dice").Should().BeFalse();
+        CalculationTraceKeys.IsWebKey("spell:test-spark:10:dice").Should().BeFalse();
+        CalculationTraceKeys.IsWebKey("resource:rk2x9abc:max").Should().BeTrue();
+        CalculationTraceKeys.IsWebKey("resource:r1:spent").Should().BeFalse();
+        CalculationTraceKeys.IsServerKey("resource:rk2x9abc:max").Should().BeFalse();
     }
 
     private static CalculationTraceBuilder Traced((Character Character, List<Registration> Registrations) build) => Traced(build.Character, build.Registrations);

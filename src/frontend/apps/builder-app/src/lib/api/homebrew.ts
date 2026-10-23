@@ -34,6 +34,24 @@ export interface HomebrewFeature {
   description: string;
 }
 
+export type SpellRoll = "none" | "melee-attack" | "ranged-attack" | "save";
+
+/**
+ * A spell's mechanics as the form shows them: none at all when it does not say what it rolls, a saving throw's ability
+ * and half damage only for a save, and the scaling that fits its level (cantrip tiers, or dice per slot level above).
+ */
+export function fittingSpellMechanics(spell: HomebrewSpell): HomebrewSpell {
+  if (!spell.roll) return { ...spell, roll: null, saveAbility: null, halfOnSave: false, damage: null, healing: null, addsModifier: false, cantripScaling: null, slotScaling: null };
+  const save = spell.roll === "save";
+  return {
+    ...spell,
+    saveAbility: save ? spell.saveAbility : null,
+    halfOnSave: save && !!spell.halfOnSave,
+    cantripScaling: spell.level === 0 ? spell.cantripScaling : null,
+    slotScaling: spell.level > 0 ? spell.slotScaling : null,
+  };
+}
+
 export interface HomebrewSpell {
   id?: string | null;
   name: string;
@@ -54,6 +72,22 @@ export interface HomebrewSpell {
   lists: string[];
   description: string;
   higherLevels?: string | null;
+  /** what it rolls, said outright (read instead of the text): "melee-attack", "ranged-attack", "save", "none"; empty: not said */
+  roll?: SpellRoll | null;
+  /** a "save" spell: the ability saved with */
+  saveAbility?: string | null;
+  /** a "save" spell: a success still takes half the damage */
+  halfOnSave?: boolean;
+  /** "2d6 fire; 1d6 radiant" */
+  damage?: string | null;
+  /** "2d8" */
+  healing?: string | null;
+  /** the spellcasting ability modifier joins the first damage term, or the healing */
+  addsModifier?: boolean;
+  /** a cantrip: "5:2d10; 11:3d10; 17:4d10" */
+  cantripScaling?: string | null;
+  /** a leveled spell: the dice each slot level above its own adds, "1d6" */
+  slotScaling?: string | null;
   /** the record as saved, when read; a save that sends it back as expectedRevision is refused (409) if it changed since */
   revision?: string | null;
   /** on a save: the revision the edit started from (a preview's) */

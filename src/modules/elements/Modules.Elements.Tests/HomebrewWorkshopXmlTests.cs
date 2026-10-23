@@ -63,6 +63,40 @@ public class HomebrewWorkshopXmlTests
     }
 
     [TestMethod]
+    public void ASpellThatSaysNothingOfItsRoll_IsWrittenAsBefore()
+    {
+        var xml = HomebrewWorkshopXml.SpellToXml(Spell, "ID_TEST_SPELL");
+
+        // the setters every spell had before mechanics could be said, and nothing else
+        xml.Elements().Select(e => e.Name.LocalName).Should().Equal("supports", "description", "setters");
+        xml.Element("setters")!.Elements().Select(s => (string?)s.Attribute("name")).Should().Equal(
+            "level", "school", "time", "duration", "range", "hasVerbalComponent", "hasSomaticComponent", "hasMaterialComponent", "materialComponent", "isConcentration", "isRitual");
+    }
+
+    [TestMethod]
+    public void ASpellsMechanics_AreSettersOfTheirOwn_AndRoundTrip()
+    {
+        var lance = Spell with { Name = "Frost Lance", Level = 0, HigherLevels = null, Roll = "ranged-attack", Damage = "1d10 cold", CantripScaling = "5:2d10; 11:3d10; 17:4d10" };
+        var burst = Spell with { Name = "Searing Burst", Level = 3, Roll = "save", SaveAbility = "Dexterity", HalfOnSave = true, Damage = "8d6 fire; 2d6 radiant", AddsModifier = true, SlotScaling = "1d6" };
+
+        MechanicsSetters(lance).Should().Equal(
+            ("starlights-spell-roll", "ranged-attack"), ("starlights-spell-damage", "1d10 cold"), ("starlights-spell-cantrip-scaling", "5:2d10; 11:3d10; 17:4d10"));
+        MechanicsSetters(burst).Should().Equal(
+            ("starlights-spell-roll", "save"), ("starlights-spell-save", "Dexterity"), ("starlights-spell-save-success", "half"),
+            ("starlights-spell-damage", "8d6 fire; 2d6 radiant"), ("starlights-spell-modifier", "true"), ("starlights-spell-slot-scaling", "1d6"));
+        foreach (var spell in new[] { lance, burst })
+        {
+            HomebrewWorkshopXml.SpellFromXml(HomebrewWorkshopXml.SpellToXml(spell, "ID_TEST_SPELL")).Should().BeEquivalentTo(spell with { Id = "ID_TEST_SPELL" });
+        }
+    }
+
+    private static List<(string, string)> MechanicsSetters(HomebrewSpellModel spell) =>
+        HomebrewWorkshopXml.SpellToXml(spell, "ID_TEST_SPELL").Element("setters")!.Elements("set")
+            .Select(s => ((string)s.Attribute("name")!, s.Value))
+            .Where(s => s.Item1.StartsWith("starlights-spell-", StringComparison.Ordinal))
+            .ToList();
+
+    [TestMethod]
     public void ASubclass_RoundTrips_AndKeepsItsFeatureIdsWhenEdited()
     {
         var model = new HomebrewSubclassModel

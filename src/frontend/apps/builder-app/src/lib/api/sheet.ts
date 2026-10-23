@@ -4,6 +4,7 @@ import type { BuilderChoice } from "@/lib/api/builder";
 import { useItemCatalog } from "@/lib/api/items";
 import { useSpellIndex, type SpellFigures } from "@/lib/api/magic";
 import { generatedNameOf, isActive, isCarried, resolve, type AttackMode, type Inventory, type Resolved } from "@/lib/rules/items";
+import { spellMechanicsOf, type SpellMechanics } from "@/lib/rules/battle";
 import { itemSpells, type ItemSpellRef } from "@/lib/rules/item-spells";
 import { EMPTY_MAGIC, type KnownSpell, type MagicState, type Spellcasting } from "@/lib/rules/magic";
 import { proficiencyLevel, summarizeProficiencies, type Proficiencies, type ProficiencyRegistration } from "@/lib/rules/proficiencies";
@@ -93,6 +94,8 @@ export interface SheetSpell {
   source: string;
   /** for a spell outside a class's spellcasting (a feat's, a species'), the ability it is cast with */
   ability?: string;
+  /** what a homebrew spell states it rolls (the Homebrew page's mechanics); read instead of its text */
+  mechanics?: SpellMechanics | null;
 }
 
 export interface SheetSpellcasting {
@@ -111,6 +114,8 @@ export interface SheetData {
   portraitUrl?: string | null;
   level: number;
   classLine: string;
+  /** each class and its level (a resource's maximum can follow one) */
+  classLevels?: { name: string; level: number }[];
   background: string;
   alignment: string;
   deity: string;
@@ -467,6 +472,7 @@ export function useSheetData(characterId: string): {
       description: entry.description,
       origin,
       source: entry.source ?? "",
+      mechanics: spellMechanicsOf(s),
     };
   }
 
@@ -651,6 +657,7 @@ export function useSheetData(characterId: string): {
       proficienciesInOrder: summarizeProficiencies(registrations.data?.registrations ?? [], "gained"),
       attacksPerAction: figures.attacksPerAction,
       defenses: defenses.data ?? { resistances: [], immunities: [], vulnerabilities: [] },
+      classLevels: classDice.map((c) => ({ name: c.name, level: c.level })),
       hitDice: multiclass ? classDice.map((c) => `${c.level}d${c.die}`).join(" + ") : hitDie ? `${level}d${hitDie}` : "",
       hitDie,
       hitDicePools: [...classDice.reduce((m, c) => m.set(c.die, (m.get(c.die) ?? 0) + c.level), new Map<number, number>())]

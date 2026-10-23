@@ -152,9 +152,17 @@ public sealed class SaveHomebrewSpellEndpoint : Endpoint<HomebrewSpellModel, Hom
 
     public override async Task HandleAsync(HomebrewSpellModel req, CancellationToken ct)
     {
-        if (HomebrewWorkshopReview.Spell(req).Count > 0)
+        if (HomebrewWorkshopReview.Spell(req) is { Count: > 0 } problems)
         {
-            AddError("A homebrew spell needs a name (100 characters at most), a level from 0 to 9, a school, and class lists made of letters.");
+            // the form's own fields keep the message they always had; the mechanics have one of their own
+            if (problems.Any(p => !HomebrewWorkshopReview.SpellMechanicsFields.Contains(p.Detail ?? string.Empty)))
+            {
+                AddError("A homebrew spell needs a name (100 characters at most), a level from 0 to 9, a school, and class lists made of letters.");
+            }
+            if (problems.Any(p => HomebrewWorkshopReview.SpellMechanicsFields.Contains(p.Detail ?? string.Empty)))
+            {
+                AddError(HomebrewWorkshopReview.SpellMechanicsMessage);
+            }
             await Send.ErrorsAsync(cancellation: ct);
             return;
         }
