@@ -33,10 +33,22 @@ export default defineConfig(({ mode }) => {
         "@": path.resolve(__dirname, "./src"),
       },
     },
-    // the libraries (and the workspace's ui-framework) in chunks of their own, under the 500 kB size warning
+    // the libraries (and the workspace's ui-framework) in chunks of their own, under the 500 kB size warning: whole
+    // packages per chunk, no maxSize (splitting by size cut packages apart into chunks that import each other, which
+    // breaks the order modules run in); a group also takes what its packages use that no earlier group took
     build: {
       rolldownOptions: {
-        output: { codeSplitting: { groups: [{ name: "vendor", test: /node_modules[\\/]|packages[\\/]ui-framework[\\/]/, maxSize: 400_000 }] } },
+        output: {
+          codeSplitting: {
+            groups: [
+              { name: "react", test: /node_modules[\\/](react|react-dom|scheduler)[\\/]/, priority: 5 },
+              { name: "charts", test: /node_modules[\\/](recharts|d3-[^\\/]+|victory-vendor)[\\/]/, priority: 4 },
+              { name: "base-ui", test: /node_modules[\\/]@base-ui[\\/]/, priority: 3 },
+              { name: "ui-framework", test: /packages[\\/]ui-framework[\\/]/, priority: 2 },
+              { name: "vendor", test: /node_modules[\\/]/, priority: 1 },
+            ],
+          },
+        },
       },
     },
     server: {
