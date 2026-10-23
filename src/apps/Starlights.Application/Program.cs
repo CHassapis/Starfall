@@ -200,9 +200,22 @@ public sealed partial class Program
         app.UseStarlightsPlatform();
         app.UseCors();
 
-        app.UseHttpsRedirection();
+        // only when this process serves HTTPS itself (the "https" launch profile): behind the reverse proxy
+        // (deploy/: plain HTTP on 8080) there is no HTTPS port to redirect to, and the middleware only logged
+        // "Failed to determine the https port for redirect"
+        if (ServesHttps(app.Configuration))
+        {
+            app.UseHttpsRedirection();
+        }
         app.UseAuthorization();
 
         app.Run();
     }
+
+    private static bool ServesHttps(IConfiguration configuration) =>
+        (configuration["urls"] ?? string.Empty).Contains("https://", StringComparison.OrdinalIgnoreCase)
+        || !string.IsNullOrEmpty(configuration["https_ports"])
+        || !string.IsNullOrEmpty(configuration["https_port"])
+        || configuration.GetSection("Kestrel:Endpoints").GetChildren()
+            .Any(e => (e["Url"] ?? string.Empty).StartsWith("https://", StringComparison.OrdinalIgnoreCase));
 }

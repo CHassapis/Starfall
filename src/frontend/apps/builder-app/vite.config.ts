@@ -26,6 +26,20 @@ function pdfjsStandardFonts(): Plugin {
   };
 }
 
+// pdf-lib and its fonts: only the printable sheet and its worker use them, so they stay out of what every page loads.
+// Whole packages per chunk, no maxSize: splitting by size cut packages apart into chunks that import each other, and
+// a module then ran before the chunk holding its helper had (the sheet page threw "bt is not a function").
+// pdf-lib first, so the libraries both use (pako) go with it and fontkit's chunk holds fontkit alone
+const pdfLibGroups = [
+  { name: "pdf-lib", test: /node_modules[\\/](pdf-lib|@pdf-lib[\\/](?!fontkit[\\/]))/, priority: 3 },
+  { name: "fontkit", test: /node_modules[\\/]@pdf-lib[\\/]fontkit[\\/]/, priority: 2 },
+];
+// the other libraries in a chunk of their own: cached across releases (the app's code changes, they rarely do)
+const chunkGroups = [
+  ...pdfLibGroups,
+  { name: "vendor", test: /node_modules[\\/](?!pdf-lib[\\/]|@pdf-lib[\\/]|pdfjs-dist[\\/])/, priority: 1 },
+];
+
 export default defineConfig(({ mode }) => {
   const viteEnv = loadEnv(mode, process.cwd(), "");
 
@@ -52,6 +66,17 @@ export default defineConfig(({ mode }) => {
         "@components/ui": path.resolve(__dirname, "../../packages/ui/src/components/ui"),
         "@starlights/ui": path.resolve(__dirname, "../../packages/ui/src"),
       },
+    },
+    build: {
+      rolldownOptions: { output: { codeSplitting: { groups: chunkGroups } } },
+      // @pdf-lib/fontkit ships as one prebuilt module of ~711 kB minified plus its own copy of pako (~45 kB), so its chunk
+      // cannot be smaller (the vendor chunk is ~700 kB); anything new that grows past this still gets the warning
+      chunkSizeWarningLimit: 800,
+    },
+    // the sheet's PDF is made in a module worker (aurora-sheet-client.ts: { type: "module" }), split the same way
+    worker: {
+      format: "es",
+      rolldownOptions: { output: { codeSplitting: { groups: pdfLibGroups } } },
     },
     server: {
       port: parseInt(nodeEnv.PORT || "55052"),

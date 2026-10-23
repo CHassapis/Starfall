@@ -80,7 +80,7 @@ internal class CharacterSnapshotsRepository : RepositoryBase<CharacterSnapshot>,
         {
             sql.Append($"DELETE FROM characters.[{table}] WHERE parent_character = @id;");
         }
-        sql.Append("DELETE FROM characters.character_snapshot WHERE id = @id; DELETE FROM characters.character WHERE id = @id;");
+        sql.Append("DELETE FROM characters.character_snapshot WHERE character_id = @id; DELETE FROM characters.character WHERE id = @id;");
         await using var command = connection.CreateCommand();
         command.Transaction = Context.Database.CurrentTransaction?.GetDbTransaction();
         command.CommandText = sql.ToString();

@@ -16,6 +16,8 @@ namespace Starlights.Modules.Elements.Tests;
 [TestClass]
 public class HomebrewWorkshopXmlTests
 {
+    public TestContext TestContext { get; set; } = default!;
+
     private static readonly HomebrewSpellModel Spell = new()
     {
         Name = "Moonlit Lash",
@@ -207,7 +209,7 @@ public class HomebrewWorkshopXmlTests
             var importer = new AuroraImporter(NullLogger<AuroraImporter>.Instance, persistence.Object,
                 new AuroraImporterOptions(Path.Combine(root, "content"), HomebrewPath: homebrew),
                 new FiveEToolsData(new FiveEToolsOptions(Path.Combine(root, "no-5etools")), NullLogger<FiveEToolsData>.Instance));
-            await importer.ImportAsync(AuroraImporterOptions.HomebrewIndex);
+            await importer.ImportAsync(AuroraImporterOptions.HomebrewIndex, cancellationToken: TestContext.CancellationToken);
 
             var byId = added.ToDictionary(e => e.GetRequiredComponent<AuroraSourceComponent>().AuroraId);
             byId["ID_STARLIGHTS_HOMEBREW_SPELL_MOONLIT_LASH"].Type.Should().Be("Spell");

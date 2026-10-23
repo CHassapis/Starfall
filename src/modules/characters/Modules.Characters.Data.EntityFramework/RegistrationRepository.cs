@@ -59,7 +59,9 @@ internal class RegistrationRepository : RepositoryBase<Registration>, IRegistrat
 
             if (registration is not null)
             {
-                _logger.LogWarning("Including pending registrations in local context.");
+                // registrations added earlier in this unit of work and not saved yet: the normal path while a character
+                // is processed (dozens per Aurora import), so debug like the event processing's progress lines
+                _logger.LogDebug("Including pending registrations in local context.");
             }
         }
 
@@ -89,7 +91,7 @@ internal class RegistrationRepository : RepositoryBase<Registration>, IRegistrat
 
         if (pending.Count > 0)
         {
-            _logger.LogWarning("Including '{PendingCount}' pending registrations in local context.", pending.Count);
+            _logger.LogDebug("Including '{PendingCount}' pending registrations in local context.", pending.Count);
             registrations.AddRange(pending);
         }
 
@@ -131,7 +133,7 @@ internal class RegistrationRepository : RepositoryBase<Registration>, IRegistrat
 
         if (pending.Count > 0)
         {
-            _logger.LogWarning("Including '{PendingCount}' pending registrations in local context.", pending.Count);
+            _logger.LogDebug("Including '{PendingCount}' pending registrations in local context.", pending.Count);
             registrations.AddRange(pending);
         }
 

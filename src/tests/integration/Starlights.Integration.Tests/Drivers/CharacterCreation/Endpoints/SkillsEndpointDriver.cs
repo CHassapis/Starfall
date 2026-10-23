@@ -1,5 +1,6 @@
 ﻿using System.Net.Http.Json;
 using AwesomeAssertions;
+using Starlights.Integration.Drivers.Characters;
 using Starlights.Integration.Extensions;
 using Starlights.Modules.Characters.Endpoints.Characters.Skills.GetSkills;
 
@@ -8,10 +9,12 @@ namespace Starlights.Integration.Drivers.CharacterCreation.Endpoints;
 internal sealed class SkillsEndpointDriver : IDriver
 {
     private readonly IIntegrationHost _integration;
+    private readonly CharactersDriverContext _characters;
 
-    public SkillsEndpointDriver(IIntegrationHost integration)
+    public SkillsEndpointDriver(IIntegrationHost integration, CharactersDriverContext characters)
     {
         _integration = integration;
+        _characters = characters;
     }
 
     /// <summary>
@@ -21,7 +24,7 @@ internal sealed class SkillsEndpointDriver : IDriver
     {
         using var api = _integration.CreateClient();
 
-        var characterId = _integration.GetCharacterIdentifier();
+        var characterId = _characters.CurrentCharacter.Id;
         var url = $"/api/characters/{characterId}/skills";
 
         var response = await api.GetAsync(url);

@@ -16,7 +16,6 @@ import { CompendiumPage } from "./pages/compendium/Index.tsx";
 import { HomebrewPage } from "./pages/homebrew/Index.tsx";
 import { ContentPage } from "./pages/content/Index.tsx";
 import { CharacterBuilderPage } from "./pages/characters/builder/builder-page.tsx";
-import { CharacterSheetPage } from "./pages/characters/sheet/sheet-page.tsx";
 import { PlayerProvider } from "./lib/player.tsx";
 import { LandingPage2 } from "./pages/landing/Index.tsx";
 // import "./styles/typography.css";
@@ -114,9 +113,9 @@ const router = createBrowserRouter([
     ],
   },
   {
-    // the printable sheet has no app chrome
+    // the printable sheet has no app chrome; its own bundle (pdf-lib, its fonts and pdf.js), loaded when first opened
     path: "/characters/:id/sheet",
-    element: <CharacterSheetPage />,
+    lazy: () => import("./pages/characters/sheet/sheet-page.tsx").then((m) => ({ Component: m.CharacterSheetPage })),
   },
   {
     path: "/characters/:id/builder",

@@ -1,5 +1,6 @@
 ﻿using System.Net.Http.Json;
 using AwesomeAssertions;
+using Starlights.Integration.Drivers.Characters;
 using Starlights.Integration.Extensions;
 using Starlights.Modules.Characters.Endpoints.Characters.AbilityScores.GetAbilities;
 using Starlights.Modules.Characters.Endpoints.Characters.AbilityScores.UpdateAdditionalScore;
@@ -10,10 +11,12 @@ namespace Starlights.Integration.Drivers.CharacterCreation.Endpoints;
 internal sealed class AbilityScoresEndpointDriver : IDriver
 {
     private readonly IIntegrationHost _integration;
+    private readonly CharactersDriverContext _characters;
 
-    public AbilityScoresEndpointDriver(IIntegrationHost integration)
+    public AbilityScoresEndpointDriver(IIntegrationHost integration, CharactersDriverContext characters)
     {
         _integration = integration;
+        _characters = characters;
     }
 
     /// <summary>
@@ -23,7 +26,7 @@ internal sealed class AbilityScoresEndpointDriver : IDriver
     {
         using var api = _integration.CreateClient();
 
-        var characterId = _integration.GetCharacterIdentifier();
+        var characterId = _characters.CurrentCharacter.Id;
         var url = $"/api/characters/{characterId}/ability-scores";
 
         var response = await api.GetAsync(url);
@@ -42,7 +45,7 @@ internal sealed class AbilityScoresEndpointDriver : IDriver
     {
         using var api = _integration.CreateClient();
 
-        var characterId = _integration.GetCharacterIdentifier();
+        var characterId = _characters.CurrentCharacter.Id;
 
         var url = $"/api/characters/{characterId}/ability-scores/{abilityScoreId}/base";
         var payload = new UpdateAbilityBaseScoreRequest { Value = value };
@@ -63,7 +66,7 @@ internal sealed class AbilityScoresEndpointDriver : IDriver
     {
         using var api = _integration.CreateClient();
 
-        var characterId = _integration.GetCharacterIdentifier();
+        var characterId = _characters.CurrentCharacter.Id;
 
         var url = $"/api/characters/{characterId}/ability-scores/{abilityScoreId}/additional";
         var payload = new UpdateAbilityAdditionalScoreRequest { Value = value };

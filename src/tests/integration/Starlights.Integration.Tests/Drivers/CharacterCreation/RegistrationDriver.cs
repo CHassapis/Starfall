@@ -1,6 +1,7 @@
 ﻿using AwesomeAssertions;
 using Starlights.Integration.Constants;
 using Starlights.Integration.Drivers.CharacterCreation.Endpoints;
+using Starlights.Integration.Drivers.Characters;
 using Starlights.Integration.Extensions;
 using Starlights.Modules.Characters.Domain.Classes.Eventing;
 using Starlights.Modules.Characters.Domain.Registrations.Eventing;
@@ -13,17 +14,19 @@ namespace Starlights.Integration.Drivers.CharacterCreation;
 internal sealed class RegistrationDriver : IDriver
 {
     private readonly IIntegrationHost _integration;
+    private readonly CharactersDriverContext _characters;
     private readonly RegistrationEndpointDriver _api;
 
-    public RegistrationDriver(IIntegrationHost integration, RegistrationEndpointDriver api)
+    public RegistrationDriver(IIntegrationHost integration, CharactersDriverContext characters, RegistrationEndpointDriver api)
     {
         _integration = integration;
+        _characters = characters;
         _api = api;
     }
 
     public async Task<List<RegistrationDataModel>> GetRegistrations()
     {
-        var characterId = _integration.GetCharacterIdentifier();
+        var characterId = _characters.CurrentCharacter.Id;
 
         var response = await _api.GetRegistrationsAsync(characterId);
         response.Registrations.Should().NotBeEmpty("Expected at least one registration to be available.");
@@ -32,7 +35,7 @@ internal sealed class RegistrationDriver : IDriver
 
     public async Task<List<StatisticGroupDataModel>> GetStatistics()
     {
-        var characterId = _integration.GetCharacterIdentifier();
+        var characterId = _characters.CurrentCharacter.Id;
 
         var response = await _api.GetStatisticsAsync(characterId);
         response.Statistics.Should().NotBeEmpty("Expected at least one statistic to be available.");

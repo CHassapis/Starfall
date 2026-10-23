@@ -9,6 +9,8 @@ namespace Starlights.Modules.Elements.Tests;
 [TestClass]
 public class GitHubArchiveTests
 {
+    public TestContext TestContext { get; set; } = default!;
+
     [TestMethod]
     [DataRow("https://github.com/AuroraLegacy/elements", "AuroraLegacy", "elements", null)]
     [DataRow("https://github.com/5etools-mirror-3/5etools-src.git", "5etools-mirror-3", "5etools-src", null)]
@@ -63,7 +65,7 @@ public class GitHubArchiveTests
         {
             var result = await GitHubArchive.ExtractAsync(
                 Archive(new PaxTarEntry(TarEntryType.Directory, "repo-abc/"), File("repo-abc/package.json", "{}"), File("repo-abc/data/spells.json"), File("repo-abc/js/app.js")),
-                target, p => p == "package.json" || p.StartsWith("data/", StringComparison.Ordinal), 1_000_000, 100);
+                target, p => p == "package.json" || p.StartsWith("data/", StringComparison.Ordinal), 1_000_000, 100, TestContext.CancellationToken);
             result.Files.Should().Be(2);
             System.IO.File.Exists(Path.Combine(target, "package.json")).Should().BeTrue();
             System.IO.File.Exists(Path.Combine(target, "data", "spells.json")).Should().BeTrue();
@@ -83,7 +85,7 @@ public class GitHubArchiveTests
         {
             var result = await GitHubArchive.ExtractAsync(
                 Archive(File("repo/../../escape.txt"), File("repo/a/../../b.txt"), new PaxTarEntry(TarEntryType.SymbolicLink, "repo/link") { LinkName = "/etc/passwd" }, File("repo/ok.txt")),
-                target, _ => true, 1_000_000, 100);
+                target, _ => true, 1_000_000, 100, TestContext.CancellationToken);
             result.Files.Should().Be(1);
             result.Skipped.Should().Be(3);
             Directory.GetFiles(target, "*", SearchOption.AllDirectories).Select(Path.GetFileName).Should().BeEquivalentTo(["ok.txt"]);
@@ -101,7 +103,7 @@ public class GitHubArchiveTests
         var target = Path.Combine(Path.GetTempPath(), "gha-" + Guid.NewGuid().ToString("N"));
         try
         {
-            var act = () => GitHubArchive.ExtractAsync(Archive(File("repo/a.txt", new string('x', 600)), File("repo/b.txt", new string('x', 600))), target, _ => true, 1_000, 100);
+            var act = () => GitHubArchive.ExtractAsync(Archive(File("repo/a.txt", new string('x', 600)), File("repo/b.txt", new string('x', 600))), target, _ => true, 1_000, 100, TestContext.CancellationToken);
             await act.Should().ThrowAsync<InvalidDataException>();
         }
         finally

@@ -37,7 +37,7 @@ public sealed partial class ReferenceCharacterTests : IntegrationTestBase
     [Timeout(600_000, CooperativeCancellation = true)]
     public async Task TheCharacter_HasTheFiguresWorkedOutByHand(string character)
     {
-        var spec = JsonNode.Parse(await File.ReadAllTextAsync(ReferenceFile("characters", $"{character}.json")))!;
+        var spec = JsonNode.Parse(await File.ReadAllTextAsync(ReferenceFile("characters", $"{character}.json"), TestContext.CancellationToken))!;
         await using var host = await StartAsync();
         using var api = host.Integration.CreateClient();
         var builder = new ReferenceCharacterBuilder(host.Integration, api);
@@ -69,10 +69,10 @@ public sealed partial class ReferenceCharacterTests : IntegrationTestBase
     [Timeout(300_000, CooperativeCancellation = true)]
     public async Task TheItemCatalog_DescribesTheReferenceItemsAsTheWebTestsDo()
     {
-        var catalog = JsonNode.Parse(await File.ReadAllTextAsync(ReferenceFile("catalog.json")))!["items"]!.AsArray();
+        var catalog = JsonNode.Parse(await File.ReadAllTextAsync(ReferenceFile("catalog.json"), TestContext.CancellationToken))!["items"]!.AsArray();
         await using var host = await StartAsync();
         using var api = host.Integration.CreateClient();
-        var served = JsonNode.Parse(await api.GetStringAsync("/api/elements/items"))!["items"]!.AsArray()
+        var served = JsonNode.Parse(await api.GetStringAsync("/api/elements/items", TestContext.CancellationToken))!["items"]!.AsArray()
             .Where(i => i!["auroraId"]?.GetValue<string>().StartsWith("ID_REF_", StringComparison.Ordinal) == true)
             .ToDictionary(i => i!["auroraId"]!.GetValue<string>(), i => i!);
 
@@ -104,7 +104,7 @@ public sealed partial class ReferenceCharacterTests : IntegrationTestBase
     public async Task TracingACharacter_ChangesNothingInTheDatabase()
     {
         // the wizard: an item sets Strength, items stack and do not; the calculation changes the loaded character
-        var spec = JsonNode.Parse(await File.ReadAllTextAsync(ReferenceFile("characters", "c05-wizard-2014.json")))!;
+        var spec = JsonNode.Parse(await File.ReadAllTextAsync(ReferenceFile("characters", "c05-wizard-2014.json"), TestContext.CancellationToken))!;
         await using var host = await StartAsync();
         using var api = host.Integration.CreateClient();
         var builder = new ReferenceCharacterBuilder(host.Integration, api);
@@ -120,13 +120,13 @@ public sealed partial class ReferenceCharacterTests : IntegrationTestBase
 
         foreach (var key in new[] { "ability-score:strength", "skill:athletics", "saving-throw:wisdom", "statistic:ac:misc", "spell-attack:ref-wizard", "proficiency-bonus", "armor-class", "statistic:nothing" })
         {
-            (await api.GetAsync($"/api/characters/{builder.CharacterId}/calculation/trace?value={Uri.EscapeDataString(key)}")).IsSuccessStatusCode.Should().BeTrue(key);
+            (await api.GetAsync($"/api/characters/{builder.CharacterId}/calculation/trace?value={Uri.EscapeDataString(key)}", TestContext.CancellationToken)).IsSuccessStatusCode.Should().BeTrue(key);
         }
 
         (await host.SnapshotAsync()).Should().Equal(before, "tracing writes nothing: no row and no event");
 
         // and the check would see a write: the statistics endpoint saves its calculation, which puts the score right
-        (await api.GetAsync($"/api/characters/{builder.CharacterId}/statistics")).EnsureSuccessStatusCode();
+        (await api.GetAsync($"/api/characters/{builder.CharacterId}/statistics", TestContext.CancellationToken)).EnsureSuccessStatusCode();
         (await host.SnapshotAsync()).Should().NotEqual(before);
     }
 

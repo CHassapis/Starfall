@@ -21,7 +21,8 @@ namespace Starlights.Integration.Tests.Characters;
 /// </summary>
 /// <remarks>
 /// On SQL Server (<c>STARFALL_TEST_SQLSERVER</c>, as <see cref="Elements.HomebrewSqlServerTests"/>): saving the combat
-/// state takes a row lock, which the in-memory provider cannot.
+/// state takes a row lock, which the in-memory provider cannot. Each test has two minutes, as the other SQL Server tests:
+/// a fresh database, its migrations and a character's processing outgrew the in-memory tests' 30 s on a busy machine.
 /// </remarks>
 [TestClass]
 [TestCategory("SqlServer")]
@@ -98,7 +99,7 @@ public sealed class CombatResourcesEndpointTests : IntegrationTestBase
     ];
 
     [TestMethod]
-    [Timeout(TestConstants.Timeout, CooperativeCancellation = true)]
+    [Timeout(120_000, CooperativeCancellation = true)]
     public async Task Resources_AreSavedWithWhatWasSpent_AndASaveWithoutThemKeepsThem()
     {
         var characterId = await _integration.GetDriver<CharacterCreationDriver>().CreateCharacterAsync();
@@ -126,7 +127,7 @@ public sealed class CombatResourcesEndpointTests : IntegrationTestBase
     }
 
     [TestMethod]
-    [Timeout(TestConstants.Timeout, CooperativeCancellation = true)]
+    [Timeout(120_000, CooperativeCancellation = true)]
     public async Task ResourcesOutOfBounds_AreRefused_AndChangeNothing()
     {
         var characterId = await _integration.GetDriver<CharacterCreationDriver>().CreateCharacterAsync();
@@ -141,7 +142,7 @@ public sealed class CombatResourcesEndpointTests : IntegrationTestBase
     }
 
     [TestMethod]
-    [Timeout(TestConstants.Timeout, CooperativeCancellation = true)]
+    [Timeout(120_000, CooperativeCancellation = true)]
     public async Task LockedPlayersCharacter_ItsResources_NeedThatPlayersToken()
     {
         var (playerName, ownToken) = await LockPlayerAsync("Test Player Ilse", "synthetic-pass-9");
@@ -164,7 +165,7 @@ public sealed class CombatResourcesEndpointTests : IntegrationTestBase
     ];
 
     [TestMethod]
-    [Timeout(TestConstants.Timeout, CooperativeCancellation = true)]
+    [Timeout(120_000, CooperativeCancellation = true)]
     public async Task FavoriteRolls_AreSaved_AndASaveWithoutThemKeepsThem()
     {
         var characterId = await _integration.GetDriver<CharacterCreationDriver>().CreateCharacterAsync();
@@ -191,7 +192,7 @@ public sealed class CombatResourcesEndpointTests : IntegrationTestBase
     }
 
     [TestMethod]
-    [Timeout(TestConstants.Timeout, CooperativeCancellation = true)]
+    [Timeout(120_000, CooperativeCancellation = true)]
     public async Task FavoriteRollsThatAreNotDice_AndEmptyEntries_AreRefused_AndChangeNothing()
     {
         var characterId = await _integration.GetDriver<CharacterCreationDriver>().CreateCharacterAsync();
@@ -225,7 +226,7 @@ public sealed class CombatResourcesEndpointTests : IntegrationTestBase
     }
 
     [TestMethod]
-    [Timeout(TestConstants.Timeout, CooperativeCancellation = true)]
+    [Timeout(120_000, CooperativeCancellation = true)]
     public async Task LockedPlayersCharacter_ItsFavoriteRolls_NeedThatPlayersToken()
     {
         var (playerName, ownToken) = await LockPlayerAsync("Test Player Maren", "synthetic-pass-11");

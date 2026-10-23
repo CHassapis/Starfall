@@ -60,7 +60,7 @@ public sealed class CalculationTraceEndpointTests : IntegrationTestBase
         body.Content!.Fingerprint.Should().StartWith("sha256:");
 
         // the contract's values are words on the wire
-        var raw = JsonNode.Parse(await (await Trace("?value=ability-modifier:strength")).Content.ReadAsStringAsync())!;
+        var raw = JsonNode.Parse(await (await Trace("?value=ability-modifier:strength")).Content.ReadAsStringAsync(_integration.CancellationToken))!;
         raw["status"]!.GetValue<string>().Should().Be("traced");
         raw["trace"]!["steps"]!.AsArray().Select(s => s!["operation"]!.GetValue<string>()).Should().Equal("start", "add", "divide", "round-down");
     }

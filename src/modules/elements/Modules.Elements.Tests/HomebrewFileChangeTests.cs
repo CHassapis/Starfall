@@ -8,6 +8,8 @@ namespace Starlights.Modules.Elements.Tests;
 [TestClass]
 public class HomebrewFileChangeTests
 {
+    public TestContext TestContext { get; set; } = default!;
+
     [TestMethod]
     public async Task FailedCommit_RestoresFile()
     {
@@ -16,14 +18,14 @@ public class HomebrewFileChangeTests
         const string original = "<elements><append id='ORIGINAL'/></elements>";
         try
         {
-            await File.WriteAllTextAsync(path, original);
+            await File.WriteAllTextAsync(path, original, TestContext.CancellationToken);
             Func<Task> change = async () => await HomebrewFileChange.ApplyAsync(path, null, () =>
             {
                 Transaction.Current!.EnlistVolatile(new TransactionProbe { RejectCommit = true }, EnlistmentOptions.None);
                 return Task.FromResult(1);
             });
             await change.Should().ThrowAsync<TransactionAbortedException>();
-            (await File.ReadAllTextAsync(path)).Should().Be(original);
+            (await File.ReadAllTextAsync(path, TestContext.CancellationToken)).Should().Be(original);
         }
         finally { Directory.Delete(folder, recursive: true); }
     }
@@ -36,11 +38,11 @@ public class HomebrewFileChangeTests
         const string original = "<elements><append id='ORIGINAL'/></elements>";
         try
         {
-            await File.WriteAllTextAsync(path, original);
+            await File.WriteAllTextAsync(path, original, TestContext.CancellationToken);
             Func<Task> change = async () => await HomebrewFileChange.ApplyAsync<int>(path, null,
                 () => Task.FromCanceled<int>(new CancellationToken(true)));
             await change.Should().ThrowAsync<OperationCanceledException>();
-            (await File.ReadAllTextAsync(path)).Should().Be(original);
+            (await File.ReadAllTextAsync(path, TestContext.CancellationToken)).Should().Be(original);
         }
         finally { Directory.Delete(folder, recursive: true); }
     }
@@ -60,7 +62,7 @@ public class HomebrewFileChangeTests
         var probe = new TransactionProbe();
         try
         {
-            if (operation != "create") await File.WriteAllBytesAsync(path, original);
+            if (operation != "create") await File.WriteAllBytesAsync(path, original, TestContext.CancellationToken);
             var replacement = operation == "delete" ? null : XDocument.Parse("<elements><append id='NEW'/></elements>");
             Func<Task> change = async () => await HomebrewFileChange.ApplyAsync(path, replacement, async () =>
             {
@@ -78,7 +80,7 @@ public class HomebrewFileChangeTests
                 probe.RolledBack.Should().BeTrue();
                 probe.Committed.Should().BeFalse();
                 File.Exists(path).Should().Be(operation != "create");
-                if (operation != "create") (await File.ReadAllBytesAsync(path)).Should().Equal(original);
+                if (operation != "create") (await File.ReadAllBytesAsync(path, TestContext.CancellationToken)).Should().Equal(original);
             }
             else
             {

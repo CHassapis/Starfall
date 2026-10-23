@@ -99,9 +99,17 @@ public sealed class ServerStatusEndpoint : EndpointWithoutRequest<ServerStatusRe
         return new MigrationState(module, done.Count, known.Count, done.LastOrDefault(), known.Where(m => !applied.Contains(m)).ToList());
     }
 
-    // (only these fixed table names: nothing from the request goes into the query)
+    // one fixed query per table (a table name cannot be a SQL parameter): nothing from the request goes into the SQL
     private static Task<int> CountAsync(DatabaseFacade database, string table, CancellationToken ct) =>
-        database.SqlQueryRaw<int>($"SELECT COUNT(*) AS [Value] FROM {table}").SingleAsync(ct);
+        database.SqlQueryRaw<int>(table switch
+        {
+            "characters.character" => "SELECT COUNT(*) AS [Value] FROM characters.character",
+            "characters.player" => "SELECT COUNT(*) AS [Value] FROM characters.player",
+            "characters.campaign" => "SELECT COUNT(*) AS [Value] FROM characters.campaign",
+            "characters.campaign_entry" => "SELECT COUNT(*) AS [Value] FROM characters.campaign_entry",
+            "elements.element" => "SELECT COUNT(*) AS [Value] FROM elements.element",
+            _ => throw new ArgumentOutOfRangeException(nameof(table), table, "not a counted table"),
+        }).SingleAsync(ct);
 
     /// <summary>Homebrew element files, items made on the Homebrew page, and homebrew monsters.</summary>
     private static (int Files, int Items, int Monsters) Homebrew(string folder)

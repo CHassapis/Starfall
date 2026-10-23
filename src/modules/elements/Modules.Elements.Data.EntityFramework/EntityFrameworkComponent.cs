@@ -1,5 +1,6 @@
 ﻿using System.Diagnostics;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -15,6 +16,11 @@ internal class EntityFrameworkComponent : IPlatformServiceComponent, IPlatformAp
 {
     public int RegistrationOrder => 1010;
 
+    // EF's default, stated: queries that include several collections stay one query (as they always were here)
+    // instead of logging "no QuerySplittingBehavior has been configured" for each of them
+    private static void SingleQuery(SqlServerDbContextOptionsBuilder sql) =>
+        sql.UseQuerySplittingBehavior(QuerySplittingBehavior.SingleQuery);
+
     public void ConfigureServices(IHostApplicationBuilder builder)
     {
         builder.Services.AddScoped<IElementsRepository, ElementsRepository>();
@@ -27,7 +33,7 @@ internal class EntityFrameworkComponent : IPlatformServiceComponent, IPlatformAp
                 // a test that needs real SQL Server behaviour (transactions, rollback) names a database it prepared
                 if (builder.Configuration["Integration:SqlServer"] is { Length: > 0 } sqlServer)
                 {
-                    options.UseSqlServer(sqlServer);
+                    options.UseSqlServer(sqlServer, SingleQuery);
                     return;
                 }
 
@@ -48,7 +54,7 @@ internal class EntityFrameworkComponent : IPlatformServiceComponent, IPlatformAp
             else
             {
                 Trace.WriteLine($"using the provided '{key}' connection string: {connectionString}");
-                options.UseSqlServer(connectionString);
+                options.UseSqlServer(connectionString, SingleQuery);
             }
 
             if (builder.Environment.IsDevelopment())
