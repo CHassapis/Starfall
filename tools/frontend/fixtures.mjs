@@ -170,6 +170,53 @@ export function fixture() {
       ],
     },
   ];
+  // GET …/calculation/trace: the server's traces of this character's figures, in the contract's shape
+  const calculationTrace = (value) => {
+    const answer = (status, trace, reason = null) => ({
+      contractVersion: 1,
+      characterId: CHARACTER_ID,
+      value,
+      status,
+      trace,
+      content: trace ? { sources: ["Synthetic fixture"], editions: ["2024"], fingerprint: "sha256:00000000000000000000000000000000" } : null,
+      reason,
+    });
+    const step = (operation, v, result, label, source) => ({ operation, value: v, result, label, source, input: null });
+    const calculated = (refers) => ({ kind: "calculated", refers });
+    const fixed = (name) => ({ kind: "fixed", name });
+    const traced = (label, steps) => answer("traced", { key: value, label, final: steps.at(-1).result, steps, excluded: [], notes: [] });
+    if (/^(armor-class|hit-points|initiative|passive-perception|speed:|attack:)/.test(value)) return answer("unsupported", null, "The web app works this value out and traces it itself.");
+    const [kind, ...rest] = value.split(":");
+    const name = rest.join(":");
+    const ability = abilities.find((a) => a.name.toLowerCase() === name);
+    if (kind === "ability-score" && ability)
+      return traced(`${ability.name} score`, [step("start", ability.calculatedScore, ability.calculatedScore, "Base score", { kind: "user-supplied", name: "Base score" })]);
+    if (kind === "ability-modifier" && ability) {
+      const s = ability.calculatedScore;
+      return traced(`${ability.name} modifier`, [
+        step("start", s, s, `${ability.name} score`, calculated(`${name}:score`)),
+        step("add", -10, s - 10, "Less 10", fixed("Ability modifier")),
+        step("divide", 2, (s - 10) / 2, "Half", fixed("Ability modifier")),
+        step("round-down", (s - 10) / 2, Math.floor((s - 10) / 2), "Rounded down", fixed("Rounding")),
+      ]);
+    }
+    if (kind === "saving-throw" && ability)
+      return traced(`${ability.name} saving throw`, [step("start", ability.calculatedModifier, ability.calculatedModifier, `${ability.name} modifier`, calculated(`${name}:modifier`))]);
+    if (value === "proficiency-bonus") return traced("Proficiency bonus", [step("start", 2, 2, "Proficiency Bonus", { kind: "rule", name: "Proficiency Bonus", bonus: "base" })]);
+    const skill = ["Arcana", "Investigation", "Perception", "Stealth"].find((s) => s.toLowerCase() === name);
+    if (kind === "skill" && skill)
+      return traced(skill, [step("start", 3, 3, "Intelligence modifier", calculated("intelligence:modifier")), step("add", 2, 5, "Proficiency", calculated(`${name}:proficiency`))]);
+    if (kind === "statistic" && name.endsWith(":proficiency")) return traced(name, [step("start", 2, 2, "Skill Proficiency", { kind: "rule", name: "Wizard", elementType: "Class" })]);
+    if (kind === "spell-attack" && name === "wizard")
+      return traced("Wizard spell attack", [step("start", 2, 2, "Proficiency bonus", calculated("proficiency")), step("add", 3, 5, "Intelligence modifier", calculated("intelligence:modifier"))]);
+    if (kind === "spell-save-dc" && name === "wizard")
+      return traced("Wizard spell save DC", [
+        step("start", 8, 8, "Base", fixed("Spell save DC")),
+        step("add", 2, 10, "Proficiency bonus", calculated("proficiency")),
+        step("add", 3, 13, "Intelligence modifier", calculated("intelligence:modifier")),
+      ]);
+    return answer("missing", null, `The character has no ${name || value}.`);
+  };
   return {
     get combat() {
       return combat;
@@ -252,6 +299,7 @@ export function fixture() {
         return combat;
       }
       if (suffix === "/defenses") return { resistances: [], immunities: [], vulnerabilities: [] };
+      if (suffix === "/calculation/trace") return calculationTrace(new URL(url).searchParams.get("value") ?? "");
       if (suffix.startsWith("/builder/session")) {
         if (suffix.endsWith("/save")) changed = false;
         return { active: true, since: "2026-01-01T12:00:00Z", changed };

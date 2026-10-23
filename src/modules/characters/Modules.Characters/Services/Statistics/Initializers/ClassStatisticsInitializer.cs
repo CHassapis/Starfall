@@ -1,4 +1,5 @@
 using Starlights.Modules.Characters.Domain.Classes;
+using Starlights.Modules.Characters.Services.Calculation;
 
 namespace Starlights.Modules.Characters.Services.Statistics.Initializers;
 
@@ -24,7 +25,8 @@ internal sealed class ClassStatisticsInitializer : IStatisticsCalculationInitial
                     group.Complete();
                 });
 
-                context.Statistics.WithGroupVariants(levelGroup.GroupName, classObj.Name);
+                context.Trace?.Value(levelGroup.GroupName, new RecordedValue(classObj.Level, classObj.Name, TraceSourceKind.Character));
+                context.Statistics.WithGroupVariants(levelGroup.GroupName, classObj.Name, context.Trace);
             }
         });
     }

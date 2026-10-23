@@ -1,0 +1,72 @@
+{
+  "id": "c05-wizard-2014",
+  "title": "2014 wizard with an item that sets Strength and bonuses that do not stack",
+  "edition": "2014",
+  "covers": ["spellcaster", "an item that sets an ability score (replacement)", "non-stacking item bonuses (same kind)", "stacking item bonus", "item bonus to one saving throw", "versatile weapon in two hands"],
+  "steps": [
+    { "abilities": { "Strength": 8, "Dexterity": 14, "Constitution": 13, "Intelligence": 15, "Wisdom": 12, "Charisma": 10 } },
+    { "pick": "Class", "option": "Ref Wizard" },
+    { "pick": "Species", "option": "Ref Swift Folk" },
+    { "pick": "Skill Proficiency (Ref Wizard)", "option": "Skill Proficiency (Arcana)" },
+    { "pick": "Skill Proficiency (Ref Wizard)", "option": "Skill Proficiency (History)" },
+    { "level": "Ref Wizard", "to": 3 },
+    { "inventory": [
+      { "id": "staff", "item": "ID_REF_WEAPON_QUARTERSTAFF", "equipped": "Two-Handed", "attack": 1 },
+      { "id": "gauntlets", "item": "ID_REF_MAGIC_GAUNTLETS_OF_MIGHT", "equipped": "Worn", "attuned": true },
+      { "id": "ring", "item": "ID_REF_MAGIC_RING_OF_WARDING", "equipped": "Worn", "attuned": true },
+      { "id": "amulet", "item": "ID_REF_MAGIC_AMULET_OF_WARDING", "equipped": "Worn", "attuned": true },
+      { "id": "cloak", "item": "ID_REF_MAGIC_CLOAK_OF_GUARDING", "equipped": "Worn" }
+    ] }
+  ],
+  "expected": {
+    "level": 3,
+    "proficiencyBonus": { "value": 2, "why": "level 3: +2" },
+    "abilities": {
+      "STR": { "score": 19, "modifier": 4, "why": "8 base, nothing added; Ref Gauntlets of Might set it to 19, which is higher, so 19" },
+      "DEX": { "score": 16, "modifier": 3, "why": "14 base + 2 Ref Swift Folk" },
+      "CON": { "score": 13, "modifier": 1, "why": "13 base" },
+      "INT": { "score": 16, "modifier": 3, "why": "15 base + 1 Ref Swift Folk" },
+      "WIS": { "score": 12, "modifier": 1, "why": "12 base" },
+      "CHA": { "score": 10, "modifier": 0, "why": "10 base" }
+    },
+    "saves": {
+      "STR": { "value": 4, "why": "Str +4" },
+      "DEX": { "value": 3, "why": "Dex +3" },
+      "CON": { "value": 1, "why": "Con +1" },
+      "INT": { "value": 5, "why": "Int +3 + proficiency 2" },
+      "WIS": { "value": 4, "why": "Wis +1 + proficiency 2 + 1 Ref Cloak of Guarding" },
+      "CHA": { "value": 0, "why": "Cha +0" }
+    },
+    "skills": {
+      "Arcana": { "value": 5, "why": "Int +3 + proficiency 2" },
+      "History": { "value": 5, "why": "Int +3 + proficiency 2" },
+      "Athletics": { "value": 4, "why": "Str +4 (set by the gauntlets)" },
+      "Perception": { "value": 1, "why": "Wis +1" }
+    },
+    "statistics": {
+      "ac:misc": { "value": 3, "why": "Ref Amulet of Warding +2 + Ref Cloak of Guarding +1; Ref Ring of Warding's +1 is the same kind (warding) and lower, so it does not count" },
+      "innate-speed": { "value": 35, "why": "Ref Swift Folk" }
+    },
+    "registered": ["ID_PROFICIENCY_WEAPON_PROFICIENCY_SIMPLE_WEAPONS"],
+    "classes": [{ "name": "Ref Wizard", "level": 3, "hitDie": 6 }],
+    "spellcasting": {
+      "Ref Wizard": { "ability": "Intelligence", "attack": 5, "dc": 13, "multiclass": "Full", "classLevel": 3, "edition": "2014", "slots": { "1": 4, "2": 2 },
+        "why": "attack 2 + 3; DC 8 + 2 + 3; slots 2 + 1 + 1 first level, 2 second level at level 3" }
+    },
+    "spellSlots": { "value": { "1": 4, "2": 2 }, "why": "one spellcasting: its own table" },
+    "armorClass": { "value": 16, "why": "10 + Dex +3 (no armor) + 3 other bonuses (ac:misc)" },
+    "hitPoints": { "value": 17, "why": "6 + 2 x 4 (d6 average) + Con +1 x 3 = 6 + 8 + 3" },
+    "initiative": { "value": 3, "why": "Dex +3" },
+    "speed": { "walk": 35, "why": "Ref Swift Folk" },
+    "passivePerception": { "value": 11, "why": "10 + Perception +1" },
+    "attacks": [
+      { "name": "Ref Quarterstaff", "attack": "+6 vs AC", "damage": "1d8+4 bludgeoning", "why": "Str +4 + proficiency 2; two hands: versatile d8 + Str 4" }
+    ],
+    "attacksPerAction": 1,
+    "traces": [
+      { "value": "ability-score:strength", "final": 19, "excluded": [], "operations": ["replace"] },
+      { "value": "statistic:ac:misc", "final": 3, "excluded": [{ "reason": "stacking", "value": 1 }] },
+      { "value": "saving-throw:wisdom", "final": 4, "excluded": [] }
+    ]
+  }
+}

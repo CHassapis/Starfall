@@ -1,0 +1,227 @@
+{
+  "contractVersion": 1,
+  "characterId": "01a16311-f0e2-7d48-8094-7371141cdee4",
+  "value": "spell-attack:ref-bard",
+  "status": "traced",
+  "trace": {
+    "key": "spell-attack:ref-bard",
+    "label": "Ref Bard spell attack",
+    "final": 6,
+    "steps": [
+      {
+        "operation": "start",
+        "value": 2,
+        "result": 2,
+        "label": "Proficiency bonus",
+        "source": {
+          "kind": "calculated",
+          "name": null,
+          "elementType": null,
+          "elementId": null,
+          "registrationId": null,
+          "ruleId": null,
+          "bonus": null,
+          "refers": "proficiency"
+        },
+        "input": {
+          "key": "proficiency-bonus",
+          "label": "Proficiency bonus",
+          "final": 2,
+          "steps": [
+            {
+              "operation": "start",
+              "value": 2,
+              "result": 2,
+              "label": "Proficiency Bonus",
+              "source": {
+                "kind": "rule",
+                "name": "Proficiency Bonus",
+                "elementType": "Rule",
+                "elementId": "01a16311-e3aa-7925-8800-157cba27b28a",
+                "registrationId": "01a16311-f639-77a9-b0a0-565b1031cecd",
+                "ruleId": "01a16311-e3ac-7f25-9ef6-ab8131a91145",
+                "bonus": "base",
+                "refers": null
+              },
+              "input": null
+            }
+          ],
+          "excluded": [],
+          "notes": []
+        }
+      },
+      {
+        "operation": "add",
+        "value": 3,
+        "result": 5,
+        "label": "Charisma modifier",
+        "source": {
+          "kind": "calculated",
+          "name": null,
+          "elementType": null,
+          "elementId": null,
+          "registrationId": null,
+          "ruleId": null,
+          "bonus": null,
+          "refers": "charisma:modifier"
+        },
+        "input": {
+          "key": "ability-modifier:charisma",
+          "label": "Charisma modifier",
+          "final": 3,
+          "steps": [
+            {
+              "operation": "start",
+              "value": 16,
+              "result": 16,
+              "label": "Charisma score",
+              "source": {
+                "kind": "calculated",
+                "name": null,
+                "elementType": null,
+                "elementId": null,
+                "registrationId": null,
+                "ruleId": null,
+                "bonus": null,
+                "refers": "charisma:score"
+              },
+              "input": {
+                "key": "ability-score:charisma",
+                "label": "Charisma score",
+                "final": 16,
+                "steps": [
+                  {
+                    "operation": "start",
+                    "value": 16,
+                    "result": 16,
+                    "label": "Base score",
+                    "source": {
+                      "kind": "user-supplied",
+                      "name": "Base score",
+                      "elementType": null,
+                      "elementId": null,
+                      "registrationId": null,
+                      "ruleId": null,
+                      "bonus": null,
+                      "refers": null
+                    },
+                    "input": null
+                  }
+                ],
+                "excluded": [],
+                "notes": []
+              }
+            },
+            {
+              "operation": "add",
+              "value": -10,
+              "result": 6,
+              "label": "Less 10",
+              "source": {
+                "kind": "fixed",
+                "name": "Ability modifier",
+                "elementType": null,
+                "elementId": null,
+                "registrationId": null,
+                "ruleId": null,
+                "bonus": null,
+                "refers": null
+              },
+              "input": null
+            },
+            {
+              "operation": "divide",
+              "value": 2,
+              "result": 3,
+              "label": "Half",
+              "source": {
+                "kind": "fixed",
+                "name": "Ability modifier",
+                "elementType": null,
+                "elementId": null,
+                "registrationId": null,
+                "ruleId": null,
+                "bonus": null,
+                "refers": null
+              },
+              "input": null
+            },
+            {
+              "operation": "round-down",
+              "value": 3,
+              "result": 3,
+              "label": "Rounded down",
+              "source": {
+                "kind": "fixed",
+                "name": "Rounding",
+                "elementType": null,
+                "elementId": null,
+                "registrationId": null,
+                "ruleId": null,
+                "bonus": null,
+                "refers": null
+              },
+              "input": null
+            }
+          ],
+          "excluded": [],
+          "notes": []
+        }
+      },
+      {
+        "operation": "add",
+        "value": 1,
+        "result": 6,
+        "label": "Spell attack bonuses",
+        "source": {
+          "kind": "calculated",
+          "name": null,
+          "elementType": null,
+          "elementId": null,
+          "registrationId": null,
+          "ruleId": null,
+          "bonus": null,
+          "refers": "spellcasting:attack"
+        },
+        "input": {
+          "key": "statistic:spellcasting:attack",
+          "label": "spellcasting:attack",
+          "final": 1,
+          "steps": [
+            {
+              "operation": "start",
+              "value": 1,
+              "result": 1,
+              "label": "Ref Rod of Focus",
+              "source": {
+                "kind": "rule",
+                "name": "Ref Rod of Focus",
+                "elementType": "Magic Item",
+                "elementId": "76b5faca-df66-5bed-9784-08b262193d26",
+                "registrationId": "01a16312-51be-7261-849d-68f7e7486f0d",
+                "ruleId": "31f9f575-49aa-5314-8b56-2d152ea1e67e",
+                "bonus": null,
+                "refers": null
+              },
+              "input": null
+            }
+          ],
+          "excluded": [],
+          "notes": []
+        }
+      }
+    ],
+    "excluded": [],
+    "notes": []
+  },
+  "content": {
+    "sources": [
+      "Starfall Reference"
+    ],
+    "editions": [
+      "2014"
+    ],
+    "fingerprint": "sha256:d41f103eb8b803c666c9e82c47237694"
+  },
+  "reason": null
+}

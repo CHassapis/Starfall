@@ -1,3 +1,5 @@
+using Starlights.Modules.Characters.Services.Calculation;
+
 namespace Starlights.Modules.Characters.Services.Statistics;
 
 
@@ -25,12 +27,14 @@ public static class StatisticValuesGroupCollectionExtensions
         return value;
     }
 
-    public static StatisticValuesGroupCollection WithGroupVariants(this StatisticValuesGroupCollection collection, string groupName, string? displayName = null)
+    public static StatisticValuesGroupCollection WithGroupVariants(this StatisticValuesGroupCollection collection, string groupName, string? displayName = null, StatisticsTraceRecorder? trace = null)
     {
         var originGroup = collection.GetGroup(groupName);
 
-        // remove existing variants
-        var variants = collection.Where(g => g.GroupName.StartsWith($"{originGroup.GroupName}:")).ToList();
+        // remove existing variants: the two halves only (other statistics can share the prefix: strength:score:set,
+        // the value an item sets Strength to, was removed with them once Strength had been worked out)
+        var variants = collection.Where(g => g.GroupName.Equals($"{originGroup.GroupName}:half", StringComparison.OrdinalIgnoreCase)
+            || g.GroupName.Equals($"{originGroup.GroupName}:half:up", StringComparison.OrdinalIgnoreCase)).ToList();
 
         foreach (var variant in variants)
         {
@@ -59,6 +63,8 @@ public static class StatisticValuesGroupCollectionExtensions
 
         h.Complete();
         hup.Complete();
+        trace?.Variant(h.GroupName, new RecordedVariant(originGroup.GroupName, originGroup.Sum(), RoundUp: false, h.Sum()));
+        trace?.Variant(hup.GroupName, new RecordedVariant(originGroup.GroupName, originGroup.Sum(), RoundUp: true, hup.Sum()));
 
         return collection;
     }

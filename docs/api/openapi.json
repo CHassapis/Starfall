@@ -3289,6 +3289,46 @@
         }
       }
     },
+    "/api/characters/{characterId}/calculation/trace": {
+      "get": {
+        "tags": [
+          "Characters"
+        ],
+        "operationId": "StarlightsModulesCharactersEndpointsCharactersCalculationGetCalculationTraceEndpoint",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CalculationTraceResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CalculationTraceError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CalculationTraceError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/characters/{characterId}/builder/session": {
       "get": {
         "tags": [
@@ -4582,6 +4622,148 @@
           },
           "changed": {
             "type": "boolean"
+          }
+        }
+      },
+      "CalculationTrace": {
+        "required": [
+          "key",
+          "label",
+          "final"
+        ],
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "final": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "steps": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TraceStep"
+            }
+          },
+          "excluded": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TraceExclusion"
+            }
+          },
+          "notes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "CalculationTraceContent": {
+        "required": [
+          "fingerprint"
+        ],
+        "type": "object",
+        "properties": {
+          "sources": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "editions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "fingerprint": {
+            "type": "string"
+          }
+        }
+      },
+      "CalculationTraceError": {
+        "required": [
+          "code",
+          "message"
+        ],
+        "type": "object",
+        "properties": {
+          "contractVersion": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      },
+      "CalculationTraceResponse": {
+        "required": [
+          "characterId",
+          "value",
+          "status"
+        ],
+        "type": "object",
+        "properties": {
+          "contractVersion": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "characterId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "value": {
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/TraceStatus"
+          },
+          "trace": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/CalculationTrace"
+              }
+            ]
+          },
+          "content": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/CalculationTraceContent"
+              }
+            ]
+          },
+          "reason": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -7901,6 +8083,26 @@
           },
           "pending": {
             "type": "boolean"
+          }
+        }
+      },
+      "GetCalculationTraceRequest": {
+        "type": "object",
+        "properties": {
+          "value": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "version": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
           }
         }
       },
@@ -11536,6 +11738,194 @@
             "items": {
               "$ref": "#/components/schemas/SubclassTarget"
             }
+          }
+        }
+      },
+      "TraceExclusion": {
+        "required": [
+          "reason",
+          "value",
+          "label"
+        ],
+        "type": "object",
+        "properties": {
+          "reason": {
+            "$ref": "#/components/schemas/TraceExclusionReason"
+          },
+          "value": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "label": {
+            "type": "string"
+          },
+          "source": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/TraceSource"
+              }
+            ]
+          },
+          "detail": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "TraceExclusionReason": {
+        "enum": [
+          "stacking",
+          "lower-alternative",
+          "set-not-higher",
+          "condition-not-met",
+          "unresolved-dependency"
+        ]
+      },
+      "TraceOperation": {
+        "enum": [
+          "start",
+          "add",
+          "replace",
+          "maximum",
+          "minimum",
+          "multiply",
+          "divide",
+          "round-down",
+          "round-up",
+          "round-toward-zero"
+        ]
+      },
+      "TraceSource": {
+        "required": [
+          "kind"
+        ],
+        "type": "object",
+        "properties": {
+          "kind": {
+            "$ref": "#/components/schemas/TraceSourceKind"
+          },
+          "name": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "elementType": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "elementId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "registrationId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "ruleId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "bonus": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "refers": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "TraceSourceKind": {
+        "enum": [
+          "rule",
+          "user-supplied",
+          "character",
+          "fixed",
+          "calculated"
+        ]
+      },
+      "TraceStatus": {
+        "enum": [
+          "traced",
+          "missing",
+          "unsupported"
+        ]
+      },
+      "TraceStep": {
+        "required": [
+          "operation",
+          "value",
+          "result",
+          "label"
+        ],
+        "type": "object",
+        "properties": {
+          "operation": {
+            "$ref": "#/components/schemas/TraceOperation"
+          },
+          "value": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "result": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "label": {
+            "type": "string"
+          },
+          "source": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/TraceSource"
+              }
+            ]
+          },
+          "input": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/CalculationTrace"
+              }
+            ]
           }
         }
       },

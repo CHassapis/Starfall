@@ -156,6 +156,23 @@ public sealed class AccessControlEndpointTests : IntegrationTestBase
     }
 
     [TestMethod]
+    public async Task LockedPlayersCharacter_ItsCalculationTrace_NeedsTheSameToken()
+    {
+        await _integration.InitializeElements();
+        var (playerName, ownToken) = await LockPlayerAsync("Test Player Gale", "synthetic-pass-7");
+        var (_, otherToken) = await LockPlayerAsync("Test Player Hollis", "synthetic-pass-8");
+        var adminToken = await UnlockAdminAsync(_integration.Options.MasterPassword);
+        var characterId = await CreateCharacterForAsync(playerName, ownToken);
+        const string trace = "/calculation/trace?value=skill:athletics";
+
+        (await GetCharacterAsync(characterId, path: trace)).Should().Be(HttpStatusCode.Unauthorized, "a locked player's character needs a token");
+        (await GetCharacterAsync(characterId, otherToken, path: trace)).Should().Be(HttpStatusCode.Unauthorized, "another player's token does not open it");
+        (await GetCharacterAsync(characterId, adminKey: _integration.Options.AdminKey, path: trace)).Should().Be(HttpStatusCode.Unauthorized, "the content admin key is not a player's token");
+        (await GetCharacterAsync(characterId, ownToken, path: trace)).Should().Be(HttpStatusCode.OK);
+        (await GetCharacterAsync(characterId, adminToken, path: trace)).Should().Be(HttpStatusCode.OK, "the admin token opens every player");
+    }
+
+    [TestMethod]
     public async Task CreatingACharacterForALockedPlayer_NeedsTheirToken()
     {
         await _integration.InitializeElements();
@@ -232,7 +249,7 @@ public sealed class AccessControlEndpointTests : IntegrationTestBase
         return (await response.Content.ReadFromJsonAsync<CreateCharacterResponse>(_integration.CancellationToken))!.Id;
     }
 
-    private async Task<HttpStatusCode> GetCharacterAsync(Guid characterId, string? playerToken = null, string? adminKey = null)
+    private async Task<HttpStatusCode> GetCharacterAsync(Guid characterId, string? playerToken = null, string? adminKey = null, string path = "")
     {
         using var client = _integration.CreateClient();
         if (playerToken is not null)
@@ -243,6 +260,6 @@ public sealed class AccessControlEndpointTests : IntegrationTestBase
         {
             client.DefaultRequestHeaders.Add(IntegrationHost.AdminKeyHeader, adminKey);
         }
-        return (await client.GetAsync($"/api/characters/{characterId}", _integration.CancellationToken)).StatusCode;
+        return (await client.GetAsync($"/api/characters/{characterId}{path}", _integration.CancellationToken)).StatusCode;
     }
 }

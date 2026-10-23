@@ -1,0 +1,74 @@
+{
+  "id": "c10-imported-aurora-rogue",
+  "title": "a rogue as the Aurora import builds it: rolled hit points and an attack written by hand",
+  "edition": "2014",
+  "covers": ["what the Aurora import produces from a character's attack list and rolled hit points (the file's parts are in the web suite)", "rolled hit points instead of the average", "an attack written by hand: shown as written, marked as entered by the user", "expertise from level 1"],
+  "steps": [
+    { "abilities": { "Strength": 10, "Dexterity": 15, "Constitution": 14, "Intelligence": 12, "Wisdom": 13, "Charisma": 8 } },
+    { "pick": "Class", "option": "Ref Rogue" },
+    { "pick": "Species", "option": "Ref Swift Folk" },
+    { "pick": "Background", "option": "Ref Acolyte" },
+    { "level": "Ref Rogue", "to": 2 },
+    { "pick": "Skill Proficiency (Ref Rogue)", "option": "Skill Proficiency (Stealth)" },
+    { "pick": "Skill Proficiency (Ref Rogue)", "option": "Skill Proficiency (Deception)" },
+    { "pick": "Skill Proficiency (Ref Rogue)", "option": "Skill Proficiency (Perception)" },
+    { "pick": "Skill Proficiency (Ref Rogue)", "option": "Skill Proficiency (Acrobatics)" },
+    { "pick": "Expertise (Ref Rogue)", "option": "Skill Expertise (Stealth)" },
+    { "pick": "Expertise (Ref Rogue)", "option": "Skill Expertise (Perception)" },
+    { "story": { "hitPointRolls": "8,7" } },
+    { "inventory": [
+      { "id": "4b0e7a10-5c1d-4f2e-9a3b-000000000c11", "item": "ID_REF_ARMOR_LEATHER", "equipped": "Armor" },
+      { "id": "4b0e7a10-5c1d-4f2e-9a3b-000000000c12", "item": "ID_REF_WEAPON_RAPIER", "equipped": "Main Hand", "attack": 1 }
+    ],
+      "customAttacks": [
+        { "id": "4b0e7a10-5c1d-4f2e-9a3b-000000000c10", "name": "Ref Hidden Blade", "range": "5 ft", "toHit": "+7 vs AC", "damage": "1d4+5 piercing", "ability": "Dexterity", "description": "a figure entered by hand in Aurora", "place": 2 }
+      ] }
+  ],
+  "expected": {
+    "level": 2,
+    "proficiencyBonus": { "value": 2, "why": "level 2: +2" },
+    "abilities": {
+      "STR": { "score": 10, "modifier": 0, "why": "10 base" },
+      "DEX": { "score": 17, "modifier": 3, "why": "15 base + 2 Ref Swift Folk" },
+      "CON": { "score": 14, "modifier": 2, "why": "14 base" },
+      "INT": { "score": 13, "modifier": 1, "why": "12 base + 1 Ref Swift Folk" },
+      "WIS": { "score": 13, "modifier": 1, "why": "13 base" },
+      "CHA": { "score": 8, "modifier": -1, "why": "8 base" }
+    },
+    "saves": {
+      "STR": { "value": 0, "why": "Str +0" },
+      "DEX": { "value": 5, "why": "Dex +3 + proficiency 2" },
+      "CON": { "value": 2, "why": "Con +2" },
+      "INT": { "value": 3, "why": "Int +1 + proficiency 2" },
+      "WIS": { "value": 1, "why": "Wis +1" },
+      "CHA": { "value": -1, "why": "Cha -1" }
+    },
+    "skills": {
+      "Stealth": { "value": 7, "why": "Dex +3 + proficiency 2 + expertise 2" },
+      "Perception": { "value": 5, "why": "Wis +1 + proficiency 2 + expertise 2" },
+      "Deception": { "value": 1, "why": "Cha -1 + proficiency 2" },
+      "Acrobatics": { "value": 5, "why": "Dex +3 + proficiency 2" },
+      "Insight": { "value": 3, "why": "Wis +1 + proficiency 2 (Ref Acolyte)" },
+      "Religion": { "value": 3, "why": "Int +1 + proficiency 2 (Ref Acolyte)" }
+    },
+    "statistics": {
+      "innate-speed": { "value": 35, "why": "Ref Swift Folk" }
+    },
+    "registered": ["ID_PROFICIENCY_WEAPON_PROFICIENCY_SIMPLE_WEAPONS", "ID_REF_PROFICIENCY_WEAPON_RAPIER", "ID_REF_EXPERTISE_SKILL_STEALTH", "ID_REF_EXPERTISE_SKILL_PERCEPTION"],
+    "classes": [{ "name": "Ref Rogue", "level": 2, "hitDie": 8 }],
+    "armorClass": { "value": 14, "why": "11 Ref Leather Armor + Dex +3" },
+    "hitPoints": { "value": 19, "why": "rolled 8 (level 1) + 7 (level 2) + Con +2 x 2 = 19; the average would give 8 + 5 + 4 = 17" },
+    "initiative": { "value": 3, "why": "Dex +3" },
+    "speed": { "walk": 35, "why": "Ref Swift Folk" },
+    "passivePerception": { "value": 15, "why": "10 + Perception +5" },
+    "attacks": [
+      { "name": "Ref Rapier", "attack": "+5 vs AC", "damage": "1d8+3 piercing", "why": "finesse Dex +3 + proficiency 2" },
+      { "name": "Ref Hidden Blade", "attack": "+7 vs AC", "damage": "1d4+5 piercing", "custom": true, "why": "written by hand: shown exactly as written, not worked out" }
+    ],
+    "attacksPerAction": 1,
+    "traces": [
+      { "value": "hit-points", "final": 19, "excluded": [] },
+      { "value": "attack:4b0e7a10-5c1d-4f2e-9a3b-000000000c10:to-hit", "final": 7, "excluded": [], "userSupplied": true }
+    ]
+  }
+}

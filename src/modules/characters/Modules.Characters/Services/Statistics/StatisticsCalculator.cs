@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using Starlights.Modules.Characters.Domain;
 using Starlights.Modules.Characters.Domain.Characters;
 using Starlights.Modules.Characters.Domain.Registrations;
+using Starlights.Modules.Characters.Services.Calculation;
 
 namespace Starlights.Modules.Characters.Services.Statistics;
 
@@ -25,14 +26,25 @@ public class StatisticsCalculator
         _postProcessors = postProcessors;
     }
 
-    public StatisticsCalculationResult Calculate(Character character, List<Registration> registrations)
+    /// <summary>
+    /// Works out the character's statistics from its registrations' rules. With a <paramref name="trace"/> it also
+    /// writes down how (see <see cref="StatisticsTraceRecorder"/>); the figures are the same either way.
+    /// </summary>
+    public StatisticsCalculationResult Calculate(Character character, List<Registration> registrations, StatisticsTraceRecorder? trace = null)
     {
         using var activity = CharactersInstrumentation.StartActivity("Statistics Calculator", a => a.AddTag("registrations", registrations.Count));
         var sw = Stopwatch.StartNew();
-        var context = new StatisticsProcessorContext(character, registrations);
+        var context = new StatisticsProcessorContext(character, registrations) { Trace = trace };
 
-        // get all statistic rules from registrations
-        var characterStatisticRules = registrations.SelectMany(r => r.StatisticRules).ToList();
+        // get all statistic rules from registrations, in a fixed order: the registrations as they were made, each
+        // one's rules as they were made (ids are time-ordered). The database returns them in no particular order,
+        // and the order decides which of two equal bonuses of the same kind counts, and so the name the sheet shows
+        // for it (two unarmored defenses of the same armor class)
+        var characterStatisticRules = registrations
+            .SelectMany(r => r.StatisticRules)
+            .OrderBy(r => r.ParentRegistrationId.Value.ToString("N"), StringComparer.Ordinal)
+            .ThenBy(r => r.Id.Value.ToString("N"), StringComparer.Ordinal)
+            .ToList();
 
         // seed the character level statistic for use in other calculations
         foreach (var processor in _initializers)
@@ -63,6 +75,8 @@ public class StatisticsCalculator
 
                 // add the value to the statistic group
                 group.WithValue(determinedValue, determinedName);
+                context.Trace?.Value(rule.Name, new RecordedValue(determinedValue, determinedName, TraceSourceKind.Rule, rule,
+                    Before: determinedValue != originalValue ? originalValue : null));
             });
         }
 
@@ -119,10 +133,12 @@ public class StatisticsCalculator
             else if (pendingGroup.Dependencies.Count > 0 && pendingGroup.Dependencies.All(d => absent.Contains(Normalize(d)) || !IsDefined(d)))
             {
                 absent.Add(key);
+                context.Trace?.Absent(key, [.. pendingGroup.Dependencies]);
                 _logger.LogInformation("[StatisticsCalculator] Statistic group '{GroupName}' left out for Character '{CharacterName}': nothing defines {Dependencies}", key, character.Name, string.Join(", ", pendingGroup.Dependencies));
             }
             else
             {
+                context.Trace?.Unresolved(key, [.. pendingGroup.Dependencies]);
                 // add warning to context
                 _logger.LogError("[StatisticsCalculator] Statistic group '{GroupName}' could not be finalized due to unresolved dependencies: {Dependencies}", key, string.Join(", ", pendingGroup.Dependencies));
             }
@@ -262,8 +278,8 @@ public class StatisticsCalculator
         // process rules without stacking bonus
         foreach (var rule in rulesWithoutBonus)
         {
-            var determinedValue = rule.HasReferenceValue() ? context.Statistics.GetValue(rule.Value) : rule.GetValue();
-            determinedValue = EnforceRuleConstraints(determinedValue, rule);
+            var rawValue = rule.HasReferenceValue() ? context.Statistics.GetValue(rule.Value) : rule.GetValue();
+            var determinedValue = EnforceRuleConstraints(rawValue, rule);
 
             var determinedName = rule.FriendlyName ?? rule.Name;
 
@@ -274,6 +290,8 @@ public class StatisticsCalculator
             }
 
             statisticsGroup.AddValue(determinedName, determinedValue, determinedName, rule.AssociatedStatisticRuleId.Value);
+            context.Trace?.Value(group.Name, new RecordedValue(determinedValue, determinedName, TraceSourceKind.Rule, rule,
+                Before: determinedValue != rawValue ? rawValue : null));
 
             pendingRules.Remove(rule);
 
@@ -291,11 +309,13 @@ public class StatisticsCalculator
             // find highest value in the group
             var highestValue = int.MinValue;
             RegistrationStatisticRule? highestRule = null;
+            var considered = context.Trace is null ? null : new List<(RegistrationStatisticRule Rule, int Raw, int Value)>();
 
             foreach (var rule in bonusGroup)
             {
-                var determinedValue = rule.HasReferenceValue() ? context.Statistics.GetValue(rule.Value) : rule.GetValue();
-                determinedValue = EnforceRuleConstraints(determinedValue, rule);
+                var rawValue = rule.HasReferenceValue() ? context.Statistics.GetValue(rule.Value) : rule.GetValue();
+                var determinedValue = EnforceRuleConstraints(rawValue, rule);
+                considered?.Add((rule, rawValue, determinedValue));
 
                 if (determinedValue > highestValue)
                 {
@@ -316,6 +336,19 @@ public class StatisticsCalculator
                 }
 
                 statisticsGroup.AddValue(determinedName, highestValue, determinedName, highestRule.AssociatedStatisticRuleId.Value);
+                if (context.Trace is { } trace && considered is not null)
+                {
+                    // the one that counted, then the others of the same kind, which did not
+                    foreach (var (rule, raw, value) in considered.OrderBy(c => c.Rule != highestRule))
+                    {
+                        var label = context.RegistrationLookup.TryGetValue(rule.ParentRegistrationId, out var name) ? name : rule.FriendlyName ?? rule.Name;
+                        trace.Value(group.Name, rule == highestRule
+                            ? new RecordedValue(value, determinedName, TraceSourceKind.Rule, rule, Before: value != raw ? raw : null)
+                            : new RecordedValue(value, label, TraceSourceKind.Rule, rule, Before: value != raw ? raw : null, Included: false,
+                                Reason: TraceExclusionReason.Stacking,
+                                Detail: $"{determinedName} {(highestValue >= 0 ? "+" : "")}{highestValue} counts instead: bonuses of the same kind ({bonusGroup.Key}) count once"));
+                    }
+                }
 
                 pendingRules.Remove(highestRule);
 

@@ -68,6 +68,7 @@ All take `{characterId}` (a GUID from the list). Read-only unless marked.
 | `GET …/combat` / `PUT` | play state: damage taken, temporary HP, hit dice spent, conditions, exhaustion, death saves, uses of features and items |
 | `GET …/story` | the story fields (appearance, backstory, …) |
 | `GET …/export` | the whole character as one Starfall character file (see [character portability](../character-portability.md)) |
+| `GET …/calculation/trace?value=<key>` | how one figure was worked out, step by step (see [Calculation traces](#calculation-traces)) |
 
 Content the sheet needs alongside: `GET /api/elements/items` (every item's figures: weapon dice and properties, armor
 class, by element id; default values are left out of the JSON) and `GET /api/elements/spell-index` (every spell).
@@ -104,6 +105,67 @@ sets `edited: true` on manual edits and reordered rows, which then take preceden
 are remembered in inventory `removedAttackIds`, so reimports do not resurrect them. They stay through builder saves, level-ups,
 trades, character export and import.
 
+## Calculation traces
+
+`GET /api/characters/{id}/calculation/trace?value=<key>&version=1` answers how one of the character's figures was
+worked out, from the same calculation the other endpoints run (with a recorder), so the trace ends at the figure
+they give. Read only: it never saves the character. Same access as the character's other endpoints (a locked
+player's character needs `X-Player-Token`).
+
+| Key | Value |
+|---|---|
+| `ability-score:<ability>`, `ability-modifier:<ability>`, `saving-throw:<ability>` | `strength` … `charisma` |
+| `proficiency-bonus`, `skill:<skill>` | `skill:sleight-of-hand` (the name in lower case, spaces as `-`) |
+| `spell-attack:<spellcasting>`, `spell-save-dc:<spellcasting>` | `spell-attack:wizard` (the spellcasting's name as a slug) |
+| `statistic:<name>` | any statistic of `GET …/statistics`: `statistic:ac:misc`, `statistic:innate-speed` |
+
+The web app works out armor class, hit points, initiative, speeds, passive Perception and attacks itself (from these
+figures and the inventory; see [Attacks](#attacks)). For their keys (`armor-class`, `hit-points`, `initiative`,
+`passive-perception`, `speed:walk|fly|climb|swim`, `attack:<inventory or custom attack id>:to-hit|damage`) the
+server answers `"status": "unsupported"` rather than a trace of its own; the web app traces them in the same shape
+(`src/frontend/apps/builder-app/src/lib/sheet-figures.ts`), and its "Why this value?" buttons on the interactive
+sheet show both.
+
+The answer:
+
+- `status`: `traced`, `missing` (a value the server traces, but this character has no such spellcasting or
+  statistic; `reason` says which) or `unsupported` (above).
+- `trace`: `key`, `label`, `final` (the figure), `steps`, `excluded`, `notes`. Replaying the steps from the first
+  gives `final`. Each step has an `operation` (`start`, `add`, `replace`, `maximum`, `minimum`, `multiply`, `divide`,
+  `round-down`, `round-up`, `round-toward-zero`), its operand `value`, the running `result`, a `label`, a `source`
+  and, when the operand is a value of its own, its trace as `input`.
+- `source.kind`: `rule` (a statistic rule of one of the character's elements: element, registration, rule ids and
+  Aurora's `bonus` name), `user-supplied` (what the player entered: a base score, rolled hit points, an attack written
+  by hand; shown as entered, not worked out), `character` (a level), `fixed` (a number of the rules, the 8 of a save
+  DC), `calculated` (another value; `refers` names its statistic).
+- `excluded`: what was weighed and left out, with a `reason`: `stacking` (a bonus of the same kind counts once),
+  `lower-alternative`, `set-not-higher` (an item setting a score no higher than it is), `condition-not-met`,
+  `unresolved-dependency` (it refers to a statistic nothing gives). Only what the calculation actually weighed is
+  listed: requirements, levels and "while wearing" conditions are applied before the figures are calculated, so the
+  trace shows their result (a rule that is not there).
+- `content`: the `sources` and rules `editions` of the elements in the trace, and a `fingerprint` of their rules
+  (the same content gives the same fingerprint on any server; ids are left out).
+
+Errors are `{ contractVersion, code, message }`: `400 invalid-argument` (no key, or not a key above),
+`400 unsupported-version`, `404 not-found`. The contract is version 1 (`contractVersion` in every answer). A change
+that is not backwards compatible raises it, and a request for a version the server does not have is refused with
+`unsupported-version`; new fields can appear without a new version. TypeScript types generated from `openapi.json`:
+`src/frontend/apps/builder-app/src/lib/contracts/calculation-trace.ts`.
+
+**Worked example** ([`examples/calculation-trace.json`](examples/calculation-trace.json), a real answer for the
+reference bard c04 of `src/frontend/apps/builder-app/reference-characters`): spell attack +6.
+
+```bash
+curl -s 'http://localhost:8093/api/characters/<id>/calculation/trace?value=spell-attack:ref-bard&version=1' \
+  | jq '.trace.steps[] | [.operation, .value, .result, .label]'
+```
+
+| Step | Operand | Result | Source, and its own trace (`input`) |
+|---|---|---|---|
+| start: Proficiency bonus | 2 | 2 | `proficiency-bonus`: the Proficiency Bonus rule, +2 at level 2 |
+| add: Charisma modifier | 3 | 5 | `ability-modifier:charisma`: score 16, add −10, divide by 2, round down |
+| add: Spell attack bonuses | 1 | 6 | `statistic:spellcasting:attack`: Ref Rod of Focus +1 |
+
 ## Writing
 
 Writes replace the whole document: read it, change it, send it all back.
@@ -132,6 +194,9 @@ curl -s http://localhost:8093/api/characters/<id>/inventory | jq '.customAttacks
 TOKEN=$(curl -s -X POST http://localhost:8093/api/characters/players/unlock \
   -H 'Content-Type: application/json' -d '{"name":"Ilyra","password":"…"}' | jq -r .token)
 curl -s -H "X-Player-Token: $TOKEN" http://localhost:8093/api/characters/<id>/inventory
+
+# how a figure was worked out
+curl -s 'http://localhost:8093/api/characters/<id>/calculation/trace?value=skill:stealth' | jq '.trace'
 ```
 
 ```bash
@@ -149,8 +214,10 @@ Generated clients: `npx openapi-typescript docs/api/openapi.json -o starlights.d
   "character sheet" endpoint would remove this; it does not exist yet.
 - **Access is all or nothing per player.** No read-only tokens, no scopes; anyone who can reach the server can read
   an unlocked player's characters and change them.
-- **Query parameters** declared with FastEndpoints' `[QueryParam]` (like `player` on the list) are not in
-  `openapi.json`; this guide names them.
+- **Query parameters** declared with FastEndpoints' `[QueryParam]` (like `player` on the list, `value` and `version`
+  of a calculation trace) are not in `openapi.json`; this guide names them.
+- **Calculation traces** cover what the server calculates; the sheet's own figures are traced by the web app, not
+  the API (see [Calculation traces](#calculation-traces)).
 - **Content administration** (`/api/elements` writes, `/api/admin`) is in the description for completeness but needs
   the admin key. Some of those endpoints answer `201 Created` where the description says `200`.
 - The API has no versioning beyond this repository: a new Starfall version can add fields. Ignore fields you don't

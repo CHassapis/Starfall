@@ -1,4 +1,5 @@
 using Starlights.Modules.Characters.Domain.Abilities;
+using Starlights.Modules.Characters.Services.Calculation;
 
 namespace Starlights.Modules.Characters.Services.Statistics.Processors;
 
@@ -73,6 +74,17 @@ internal sealed class AbilitiesGroupProcessor : IStatisticGroupProcessor
 
             var newAdditionalScore = calculated - score.BaseScore;
             component.UpdateAbilityAdditionalScore(score.Id, newAdditionalScore);
+            context.Trace?.Ability(new RecordedAbility(
+                score.Name,
+                groupKey,
+                score.BaseScore,
+                bonuses,
+                abilityGroup?.IsCompleted == true,
+                CompletedSum(context, $"{groupKey}:max") ?? 20,
+                CompletedSum(context, $"{groupKey}:max:extra") ?? 0,
+                context.Statistics.TryGetGroup($"{groupKey}:score:set", out var recordedSet) && recordedSet.IsCompleted && recordedSet.HasStatisticValues() ? recordedSet.GetStatisticValues().Max(v => v.Value) : null,
+                score.CalculatedScore,
+                score.CalculatedModifier));
 
 
             var scoreGroup = context.Statistics.WithGroup($"{groupKey}:score", group =>
@@ -87,8 +99,8 @@ internal sealed class AbilitiesGroupProcessor : IStatisticGroupProcessor
                 group.Complete();
             });
 
-            context.Statistics.WithGroupVariants(scoreGroup.GroupName, score.Name);
-            context.Statistics.WithGroupVariants(modifierGroup.GroupName, score.Name);
+            context.Statistics.WithGroupVariants(scoreGroup.GroupName, score.Name, context.Trace);
+            context.Statistics.WithGroupVariants(modifierGroup.GroupName, score.Name, context.Trace);
         }
 
     }

@@ -1,0 +1,21 @@
+{
+  "$comment": "The reference items as the item catalog (GET /api/elements/items) must describe them, written by hand from content/reference-core.xml: only what the calculations read (armor, weapon, magic bonus and attunement, base item, rules). The server test checks the catalog agrees; the web tests use it as the catalog. Ids are the Aurora ids (the web tests do not need the element GUIDs).",
+  "items": [
+    {"id": "ID_REF_ARMOR_LEATHER", "auroraId": "ID_REF_ARMOR_LEATHER", "name": "Ref Leather Armor", "elementType": "Armor", "armor": {"kind": "Light", "armorClass": 11}},
+    {"id": "ID_REF_ARMOR_BREASTPLATE", "auroraId": "ID_REF_ARMOR_BREASTPLATE", "name": "Ref Breastplate", "elementType": "Armor", "armor": {"kind": "Medium", "armorClass": 14}},
+    {"id": "ID_REF_ARMOR_CHAIN_MAIL", "auroraId": "ID_REF_ARMOR_CHAIN_MAIL", "name": "Ref Chain Mail", "elementType": "Armor", "armor": {"kind": "Heavy", "armorClass": 16, "strengthRequirement": 13, "stealthDisadvantage": true}},
+    {"id": "ID_REF_ARMOR_SHIELD", "auroraId": "ID_REF_ARMOR_SHIELD", "name": "Ref Shield", "elementType": "Armor", "armor": {"kind": "Shield", "armorClass": 2}},
+    {"id": "ID_REF_WEAPON_LONGSWORD", "auroraId": "ID_REF_WEAPON_LONGSWORD", "name": "Ref Longsword", "elementType": "Weapon", "weapon": {"damage": "1d8", "damageType": "slashing", "versatile": "1d10", "properties": ["Versatile"], "martial": true}},
+    {"id": "ID_REF_WEAPON_RAPIER", "auroraId": "ID_REF_WEAPON_RAPIER", "name": "Ref Rapier", "elementType": "Weapon", "weapon": {"damage": "1d8", "damageType": "piercing", "properties": ["Finesse"], "martial": true, "proficiencyId": "ID_REF_PROFICIENCY_WEAPON_RAPIER"}},
+    {"id": "ID_REF_WEAPON_DAGGER", "auroraId": "ID_REF_WEAPON_DAGGER", "name": "Ref Dagger", "elementType": "Weapon", "weapon": {"damage": "1d4", "damageType": "piercing", "range": "20/60", "properties": ["Finesse", "Light", "Thrown"]}},
+    {"id": "ID_REF_WEAPON_QUARTERSTAFF", "auroraId": "ID_REF_WEAPON_QUARTERSTAFF", "name": "Ref Quarterstaff", "elementType": "Weapon", "weapon": {"damage": "1d6", "damageType": "bludgeoning", "versatile": "1d8", "properties": ["Versatile"]}},
+    {"id": "ID_REF_WEAPON_SHORTBOW", "auroraId": "ID_REF_WEAPON_SHORTBOW", "name": "Ref Shortbow", "elementType": "Weapon", "weapon": {"damage": "1d6", "damageType": "piercing", "range": "80/320", "properties": ["Two-Handed"], "ranged": true}},
+    {"id": "ID_REF_MAGIC_LONGSWORD_1", "auroraId": "ID_REF_MAGIC_LONGSWORD_1", "name": "Ref Longsword +1", "elementType": "Magic Item", "magic": {"rarity": "Uncommon", "enhancement": 1}, "base": {"kind": "Weapon", "rule": "Ref Longsword"}},
+    {"id": "ID_REF_MAGIC_BREASTPLATE_1", "auroraId": "ID_REF_MAGIC_BREASTPLATE_1", "name": "Ref Breastplate +1", "elementType": "Magic Item", "magic": {"rarity": "Rare", "enhancement": 1}, "base": {"kind": "Armor", "rule": "Ref Breastplate"}, "hasRules": true},
+    {"id": "ID_REF_MAGIC_RING_OF_WARDING", "auroraId": "ID_REF_MAGIC_RING_OF_WARDING", "name": "Ref Ring of Warding", "elementType": "Magic Item", "magic": {"rarity": "Uncommon", "attunement": true}, "hasRules": true},
+    {"id": "ID_REF_MAGIC_AMULET_OF_WARDING", "auroraId": "ID_REF_MAGIC_AMULET_OF_WARDING", "name": "Ref Amulet of Warding", "elementType": "Magic Item", "magic": {"rarity": "Rare", "attunement": true}, "hasRules": true},
+    {"id": "ID_REF_MAGIC_CLOAK_OF_GUARDING", "auroraId": "ID_REF_MAGIC_CLOAK_OF_GUARDING", "name": "Ref Cloak of Guarding", "elementType": "Magic Item", "magic": {"rarity": "Uncommon"}, "slot": "cloak", "hasRules": true},
+    {"id": "ID_REF_MAGIC_GAUNTLETS_OF_MIGHT", "auroraId": "ID_REF_MAGIC_GAUNTLETS_OF_MIGHT", "name": "Ref Gauntlets of Might", "elementType": "Magic Item", "magic": {"rarity": "Uncommon", "attunement": true}, "hasRules": true},
+    {"id": "ID_REF_MAGIC_ROD_OF_FOCUS", "auroraId": "ID_REF_MAGIC_ROD_OF_FOCUS", "name": "Ref Rod of Focus", "elementType": "Magic Item", "magic": {"rarity": "Uncommon", "attunement": true}, "hasRules": true}
+  ]
+}

@@ -185,6 +185,27 @@ public sealed class StatisticsCalculatorTests
         character.GetRequiredComponent<AbilitiesComponent>().AbilityScores.Single().CalculatedScore.Should().Be(expected);
     }
 
+    [TestMethod]
+    public void Calculate_WithAScoreSetByAnItem_KeepsTheStatisticOfTheSetValue()
+    {
+        // Arrange: making Strength's halves removed every statistic named strength:score:…, the item's
+        // strength:score:set among them, once Strength had been worked out
+        var character = CreateTestCharacter();
+        AddAbilityScore(character, "Strength", "STR", 8);
+        var registrations = new List<Registration>
+        {
+            CreateRegistrationWithStatisticRule(character, "Gauntlets of Ogre Power", "Magic Item", "strength:score:set", "19"),
+        };
+
+        // Act
+        var result = _calculator.Calculate(character, registrations);
+
+        // Assert
+        result.Statistics.GetValue("strength:score:set").Should().Be(19);
+        result.Statistics.GetValue("strength:score:half").Should().Be(9);
+        result.Statistics.GetValue("strength:score:half:up").Should().Be(10);
+    }
+
     #region Character Level Tests
 
     [TestMethod]
@@ -499,6 +520,8 @@ public sealed class StatisticsCalculatorTests
         var character = CreateTestCharacter();
         var registration1 = CreateRegistrationWithStatisticRule(character, "Item A", "Item", "armor-class", "+2",
             rule => rule.UpdateStackingBonus("enhancement"));
+        // the registration made first counts on a tie (ids are time-ordered to the millisecond)
+        Thread.Sleep(2);
         var registration2 = CreateRegistrationWithStatisticRule(character, "Item B", "Item", "armor-class", "+2",
             rule => rule.UpdateStackingBonus("enhancement"));
         var registrations = new List<Registration> { registration1, registration2 };
@@ -510,6 +533,28 @@ public sealed class StatisticsCalculatorTests
         result.Statistics.GetValue("armor-class").Should().Be(2);
         var displayName = result.Statistics.GetGroup("armor-class").GetStatisticValues().Single().DisplayName;
         displayName.Should().Contain("Item A");
+    }
+
+    [TestMethod]
+    public void Calculate_WithEqualStackingBonuses_TheRegistrationMadeFirstCounts_InWhateverOrderTheyAreLoaded()
+    {
+        // Arrange: SQL Server returns a character's registrations in no set order; which of two equal bonuses of
+        // the same kind counted (and so the name the sheet shows for the value) used to follow that order
+        var character = CreateTestCharacter();
+        var first = CreateRegistrationWithStatisticRule(character, "Unarmored Defense", "Class Feature", "ac:calculation", "13",
+            rule => rule.UpdateStackingBonus("calculation"));
+        Thread.Sleep(2);
+        var second = CreateRegistrationWithStatisticRule(character, "Natural Armor", "Species Feature", "ac:calculation", "13",
+            rule => rule.UpdateStackingBonus("calculation"));
+
+        foreach (var registrations in new[] { new List<Registration> { first, second }, [second, first] })
+        {
+            // Act
+            var result = _calculator.Calculate(character, registrations);
+
+            // Assert
+            result.Statistics.GetGroup("ac:calculation").GetStatisticValues().Should().ContainSingle().Which.Source.Should().Be("Unarmored Defense");
+        }
     }
 
     [TestMethod]

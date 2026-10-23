@@ -1,0 +1,41 @@
+/// <reference types="node" />
+import { readFileSync, writeFileSync } from "node:fs";
+import { describe, expect, it } from "vitest";
+import { checkShape, contractTypes, type OpenApiDocument } from "./openapi-contract";
+import { CALCULATION_TRACE_HEADER, CALCULATION_TRACE_SCHEMAS } from "./calculation-trace-schemas";
+
+// the API description the server's tests write (OpenApiDocumentTests), from the repository root
+const description = new URL("../../../../../../../docs/api/openapi.json", import.meta.url);
+const document = JSON.parse(readFileSync(description, "utf8")) as OpenApiDocument;
+const example = new URL("../../../../../../../docs/api/examples/calculation-trace.json", import.meta.url);
+
+describe("the calculation trace contract", () => {
+  it("is the types the API description gives (regenerate with STARLIGHTS_UPDATE_CONTRACTS=1)", () => {
+    const file = new URL("./calculation-trace.ts", import.meta.url);
+    const generated = contractTypes(document, CALCULATION_TRACE_SCHEMAS, CALCULATION_TRACE_HEADER);
+    if (process.env.STARLIGHTS_UPDATE_CONTRACTS === "1") writeFileSync(file, generated);
+    expect(readFileSync(file, "utf8")).toBe(generated);
+  });
+
+  it("names the operations, reasons, kinds and outcomes the server does", () => {
+    const values = (name: string) => document.components.schemas[name].enum;
+    expect(values("TraceOperation")).toEqual(["start", "add", "replace", "maximum", "minimum", "multiply", "divide", "round-down", "round-up", "round-toward-zero"]);
+    expect(values("TraceExclusionReason")).toEqual(["stacking", "lower-alternative", "set-not-higher", "condition-not-met", "unresolved-dependency"]);
+    expect(values("TraceSourceKind")).toEqual(["rule", "user-supplied", "character", "fixed", "calculated"]);
+    expect(values("TraceStatus")).toEqual(["traced", "missing", "unsupported"]);
+  });
+
+  it("the worked example in the API docs has the contract's shape", () => {
+    const response = JSON.parse(readFileSync(example, "utf8"));
+    expect(checkShape(document, "CalculationTraceResponse", response)).toEqual([]);
+  });
+
+  it("the shape check finds what does not fit", () => {
+    const trace = { key: "armor-class", label: "Armor class", final: 15, steps: [{ operation: "plus", value: 1, result: 1, label: "x" }], extra: true };
+    expect(checkShape(document, "CalculationTrace", trace)).toEqual([
+      'CalculationTrace.steps[0].operation: "plus" is not one of start, add, replace, maximum, minimum, multiply, divide, round-down, round-up, round-toward-zero',
+      "CalculationTrace.extra: not in the contract",
+    ]);
+    expect(checkShape(document, "CalculationTraceResponse", { characterId: "x", value: "skill:stealth" })).toEqual(["CalculationTraceResponse.status: missing"]);
+  });
+});

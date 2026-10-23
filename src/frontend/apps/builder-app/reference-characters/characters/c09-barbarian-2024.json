@@ -1,0 +1,92 @@
+{
+  "id": "c09-barbarian-2024",
+  "title": "2024 barbarian 5 with two unarmored defenses competing",
+  "edition": "2024",
+  "covers": ["two unarmored defenses: the higher one counts", "an unarmored defense that allows a shield", "a tie between two defenses", "Extra Attack", "speed bonus unless in heavy armor", "level 5 proficiency", "d12 hit points"],
+  "steps": [
+    { "abilities": { "Strength": 15, "Dexterity": 14, "Constitution": 18, "Intelligence": 8, "Wisdom": 12, "Charisma": 10 } },
+    { "pick": "Class", "option": "Ref Barbarian" },
+    { "pick": "Species", "option": "Ref Stoneborn" },
+    { "pick": "Background", "option": "Ref Laborer" },
+    { "pick": "Skill Proficiency (Ref Barbarian)", "option": "Skill Proficiency (Intimidation)" },
+    { "pick": "Skill Proficiency (Ref Barbarian)", "option": "Skill Proficiency (Perception)" },
+    { "level": "Ref Barbarian", "to": 5 },
+    { "inventory": [
+      { "id": "shield", "item": "ID_REF_ARMOR_SHIELD", "equipped": "Off Hand" },
+      { "id": "longsword", "item": "ID_REF_WEAPON_LONGSWORD", "equipped": "Main Hand", "attack": 1 }
+    ] }
+  ],
+  "expected": {
+    "level": 5,
+    "proficiencyBonus": { "value": 3, "why": "level 5: +3" },
+    "abilities": {
+      "STR": { "score": 17, "modifier": 3, "why": "15 base + 2 Ref Laborer" },
+      "DEX": { "score": 14, "modifier": 2, "why": "14 base" },
+      "CON": { "score": 19, "modifier": 4, "why": "18 base + 1 Ref Laborer" },
+      "INT": { "score": 8, "modifier": -1, "why": "8 base" },
+      "WIS": { "score": 12, "modifier": 1, "why": "12 base" },
+      "CHA": { "score": 10, "modifier": 0, "why": "10 base" }
+    },
+    "saves": {
+      "STR": { "value": 6, "why": "Str +3 + proficiency 3" },
+      "DEX": { "value": 2, "why": "Dex +2" },
+      "CON": { "value": 7, "why": "Con +4 + proficiency 3" },
+      "INT": { "value": -1, "why": "Int -1" },
+      "WIS": { "value": 1, "why": "Wis +1" },
+      "CHA": { "value": 0, "why": "Cha +0" }
+    },
+    "skills": {
+      "Athletics": { "value": 6, "why": "Str +3 + proficiency 3 (Ref Laborer)" },
+      "Survival": { "value": 4, "why": "Wis +1 + proficiency 3 (Ref Laborer)" },
+      "Intimidation": { "value": 3, "why": "Cha +0 + proficiency 3" },
+      "Perception": { "value": 4, "why": "Wis +1 + proficiency 3" }
+    },
+    "statistics": {
+      "ac:ref-barbarian-defense": { "value": 16, "why": "10 + Dex 2 + Con 4" },
+      "ac:ref-stoneborn-hide": { "value": 15, "why": "13 + Dex 2" },
+      "ac:calculation": { "value": 16, "why": "both are calculations (the same kind of bonus); the higher, 16, counts" },
+      "innate-speed": { "value": 30, "why": "Ref Stoneborn" },
+      "innate-speed:misc": { "value": 10, "why": "Ref Fast Movement (level 5), no heavy armor" }
+    },
+    "registered": ["ID_PROFICIENCY_WEAPON_PROFICIENCY_SIMPLE_WEAPONS", "ID_PROFICIENCY_WEAPON_PROFICIENCY_MARTIAL_WEAPONS", "ID_REF24_CLASS_FEATURE_BARBARIAN_EXTRA_ATTACK"],
+    "classes": [{ "name": "Ref Barbarian", "level": 5, "hitDie": 12 }],
+    "armorClass": { "value": 18, "why": "Ref Barbarian Defense 16 + 2 Ref Shield" },
+    "hitPoints": { "value": 60, "why": "12 + 4 x 7 (d12 average) + Con +4 x 5 = 12 + 28 + 20" },
+    "initiative": { "value": 2, "why": "Dex +2" },
+    "speed": { "walk": 40, "why": "30 Ref Stoneborn + 10 Ref Fast Movement" },
+    "passivePerception": { "value": 14, "why": "10 + Perception +4" },
+    "attacks": [
+      { "name": "Ref Longsword", "attack": "+6 vs AC", "damage": "1d8+3 slashing", "why": "Str +3 + proficiency 3 (martial weapons); one hand (a shield in the other)" }
+    ],
+    "attacksPerAction": 2,
+    "traces": [
+      { "value": "statistic:ac:calculation", "final": 16, "excluded": [{ "reason": "stacking", "value": 15 }] },
+      { "value": "proficiency-bonus", "final": 3, "excluded": [{ "reason": "stacking", "value": 2 }], "why": "level 5: +3; the level 1 rule (+2) is the same kind of bonus and lower (as c01 at level 5)" }
+    ]
+  },
+  "scenarios": [
+    {
+      "id": "tie",
+      "title": "Constitution 16 base: both defenses come to 15",
+      "steps": [{ "abilities": { "Constitution": 16 } }],
+      "expected": {
+        "abilities": {
+          "CON": { "score": 17, "modifier": 3, "why": "16 base + 1 Ref Laborer" }
+        },
+        "saves": {
+          "CON": { "value": 6, "why": "Con +3 + proficiency 3" }
+        },
+        "statistics": {
+          "ac:ref-barbarian-defense": { "value": 15, "why": "10 + Dex 2 + Con 3" },
+          "ac:ref-stoneborn-hide": { "value": 15, "why": "13 + Dex 2" },
+          "ac:calculation": { "value": 15, "why": "a tie: the value is 15 whichever counts" }
+        },
+        "armorClass": { "value": 17, "why": "15 + 2 Ref Shield" },
+        "hitPoints": { "value": 55, "why": "12 + 28 + Con +3 x 5" },
+        "traces": [
+          { "value": "statistic:ac:calculation", "final": 15, "excluded": [{ "reason": "stacking", "value": 15 }] }
+        ]
+      }
+    }
+  ]
+}

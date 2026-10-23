@@ -3,13 +3,13 @@ import { apiClient } from "@/lib/api-client";
 import type { BuilderChoice } from "@/lib/api/builder";
 import { useItemCatalog } from "@/lib/api/items";
 import { useSpellIndex, type SpellFigures } from "@/lib/api/magic";
-import { attackModes, generatedNameOf, isActive, isCarried, resolve, type AttackMode, type CharacterFacts, type Inventory, type Resolved } from "@/lib/rules/items";
+import { generatedNameOf, isActive, isCarried, resolve, type AttackMode, type Inventory, type Resolved } from "@/lib/rules/items";
 import { itemSpells, type ItemSpellRef } from "@/lib/rules/item-spells";
 import { EMPTY_MAGIC, type KnownSpell, type MagicState, type Spellcasting } from "@/lib/rules/magic";
 import { proficiencyLevel, summarizeProficiencies, type Proficiencies, type ProficiencyRegistration } from "@/lib/rules/proficiencies";
+import type { CalculationTrace } from "@/lib/contracts/calculation-trace";
+import { sheetFigures, spellcastingFigures, traceSheetFigure, type SheetFigureInput } from "@/lib/sheet-figures";
 import {
-  sheetArmor,
-  sheetAttackLines,
   sheetEquipment,
   sheetItemCards,
   sheetSpellPages,
@@ -163,6 +163,8 @@ export interface SheetData {
   story: Record<string, string>;
 }
 
+export { hitPointsFor, hitPointsForClasses, speedsOf } from "@/lib/sheet-figures";
+
 const ABILITY_NAMES = ["Strength", "Dexterity", "Constitution", "Intelligence", "Wisdom", "Charisma"];
 
 /** A magic item or consumable the character carries. */
@@ -238,25 +240,6 @@ function sheetItems(inventory: Inventory, catalog: Parameters<typeof resolve>[1]
     }));
 }
 
-/**
- * Speeds as Aurora adds them up: the base ("innate speed", or "speed" for a creature form) plus the bonuses that
- * depend on what is worn ("innate speed:misc": Fast Movement, Unarmored Movement) and other bonuses ("speed:misc":
- * Mobile). Climbing, swimming and flying the same, each only when the character has that speed at all.
- */
-export function speedsOf(stat: (name: string) => number | undefined): { walk: number; fly: number; climb: number; swim: number } {
-  const plus = (...names: string[]) => names.reduce((n, name) => n + (stat(name) ?? 0), 0);
-  const other = (kind: "fly" | "climb" | "swim") => {
-    const base = Math.max(stat(`innate-speed:${kind}`) ?? 0, stat(`speed:${kind}`) ?? 0);
-    return base > 0 ? base + plus(`innate-speed:${kind}:misc`, `speed:${kind}:misc`) : 0;
-  };
-  return {
-    walk: (stat("innate-speed") ?? stat("speed") ?? 30) + plus("innate-speed:misc", "speed:misc"),
-    fly: other("fly"),
-    climb: other("climb"),
-    swim: other("swim"),
-  };
-}
-
 const FEATURE_TYPES = new Set(["Class Feature", "Archetype Feature", "Feat", "Feat Feature"]);
 
 function flatten(registrations: Registration[]): Registration[] {
@@ -271,32 +254,6 @@ function proficiencyOf(bonus: Bonus, proficiencyBonus: number): Proficiency {
 // "Armor Proficiency (Light Armor)" -> "Light Armor"
 const inner = (name: string) => name.match(/\(([^)]+)\)\s*$/)?.[1] ?? name;
 const unique = (list: string[]) => [...new Set(list)].sort((a, b) => a.localeCompare(b));
-
-/**
- * Maximum hit points: the hit die at level 1, then Aurora's rolls for the levels after when the character came from
- * Aurora with them (its level elements' rndhp, kept by the importer), otherwise the fixed average; the Constitution
- * modifier each level, and bonuses such as Draconic Resilience (the "hp" statistic).
- */
-export function hitPointsFor(hitDie: number, level: number, con: number, bonus: number, rolls?: string): number {
-  const rolled = (rolls ?? "").split(",").map((r) => Number(r.trim())).filter((n) => n > 0);
-  const dice = rolled.length >= level ? rolled.slice(0, level).reduce((a, b) => a + b, 0) : hitDie + (level - 1) * (hitDie / 2 + 1);
-  return dice + level * con + bonus;
-}
-
-/**
- * Maximum hit points of a multiclass character: the first class's die at its first level, then each level's fixed
- * average of its own class's die (or Aurora's rolls, when there is one for every level), the Constitution modifier
- * each level, and bonuses.
- */
-export function hitPointsForClasses(classes: { level: number; die: number }[], con: number, bonus: number, rolls?: string): number {
-  const level = classes.reduce((n, c) => n + c.level, 0);
-  const rolled = (rolls ?? "").split(",").map((r) => Number(r.trim())).filter((n) => n > 0);
-  const dice =
-    rolled.length >= level
-      ? rolled.slice(0, level).reduce((a, b) => a + b, 0)
-      : classes.reduce((n, c, i) => n + (i === 0 ? c.die + (c.level - 1) * (c.die / 2 + 1) : c.level * (c.die / 2 + 1)), 0);
-  return dice + level * con + bonus;
-}
 
 /**
  * Each skill's and saving throw's proficiency: from what the character has and from its proficiency statistics, not
@@ -351,7 +308,13 @@ export const spellLevelLine = (s: SheetSpell) =>
  * hit points (hit die from the class's Aurora setters), unarmored AC, initiative and passive perception; the
  * {{statistic}} placeholders in Aurora's sheet texts are filled from the character's statistics.
  */
-export function useSheetData(characterId: string): { data?: SheetData; isLoading: boolean; error: Error | null } {
+export function useSheetData(characterId: string): {
+  data?: SheetData;
+  isLoading: boolean;
+  error: Error | null;
+  /** how one of the figures the web app works out was worked out ("armor-class", "attack:<id>:to-hit"), on demand */
+  explain?: (key: string) => CalculationTrace | undefined;
+} {
   const base = `/api/characters/${characterId}`;
   const useSheetQuery = <T,>(key: string, url: string) => useQuery({ queryKey: ["sheet", characterId, key], queryFn: () => apiClient.get<T>(url) });
   const details = useSheetQuery<{ character: { name: string; level: number; portraitUrl?: string; playerName?: string } }>("details", base);
@@ -431,6 +394,8 @@ export function useSheetData(characterId: string): { data?: SheetData; isLoading
       const name = entry!.spellcasting!.name;
       const slug = statisticName(name);
       const castingMod = mod(entry!.spellcasting!.ability.slice(0, 3).toUpperCase());
+      // the server's figures: they include item bonuses ("<class>:spellcasting:attack", "spellcasting:dc")
+      const figures = spellcastingFigures(name, castingMod, proficiencyBonus, casting.data.casters);
       const slots: Record<number, number> = {};
       for (let l = 1; l <= 9; l++) {
         const n = stat(`${slug}:spellcasting:slots:${l}`);
@@ -441,8 +406,8 @@ export function useSheetData(characterId: string): { data?: SheetData; isLoading
         casting: {
           name,
           ability: entry!.spellcasting!.ability,
-          attackBonus: proficiencyBonus + castingMod,
-          saveDc: 8 + proficiencyBonus + castingMod,
+          attackBonus: figures.attackBonus,
+          saveDc: figures.saveDc,
           prepare: stat(`${slug}:spellcasting:prepare`) ?? null,
           slots,
           spells: [] as SheetSpell[],
@@ -537,7 +502,6 @@ export function useSheetData(characterId: string): { data?: SheetData; isLoading
   const owned = summarizeProficiencies(registrations.data?.registrations ?? []);
   const marked = withProficiencies(skills.data.skills, saves.data.savingThrows, registrations.data?.registrations, stat, proficiencyBonus);
   const skillList = marked.skills;
-  const perception = skillList.find((s) => s.name === "Perception")?.calculatedBonus ?? mod("WIS");
 
   const primary = classes.data?.classes.find((c) => c.isPrimary) ?? classes.data?.classes[0];
   const classEntry = entries.get(all.find((r) => r.registrationId === primary?.registrationId)?.associatedElementId ?? "");
@@ -551,7 +515,6 @@ export function useSheetData(characterId: string): { data?: SheetData; isLoading
       return { name: c.name, level: c.level, die: Number(entry?.setters.hd?.replace(/\D/g, "")) || hitDie || 8 };
     });
   const multiclass = classDice.length > 1;
-  const con = mod("CON");
 
   const proficiencies = { armor: [] as string[], weapons: [] as string[], tools: [] as string[] };
   // "Martial Weapons" grants every martial weapon; the sheet lists the group, like Aurora
@@ -568,20 +531,6 @@ export function useSheetData(characterId: string): { data?: SheetData; isLoading
   const dedupe = (list: SheetFeature[]) => list.filter((f) => (seen.has(f.title) ? false : (seen.add(f.title), true)));
   const background = all.find((r) => r.type === "Background Feature");
 
-  // equipment and attacks, by the same rules as the Equipment tab
-  const statistics2 = stats.data.statistics;
-  const facts: CharacterFacts & { strength: number } = {
-    mod: (a: string) => mod(a),
-    proficiencyBonus,
-    stat: (n: string) => stat(n),
-    statNames: statistics2.map((x) => x.groupName),
-    statSource: (n: string) => {
-      const value = statistics2.find((x) => x.groupName === n)?.values?.[0];
-      return value?.displayName ?? value?.source ?? undefined;
-    },
-    has: new Set(batch.data.entries.map((e) => e.auroraId).filter((id): id is string => !!id)),
-    strength: abilities.data.abilityScores.find((a) => a.abbreviation === "STR")?.calculatedScore ?? 10,
-  };
   const levelless = (name: string) => name.replace(/^Level \d+:\s*/, "");
   const slug = (name: string) => levelless(name).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
   const ancestors = (r: Registration) => {
@@ -599,7 +548,23 @@ export function useSheetData(characterId: string): { data?: SheetData; isLoading
   const itemTexts = new Map<string, ItemText>(
     [...batch.data.entries, ...(texts.data?.entries ?? [])].map((e) => [e.id, { name: e.name, description: e.description, source: e.source, setters: e.setters }]),
   );
-  const armor = sheetArmor(inventory.data, catalog.data.byId, facts, featureOf);
+  // armor class, hit points, initiative, speeds, passive Perception and attacks, by the same rules as the Equipment tab
+  const figureInput: SheetFigureInput = {
+    abilities: abilities.data.abilityScores,
+    statistics: stats.data.statistics,
+    has: new Set(batch.data.entries.map((e) => e.auroraId).filter((id): id is string => !!id)),
+    registrationNames: all.map((r) => r.name),
+    inventory: inventory.data,
+    catalog: catalog.data.byId,
+    perception: skillList.find((s) => s.name === "Perception")?.calculatedBonus,
+    level,
+    hitDie,
+    classes: classDice,
+    hitPointRolls: story.data?.fields.hitPointRolls,
+    featureOf,
+  };
+  const figures = sheetFigures(figureInput);
+  const facts = figures.facts;
 
   // spellcasting pages from the spellcasting worked out by the server
   const magicState = { ...EMPTY_MAGIC, ...(magic.data ?? {}) };
@@ -647,6 +612,7 @@ export function useSheetData(characterId: string): { data?: SheetData; isLoading
   return {
     isLoading: false,
     error: null,
+    explain: (key: string) => traceSheetFigure(figureInput, key),
     data: {
       name: details.data.character.name,
       player: details.data.character.playerName ?? "",
@@ -661,14 +627,14 @@ export function useSheetData(characterId: string): { data?: SheetData; isLoading
       abilities: abilities.data.abilityScores,
       saves: marked.saves,
       skills: skillList,
-      passivePerception: 10 + perception,
-      initiative: mod("DEX") + (stat("initiative") ?? 0),
-      speeds: speedsOf(stat),
+      passivePerception: figures.passivePerception,
+      initiative: figures.initiative,
+      speeds: figures.speeds,
       vision: unique(all.filter((r) => r.type === "Vision").map((r) => r.name)),
-      armorClass: armor.total,
-      armor,
-      attacks: sheetAttackLines(inventory.data, catalog.data.byId, facts),
-      attackModes: attackModes(inventory.data, catalog.data.byId, facts),
+      armorClass: figures.armorClass,
+      armor: figures.armor,
+      attacks: figures.attacks,
+      attackModes: figures.attackModes,
       equipment: sheetEquipment(inventory.data, catalog.data.byId, facts, itemTexts),
       itemCards: sheetItemCards(inventory.data, catalog.data.byId, itemTexts),
       items: sheetItems(inventory.data, catalog.data.byId, itemTexts).map((i) => ({
@@ -683,15 +649,7 @@ export function useSheetData(characterId: string): { data?: SheetData; isLoading
       cardSpells,
       proficiencySummary: owned,
       proficienciesInOrder: summarizeProficiencies(registrations.data?.registrations ?? [], "gained"),
-      attacksPerAction: Math.max(
-        1,
-        ...all.map((r) => {
-          const name = r.name.replace(/^Level \d+:\s*/, "");
-          if (/^Extra Attack$/i.test(name)) return 2;
-          const n = name.match(/^Extra Attack \((\d)\)$/i)?.[1] ?? { Two: "2", Three: "3" }[name.match(/^(Two|Three) Extra Attacks$/i)?.[1] ?? ""];
-          return n ? 1 + Number(n) : 1;
-        }),
-      ),
+      attacksPerAction: figures.attacksPerAction,
       defenses: defenses.data ?? { resistances: [], immunities: [], vulnerabilities: [] },
       hitDice: multiclass ? classDice.map((c) => `${c.level}d${c.die}`).join(" + ") : hitDie ? `${level}d${hitDie}` : "",
       hitDie,
@@ -699,11 +657,7 @@ export function useSheetData(characterId: string): { data?: SheetData; isLoading
         .map(([sides, count]) => ({ sides, count }))
         .sort((a, b) => b.sides - a.sides),
       edition: /\((2024|2025)\)/.test(classEntry?.source ?? "") ? "2024" : "2014",
-      hitPoints: multiclass
-        ? hitPointsForClasses(classDice, con, stat("hp") ?? 0, story.data?.fields.hitPointRolls)
-        : hitDie
-          ? hitPointsFor(hitDie, level, con, stat("hp") ?? 0, story.data?.fields.hitPointRolls)
-          : null,
+      hitPoints: figures.hitPoints,
       proficiencies: { armor: unique(proficiencies.armor), weapons: unique(proficiencies.weapons), tools: unique(proficiencies.tools) },
       languages: unique(all.filter((r) => r.type === "Language").map((r) => r.name)),
       speciesTraits: dedupe(

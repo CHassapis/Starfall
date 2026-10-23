@@ -1,0 +1,91 @@
+{
+  "id": "c08-monk-2024",
+  "title": "2024 monk: an unarmored defense and movement that need no shield",
+  "edition": "2024",
+  "covers": ["unarmored defense of a class (10 + Dex + Wis)", "a condition on what is worn (no armor, no shield)", "speed bonus while unarmored", "background ability increases", "picking up a shield turns the defense and the speed bonus off"],
+  "steps": [
+    { "abilities": { "Strength": 10, "Dexterity": 15, "Constitution": 13, "Intelligence": 8, "Wisdom": 14, "Charisma": 10 } },
+    { "pick": "Class", "option": "Ref Monk" },
+    { "pick": "Species", "option": "Ref Wanderer" },
+    { "pick": "Background", "option": "Ref Sentinel" },
+    { "pick": "Skill Proficiency (Ref Monk)", "option": "Skill Proficiency (Acrobatics)" },
+    { "pick": "Skill Proficiency (Ref Monk)", "option": "Skill Proficiency (Stealth)" },
+    { "level": "Ref Monk", "to": 2 },
+    { "inventory": [
+      { "id": "staff", "item": "ID_REF_WEAPON_QUARTERSTAFF", "equipped": "Main Hand", "attack": 1 }
+    ] }
+  ],
+  "expected": {
+    "level": 2,
+    "proficiencyBonus": { "value": 2, "why": "level 2: +2" },
+    "abilities": {
+      "STR": { "score": 10, "modifier": 0, "why": "10 base" },
+      "DEX": { "score": 16, "modifier": 3, "why": "15 base + 1 Ref Sentinel" },
+      "CON": { "score": 13, "modifier": 1, "why": "13 base" },
+      "INT": { "score": 8, "modifier": -1, "why": "8 base" },
+      "WIS": { "score": 16, "modifier": 3, "why": "14 base + 2 Ref Sentinel" },
+      "CHA": { "score": 10, "modifier": 0, "why": "10 base" }
+    },
+    "saves": {
+      "STR": { "value": 2, "why": "Str +0 + proficiency 2 (Ref Monk)" },
+      "DEX": { "value": 5, "why": "Dex +3 + proficiency 2 (Ref Monk)" },
+      "CON": { "value": 1, "why": "Con +1" },
+      "INT": { "value": -1, "why": "Int -1" },
+      "WIS": { "value": 3, "why": "Wis +3" },
+      "CHA": { "value": 0, "why": "Cha +0" }
+    },
+    "skills": {
+      "Acrobatics": { "value": 5, "why": "Dex +3 + proficiency 2" },
+      "Stealth": { "value": 5, "why": "Dex +3 + proficiency 2" },
+      "Insight": { "value": 5, "why": "Wis +3 + proficiency 2 (Ref Sentinel)" },
+      "Perception": { "value": 5, "why": "Wis +3 + proficiency 2 (Ref Sentinel)" }
+    },
+    "statistics": {
+      "ac:ref-monk-defense": { "value": 16, "why": "10 + Dex 3 + Wis 3" },
+      "ac:calculation": { "value": 16, "why": "Ref Monk Defense; no armor and no shield, so it applies" },
+      "innate-speed": { "value": 30, "why": "Ref Wanderer" },
+      "innate-speed:misc": { "value": 10, "why": "Ref Monk Movement (level 2); no armor and no shield" },
+      "initiative": { "value": 2, "why": "Ref Alertness: + proficiency bonus (2)" }
+    },
+    "registered": ["ID_PROFICIENCY_WEAPON_PROFICIENCY_SIMPLE_WEAPONS"],
+    "notRegistered": ["ID_PROFICIENCY_WEAPON_PROFICIENCY_MARTIAL_WEAPONS"],
+    "classes": [{ "name": "Ref Monk", "level": 2, "hitDie": 8 }],
+    "armorClass": { "value": 16, "why": "Ref Monk Defense 10 + Dex 3 + Wis 3, better than 10 + Dex 3 = 13" },
+    "hitPoints": { "value": 15, "why": "8 + 1 x 5 (d8 average) + Con +1 x 2 = 8 + 5 + 2" },
+    "initiative": { "value": 5, "why": "Dex +3 + 2 Ref Alertness" },
+    "speed": { "walk": 40, "why": "30 Ref Wanderer + 10 Ref Monk Movement" },
+    "passivePerception": { "value": 15, "why": "10 + Perception +5" },
+    "attacks": [
+      { "name": "Ref Quarterstaff", "attack": "+2 vs AC", "damage": "1d6+0 bludgeoning", "why": "Str +0 + proficiency 2 (simple weapons); one hand: d6; the reference monk has no martial arts feature" }
+    ],
+    "attacksPerAction": 1,
+    "traces": [
+      { "value": "statistic:ac:calculation", "final": 16, "excluded": [] },
+      { "value": "armor-class", "final": 16, "excluded": [{ "reason": "lower-alternative", "value": 13 }], "why": "10 + Dex 3 = 13 without the defense; the server's ac:calculation names the same defense at the same 16, so it is no alternative of its own" },
+      { "value": "speed:walk", "final": 40, "excluded": [] }
+    ]
+  },
+  "scenarios": [
+    {
+      "id": "shield",
+      "title": "a shield in the other hand",
+      "steps": [{ "inventory": [
+        { "id": "staff", "item": "ID_REF_WEAPON_QUARTERSTAFF", "equipped": "Main Hand", "attack": 1 },
+        { "id": "shield", "item": "ID_REF_ARMOR_SHIELD", "equipped": "Off Hand" }
+      ] }],
+      "expected": {
+        "statistics": {
+          "ac:ref-monk-defense": { "value": 16, "why": "the figure itself has no condition; only its use as the armor class has" },
+          "innate-speed": { "value": 30, "why": "Ref Wanderer" },
+          "initiative": { "value": 2, "why": "Ref Alertness" }
+        },
+        "absentStatistics": ["ac:calculation", "innate-speed:misc"],
+        "armorClass": { "value": 15, "why": "10 + Dex 3 + 2 Ref Shield; Ref Monk Defense needs no shield" },
+        "speed": { "walk": 30, "why": "Ref Monk Movement needs no shield" },
+        "traces": [
+          { "value": "armor-class", "final": 15, "excluded": [{ "reason": "condition-not-met", "value": 16 }] }
+        ]
+      }
+    }
+  ]
+}
