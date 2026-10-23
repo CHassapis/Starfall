@@ -3,6 +3,7 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import type { HomebrewSpell } from "@/lib/api/homebrew";
 import type { CombatState, CustomResource, ResourceEffect, ResourceMax } from "@/lib/rules/battle";
+import type { FavoriteRoll } from "@/lib/rules/favorite-rolls";
 import { checkShape, contractTypes, type OpenApiDocument } from "./openapi-contract";
 import { CALCULATION_TRACE_HEADER, CALCULATION_TRACE_SCHEMAS } from "./calculation-trace-schemas";
 import { HOMEBREW_PREVIEW_HEADER, HOMEBREW_PREVIEW_SCHEMAS } from "./homebrew-preview-schemas";
@@ -122,5 +123,15 @@ describe("the player's own resources", () => {
     expect(keys("CharacterResource")).toEqual([...resource].sort());
     expect(keys("CharacterResourceMax")).toEqual([...max].sort());
     expect(keys("CharacterResourceEffect")).toEqual([...effect].sort());
+  });
+});
+
+describe("favorite rolls", () => {
+  it("are the fields the API description gives the combat state (FavoriteRoll is written by hand)", () => {
+    const schemas = document.components.schemas;
+    const keys = (name: string) => Object.keys(schemas[name].properties ?? {}).sort();
+    expect(keys("CharacterCombat")).toEqual(expect.arrayContaining(["favoriteRolls" satisfies keyof CombatState]));
+    const roll = ["id", "name", "formula"] as const satisfies readonly (keyof FavoriteRoll)[];
+    expect(keys("CharacterFavoriteRoll")).toEqual([...roll].sort());
   });
 });

@@ -11,6 +11,7 @@ import {
   BrainIcon,
   CoffeeIcon,
   CrosshairIcon,
+  DicesIcon,
   FileTextIcon,
   FootprintsIcon,
   HeartIcon,
@@ -49,6 +50,7 @@ import { useLoreLookup } from "@/lib/lore/lookup";
 import { attackRoll, failChanceWith, inOrder, MARKS, targetSave, type AttackRoll, type Combatant, type FightCondition } from "@/lib/rules/encounter";
 import { WhyValue } from "@/components/why-value";
 import { TraceRecorder } from "@/lib/rules/trace";
+import { removeFavoriteRoll, saveFavoriteRoll } from "@/lib/rules/favorite-rolls";
 import {
   average,
   averageGreatWeapon,
@@ -97,6 +99,7 @@ import { cn } from "@/lib/utils";
 import { BattleBackdrop } from "./battle-index";
 import { AddResource, ResourceControls } from "./custom-resources";
 import { Companions } from "./companions";
+import { FavoriteRolls } from "./favorite-rolls";
 import { Items, ItemUses } from "./items";
 
 import { useUnits } from "@/components/units-provider";
@@ -438,6 +441,11 @@ export function CharacterBattlePage() {
         toggle={toggleMark}
         busy={markFight.isPending}
       />
+      {combat.data && (
+        <Panel title="Favorite rolls" icon={<DicesIcon className="size-4 text-primary-text" />}>
+          <FavoriteRolls rolls={state.favoriteRolls ?? []} onSave={(r) => updateCombat((c) => saveFavoriteRoll(c, r))} onRemove={(rollId) => updateCombat((c) => removeFavoriteRoll(c, rollId))} />
+        </Panel>
+      )}
       <Choices ctx={ctx} speed={speed} />
       <RestDialog kind={rest} onClose={() => setRest(null)} ctx={ctx} totalHitDice={data.level} />
     </Shell>

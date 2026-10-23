@@ -65,7 +65,7 @@ All take `{characterId}` (a GUID from the list). Read-only unless marked.
 | `GET …/inventory` / `PUT` | items, coins, treasure, **custom attacks** (below) |
 | `GET …/spellcasting` | each spellcasting: ability, attack bonus, save DC, slots, the spells it knows and prepares |
 | `GET …/magic` / `PUT` | the player's choices: prepared spells, spent slots |
-| `GET …/combat` / `PUT` | play state: damage taken, temporary HP, hit dice spent, conditions, exhaustion, death saves, uses of features and items, the player's own resources (see [Resources of the player's own](#resources-of-the-players-own)) |
+| `GET …/combat` / `PUT` | play state: damage taken, temporary HP, hit dice spent, conditions, exhaustion, death saves, uses of features and items, the player's own resources (see [Resources of the player's own](#resources-of-the-players-own)), favorite rolls (see [Favorite rolls](#favorite-rolls)) |
 | `GET …/story` | the story fields (appearance, backstory, …) |
 | `GET …/export` | the whole character as one Starfall character file (see [character portability](../character-portability.md)) |
 | `GET …/calculation/trace?value=<key>` | how one figure was worked out, step by step (see [Calculation traces](#calculation-traces)) |
@@ -127,6 +127,22 @@ does not know them cannot delete them. `[]` removes them all. A `PUT` with value
 `400` and changes nothing. Access is the character's (a locked player's character needs `X-Player-Token`).
 
 Usage lines of the content that say "Day" or "Dawn" (`1/Day`) are recharged at dawn by the web app, not by a rest.
+
+## Favorite rolls
+
+`favoriteRolls` in the combat state (`GET`/`PUT …/combat`) are dice a player names to roll with one press, on the
+sheet and in the battle view. Each has:
+
+- `id`: stable for its life (letters, digits, `-`, `_`; at most 64).
+- `name` (1–60, not only spaces).
+- `formula` (1–100): dice as the web app's dice reader reads them: terms of dice (`2d6`, `d20`; at most 100 dice of
+  1 to 1000 sides) and whole numbers, joined by `+` and `-` (`−` and `–` count as `-`), spaces ignored:
+  `"2d8+3"`, `"4d6 + 1d4 - 1"`. Not a damage type (`"2d6 fire"`) or other arithmetic (`"1d6*2"`). The cases both
+  sides are tested against are in `src/frontend/apps/builder-app/src/lib/lore/dice-cases.json`.
+
+At most 40, in the order the player keeps them. As with resources, `favoriteRolls` may be left out of a `PUT` (or sent
+as `null`) and the stored ones are kept; `[]` removes them all; a `PUT` with one out of bounds is refused with `400`
+and changes nothing. The web app rolls them; the server only keeps them. Access is the character's.
 
 ## Calculation traces
 
@@ -322,6 +338,8 @@ Generated clients: `npx openapi-typescript docs/api/openapi.json -o starlights.d
   effect, a condition) are only in its description.
 - **Resources of the player's own** are counted by the web app; the server keeps them and checks their bounds, but
   does not work out their maximum. An item's charges still come back by hand, not at dawn.
+- **Favorite rolls** are rolled by the web app. The server checks that they are dice but does not roll them, and a roll's
+  result is not saved anywhere.
 - **Content administration** (`/api/elements` writes, `/api/admin`) is in the description for completeness but needs
   the admin key. Some of those endpoints answer `201 Created` where the description says `200`.
 - The API has no versioning beyond this repository: a new Starfall version can add fields. Ignore fields you don't

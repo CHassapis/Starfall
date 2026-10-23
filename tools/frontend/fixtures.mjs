@@ -1,15 +1,21 @@
-/** Synthetic, in-memory API fixture. No books, real characters, tokens or production requests. */
+/**
+ * Synthetic, in-memory API fixture. No books, real characters, tokens or production requests. `large`: a character
+ * with many spells and features, all with long made-up texts (for measuring the PDF sheet); the default is unchanged.
+ */
 export const CHARACTER_ID = "11111111-1111-4111-8111-111111111111";
-export function fixture() {
+// made-up filler text: a long description of nothing in particular
+const filler = (name, sentences) =>
+  Array.from({ length: sentences }, (_, i) => `${name} hums with made-up energy number ${i + 1}, and the testing light bends around it in a pattern no book describes.`).join(" ");
+export function fixture({ large = false } = {}) {
   const base = `/api/characters/${CHARACTER_ID}`;
   const sources = ["Player's Handbook", "Player's Handbook (2024)", "Test Supplement (2024)"];
-  const spells = Array.from({ length: 12 }, (_, i) => ({
+  const spells = Array.from({ length: large ? 72 : 12 }, (_, i) => ({
     id: `spell-${i}`,
     elementId: `spell-${i}`,
     auroraId: `ID_WOTC_PHB24_SPELL_TEST_${i}`,
-    name: ["Arc Light", "Beacon", "Circle of Shelter", "Drift", "Echo", "Feather", "Glimmer", "Haven", "Illumination", "Jolt", "Kindle", "Lantern"][i],
+    name: ["Arc Light", "Beacon", "Circle of Shelter", "Drift", "Echo", "Feather", "Glimmer", "Haven", "Illumination", "Jolt", "Kindle", "Lantern"][i] ?? `Test Spell ${i + 1}`,
     source: sources[1],
-    level: i < 2 ? 0 : 1,
+    level: i < 2 ? 0 : large ? 1 + (i % 9) : 1,
     school: i % 2 ? "Evocation" : "Abjuration",
     castingTime: "1 action",
     range: "60 feet",
@@ -65,7 +71,7 @@ export function fixture() {
     pact: null,
     prepareMax: 4,
     spells: spells
-      .slice(0, 6)
+      .slice(0, large ? spells.length : 6)
       .map((s) => ({
         registrationId: `reg-${s.id}`,
         elementId: s.id,
@@ -146,9 +152,25 @@ export function fixture() {
       stats: [],
       sheet: null,
       spellcasting: null,
-      description: `<p>${s.name} is a synthetic testing spell. No copyrighted rules text.</p>`,
+      description: large
+        ? `<p>${s.name} is a synthetic testing spell. ${filler(s.name, 8)}</p><p>${filler(s.name, 6)}</p>`
+        : `<p>${s.name} is a synthetic testing spell. No copyrighted rules text.</p>`,
     })),
   ];
+  // the large character's features: long texts that run over several pages
+  const features = large
+    ? Array.from({ length: 40 }, (_, i) => ({
+        id: `feature-${i}`,
+        name: `Test Feature ${i + 1}`,
+        type: "Class Feature",
+        source: sources[1],
+        setters: {},
+        sheet: { display: true, alt: null, action: null, usage: i % 4 === 0 ? "2/Long Rest" : null, descriptions: [] },
+        spellcasting: null,
+        description: `<p>${filler(`Test Feature ${i + 1}`, 10)}</p>`,
+      }))
+    : [];
+  entries.push(...features);
   entries.push({ ...entries.find(e => e.id === "spell-2"), id: "spell-reprint", source: sources[2] });
   const registrations = [
     {
@@ -164,9 +186,10 @@ export function fixture() {
           type: "Class Feature",
           associatedElementId: "casting",
           children: spells
-            .slice(0, 6)
+            .slice(0, large ? spells.length : 6)
             .map((s) => ({ registrationId: `reg-${s.id}`, parentRegistrationId: "casting-reg", name: s.name, type: "Spell", associatedElementId: s.id })),
         },
+        ...features.map((f) => ({ registrationId: `reg-${f.id}`, parentRegistrationId: "class-reg", name: f.name, type: "Class Feature", associatedElementId: f.id })),
       ],
     },
   ];

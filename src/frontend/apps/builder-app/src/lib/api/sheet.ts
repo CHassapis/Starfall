@@ -304,9 +304,7 @@ function plainText(html: string): string {
   return (doc.body.textContent ?? "").replace(/\s+/g, " ").trim();
 }
 
-const ORDINAL = ["Cantrip", "1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th", "9th"];
-export const spellLevelLine = (s: SheetSpell) =>
-  s.level === 0 ? `${s.school} Cantrip` : `${ORDINAL[s.level]}-level ${s.school.toLowerCase()}${s.ritual ? " (ritual)" : ""}`;
+export { spellLevelLine } from "@/lib/spell-level-line";
 
 /**
  * Everything the classic character sheet shows. What the engine does not calculate yet is worked out here:

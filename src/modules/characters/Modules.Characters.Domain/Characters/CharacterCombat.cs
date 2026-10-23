@@ -1,3 +1,5 @@
+using System.Globalization;
+using System.Numerics;
 using System.Text.RegularExpressions;
 
 namespace Starlights.Modules.Characters.Domain.Characters;
@@ -65,6 +67,12 @@ public sealed record CharacterCombat
     public List<CharacterResource>? Resources { get; init; }
 
     /// <summary>
+    /// Rolls the player keeps at hand, by name ("Smite": "2d8+3"), rolled with the web app's dice. Null in a save from an
+    /// app that does not know them: the stored ones are kept.
+    /// </summary>
+    public List<CharacterFavoriteRoll>? FavoriteRolls { get; init; }
+
+    /// <summary>
     /// How many times someone else changed this state (a party member's potion or charm healing the character).
     /// Kept by the server alone: a simulator that loaded an older count is refused when it saves, reloads and
     /// makes its change again, so it never undoes what the other character did.
@@ -112,6 +120,12 @@ public sealed record CharacterCombat
                 || resources.Any(r => r.Validate() is not null)))
         {
             return resources.Select(r => r?.Validate()).FirstOrDefault(p => p is not null) ?? "At most 30 resources of your own, each with an id of its own.";
+        }
+        if (FavoriteRolls is { } rolls
+            && (rolls.Count > 40 || rolls.Any(r => r is null) || rolls.Select(r => r.Id).Distinct(StringComparer.Ordinal).Count() != rolls.Count
+                || rolls.Any(r => r.Validate() is not null)))
+        {
+            return rolls.Select(r => r?.Validate()).FirstOrDefault(p => p is not null) ?? "At most 40 favorite rolls, each with an id of its own.";
         }
         if (Exhaustion is < 0 or > 10 || DeathSaveSuccesses is < 0 or > 3 || DeathSaveFailures is < 0 or > 3)
         {
@@ -244,5 +258,73 @@ public sealed partial record CharacterResourceEffect
     public string? Validate() =>
         ArmorClass is < -20 or > 20 || Speed is < -120 or > 120 || AttackRolls is < -20 or > 20 || (Damage is not null && !DamagePattern().IsMatch(Damage))
             ? "A resource's effect changes armor class and attack rolls by -20 to 20, speed by -120 to 120 feet, and adds damage like \"1d6 fire\"."
+            : null;
+}
+
+/// <summary>A roll the player keeps at hand: a name and dice the web app rolls (lib/lore/dice.ts).</summary>
+public sealed partial record CharacterFavoriteRoll
+{
+    /// <summary>Stable for the roll's life.</summary>
+    public string Id { get; init; } = string.Empty;
+
+    public string Name { get; init; } = string.Empty;
+
+    /// <summary>Dice as the books write them: "2d6+3", "1d8 + 1d4 - 1", "d20".</summary>
+    public string Formula { get; init; } = string.Empty;
+
+    [GeneratedRegex("^[A-Za-z0-9_-]{1,64}$")]
+    private static partial Regex IdPattern();
+
+    [GeneratedRegex("^[+-]?([0-9]*d[0-9]+|[0-9]+)([+-]([0-9]*d[0-9]+|[0-9]+))*$")]
+    private static partial Regex Expression();
+
+    [GeneratedRegex("([+-]?)([0-9]*d[0-9]+|[0-9]+)")]
+    private static partial Regex Term();
+
+    // JavaScript's \s, which is not .NET's (JavaScript's has U+FEFF, .NET's has U+0085)
+    [GeneratedRegex("[\t\n\v\f\r \u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000\ufeff]+")]
+    private static partial Regex Spaces();
+
+    /// <summary>
+    /// Whether the web app reads the formula as dice, by the same rules as its parseDice: terms of dice and numbers
+    /// joined by + and −, at most 100 dice of 1 to 1000 sides a term, and not nothing at all.
+    /// </summary>
+    public static bool IsDice(string formula)
+    {
+        var s = Spaces().Replace(formula, string.Empty).Replace('\u2212', '-').Replace('\u2013', '-').ToLowerInvariant();
+        if (s.Length == 0 || !Expression().IsMatch(s))
+        {
+            return false;
+        }
+        // whole numbers of any length, so "000000001d6" and "99999999999" are read as the web app reads them
+        static BigInteger Number(string digits) => BigInteger.Parse(digits, NumberStyles.None, CultureInfo.InvariantCulture);
+        var anyDice = false;
+        // JavaScript accumulates flat terms as IEEE-754 numbers, including rounding after each addition.
+        // Exact integer arithmetic disagrees for cancellation beyond 2^53, even within the 100-character limit.
+        var bonus = 0d;
+        foreach (Match m in Term().Matches(s))
+        {
+            var term = m.Groups[2].Value;
+            var d = term.IndexOf('d');
+            if (d < 0)
+            {
+                var value = double.Parse(term, NumberStyles.None, CultureInfo.InvariantCulture);
+                bonus += m.Groups[1].Value == "-" ? -value : value;
+                continue;
+            }
+            var count = d == 0 ? BigInteger.One : Number(term[..d]);
+            var sides = Number(term[(d + 1)..]);
+            if (count > 100 || sides > 1000 || sides < 1)
+            {
+                return false;
+            }
+            anyDice = true;
+        }
+        return anyDice || bonus != 0;
+    }
+
+    public string? Validate() =>
+        Id is null || !IdPattern().IsMatch(Id) || string.IsNullOrWhiteSpace(Name) || Name.Length > 60 || Formula is not { Length: > 0 and <= 100 } || !IsDice(Formula)
+            ? "A favorite roll needs an id (letters, digits, - or _), a name of up to 60 characters and dice like \"2d6+3\" (at most 100 dice of up to 1000 sides a term)."
             : null;
 }

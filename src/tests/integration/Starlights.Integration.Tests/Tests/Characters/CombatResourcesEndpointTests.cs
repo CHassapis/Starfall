@@ -14,10 +14,10 @@ using Starlights.Modules.Elements.Data.EntityFramework;
 namespace Starlights.Integration.Tests.Characters;
 
 /// <summary>
-/// The player's own resources travel with the character's combat state (GET and PUT /api/characters/{id}/combat): what
-/// was saved comes back, a save from an app that does not know them keeps them, an empty list removes them, the
-/// state's own checks refuse what is out of bounds, and a password-locked player's character needs that player's
-/// token for them as for everything else. Synthetic characters and players only.
+/// The player's own resources and favorite rolls travel with the character's combat state (GET and PUT
+/// /api/characters/{id}/combat): what was saved comes back, a save from an app that does not know them keeps them, an
+/// empty list removes them, the state's own checks refuse what is out of bounds, and a password-locked player's
+/// character needs that player's token for them as for everything else. Synthetic characters and players only.
 /// </summary>
 /// <remarks>
 /// On SQL Server (<c>STARFALL_TEST_SQLSERVER</c>, as <see cref="Elements.HomebrewSqlServerTests"/>): saving the combat
@@ -155,6 +155,93 @@ public sealed class CombatResourcesEndpointTests : IntegrationTestBase
         (await GetCombatAsync(characterId, ownToken)).Resources.Should().BeNullOrEmpty("nothing was saved without the token");
         (await PutCombatAsync(characterId, state, ownToken)).Should().Be(HttpStatusCode.OK);
         (await GetCombatAsync(characterId, ownToken)).Resources.Should().BeEquivalentTo([Resources[0]]);
+    }
+
+    private static readonly List<CharacterFavoriteRoll> FavoriteRolls =
+    [
+        new() { Id = "f1", Name = "Test Smite", Formula = "2d8+3" },
+        new() { Id = "f2", Name = "Test Luck", Formula = "d20" },
+    ];
+
+    [TestMethod]
+    [Timeout(TestConstants.Timeout, CooperativeCancellation = true)]
+    public async Task FavoriteRolls_AreSaved_AndASaveWithoutThemKeepsThem()
+    {
+        var characterId = await _integration.GetDriver<CharacterCreationDriver>().CreateCharacterAsync();
+        using var client = _integration.CreateClient();
+        var url = $"/api/characters/{characterId}/combat";
+
+        var saved = await client.PutAsJsonAsync(url, new CharacterCombat { Damage = 2, Resources = Resources, FavoriteRolls = FavoriteRolls }, _integration.CancellationToken);
+        saved.StatusCode.Should().Be(HttpStatusCode.OK, await saved.Content.ReadAsStringAsync(_integration.CancellationToken));
+        var read = (await client.GetFromJsonAsync<CharacterCombat>(url, _integration.CancellationToken))!;
+        read.FavoriteRolls.Should().BeEquivalentTo(FavoriteRolls, o => o.WithStrictOrdering());
+
+        // an app from before favorite rolls sends none: they stay, as do the resources
+        (await client.PutAsJsonAsync(url, new { version = 1, damage = 5 }, _integration.CancellationToken)).StatusCode.Should().Be(HttpStatusCode.OK);
+        read = (await client.GetFromJsonAsync<CharacterCombat>(url, _integration.CancellationToken))!;
+        read.Damage.Should().Be(5);
+        read.FavoriteRolls.Should().BeEquivalentTo(FavoriteRolls, o => o.WithStrictOrdering(), "a save that leaves them out keeps them");
+        read.Resources.Should().BeEquivalentTo(Resources);
+
+        // an edited roll and a removed one; an empty list removes them all
+        (await client.PutAsJsonAsync(url, new CharacterCombat { FavoriteRolls = [FavoriteRolls[0] with { Formula = "3d8+3" }] }, _integration.CancellationToken)).StatusCode.Should().Be(HttpStatusCode.OK);
+        (await client.GetFromJsonAsync<CharacterCombat>(url, _integration.CancellationToken))!.FavoriteRolls.Should().BeEquivalentTo([FavoriteRolls[0] with { Formula = "3d8+3" }]);
+        (await client.PutAsJsonAsync(url, new CharacterCombat { FavoriteRolls = [] }, _integration.CancellationToken)).StatusCode.Should().Be(HttpStatusCode.OK);
+        (await client.GetFromJsonAsync<CharacterCombat>(url, _integration.CancellationToken))!.FavoriteRolls.Should().BeEmpty();
+    }
+
+    [TestMethod]
+    [Timeout(TestConstants.Timeout, CooperativeCancellation = true)]
+    public async Task FavoriteRollsThatAreNotDice_AndEmptyEntries_AreRefused_AndChangeNothing()
+    {
+        var characterId = await _integration.GetDriver<CharacterCreationDriver>().CreateCharacterAsync();
+        using var client = _integration.CreateClient();
+        var url = $"/api/characters/{characterId}/combat";
+        (await client.PutAsJsonAsync(url, new CharacterCombat { FavoriteRolls = FavoriteRolls }, _integration.CancellationToken)).StatusCode.Should().Be(HttpStatusCode.OK);
+
+        foreach (var formula in new[] { "2d6 fire", "101d6", "1d6*2" })
+        {
+            var refused = await client.PutAsJsonAsync(url, new CharacterCombat { FavoriteRolls = [FavoriteRolls[0] with { Formula = formula }] }, _integration.CancellationToken);
+            refused.StatusCode.Should().Be(HttpStatusCode.BadRequest, formula);
+            (await refused.Content.ReadAsStringAsync(_integration.CancellationToken)).Should().Contain("favorite roll");
+        }
+
+        // a list with an empty entry, or a roll or resource without its fields: refused with a message, not a server error
+        var empties = new object[]
+        {
+            new { favoriteRolls = new object?[] { null } },
+            new { resources = new object?[] { null } },
+            new { favoriteRolls = new[] { new { id = (string?)null, name = (string?)null, formula = (string?)null } } },
+            new { resources = new[] { new { id = "r9", name = "Test Empty", max = (object?)null } } },
+        };
+        foreach (var body in empties)
+        {
+            var refused = await client.PutAsJsonAsync(url, body, _integration.CancellationToken);
+            refused.StatusCode.Should().Be(HttpStatusCode.BadRequest, await refused.Content.ReadAsStringAsync(_integration.CancellationToken));
+        }
+        var read = (await client.GetFromJsonAsync<CharacterCombat>(url, _integration.CancellationToken))!;
+        read.FavoriteRolls.Should().BeEquivalentTo(FavoriteRolls, o => o.WithStrictOrdering());
+        read.Resources.Should().BeNullOrEmpty();
+    }
+
+    [TestMethod]
+    [Timeout(TestConstants.Timeout, CooperativeCancellation = true)]
+    public async Task LockedPlayersCharacter_ItsFavoriteRolls_NeedThatPlayersToken()
+    {
+        var (playerName, ownToken) = await LockPlayerAsync("Test Player Maren", "synthetic-pass-11");
+        var (_, otherToken) = await LockPlayerAsync("Test Player Oswin", "synthetic-pass-12");
+        var characterId = await CreateCharacterForAsync(playerName, ownToken);
+        var state = new CharacterCombat { FavoriteRolls = FavoriteRolls };
+
+        (await PutCombatAsync(characterId, state)).Should().Be(HttpStatusCode.Unauthorized, "a locked player's character needs a token");
+        (await PutCombatAsync(characterId, state, otherToken)).Should().Be(HttpStatusCode.Unauthorized, "another player's token does not change it");
+        (await PutCombatAsync(characterId, state, ownToken)).Should().Be(HttpStatusCode.OK);
+        using var client = _integration.CreateClient();
+        client.DefaultRequestHeaders.Add(PlayerTokenHeader, otherToken);
+        (await client.GetAsync($"/api/characters/{characterId}/combat", _integration.CancellationToken)).StatusCode.Should().Be(HttpStatusCode.Unauthorized, "nor read them");
+        using var own = _integration.CreateClient();
+        own.DefaultRequestHeaders.Add(PlayerTokenHeader, ownToken);
+        (await own.GetFromJsonAsync<CharacterCombat>($"/api/characters/{characterId}/combat", _integration.CancellationToken))!.FavoriteRolls.Should().BeEquivalentTo(FavoriteRolls);
     }
 
     /// <summary>Locks a new synthetic player with a password (allowed while it has none) and returns its token.</summary>
