@@ -19,6 +19,8 @@ namespace Starlights.Modules.Elements.Tests;
 [TestClass]
 public class AuroraChoicesAuditTests
 {
+    public TestContext TestContext { get; set; } = default!;
+
     [TestMethod]
     public async Task EveryChoice_HasOptions()
     {
@@ -40,7 +42,7 @@ public class AuroraChoicesAuditTests
             new FiveEToolsData(new FiveEToolsOptions(Environment.GetEnvironmentVariable("FIVETOOLS_DATA") ?? "/nonexistent"), NullLogger<FiveEToolsData>.Instance));
         foreach (var index in new[] { "AuroraLegacy.index", AuroraImporterOptions.PullRequestsIndex, AuroraImporterOptions.HomebrewIndex, AuroraImporterOptions.FiveEToolsIndex, AuroraImporterOptions.BuiltInIndex })
         {
-            await importer.ImportAsync(index);
+            await importer.ImportAsync(index, cancellationToken: TestContext.CancellationToken);
         }
 
         var byType = added.Values.GroupBy(e => e.Type).ToDictionary(g => g.Key, g => g.ToList());

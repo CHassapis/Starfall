@@ -14,14 +14,12 @@ namespace Starlights.Integration.Drivers.Characters.Manage;
 
 public sealed class CharacterManagementDriver : IDriver
 {
-    private readonly IIntegrationHost _host;
     private readonly CharactersEndpointDriver _api;
     private readonly CharactersDriverContext _context;
     private readonly EventObserverCollection _events;
 
-    public CharacterManagementDriver(IIntegrationHost host, CharactersEndpointDriver api, CharactersDriverContext context, EventObserverCollection events)
+    public CharacterManagementDriver(CharactersEndpointDriver api, CharactersDriverContext context, EventObserverCollection events)
     {
-        _host = host;
         _api = api;
         _context = context;
         _events = events;
@@ -73,7 +71,6 @@ public sealed class CharacterManagementDriver : IDriver
 
         id.Should().NotBe(Guid.Empty, "Character creation should return a valid Id.");
 
-        _host.SetCharacterIdentifier(id);
         _context.WithCharacter(id, name);
 
         await Task.WhenAll(observations);

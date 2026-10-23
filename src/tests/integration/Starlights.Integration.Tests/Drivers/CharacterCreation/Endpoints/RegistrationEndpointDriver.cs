@@ -1,5 +1,6 @@
 ﻿using System.Net.Http.Json;
 using AwesomeAssertions;
+using Starlights.Integration.Drivers.Characters;
 using Starlights.Integration.Extensions;
 using Starlights.Modules.Characters.Endpoints.Generation.Registrations.GetRegistrations;
 using Starlights.Modules.Characters.Endpoints.Generation.Registrations.GetSelectionRuleOptions;
@@ -13,10 +14,12 @@ namespace Starlights.Integration.Drivers.CharacterCreation.Endpoints;
 internal sealed class RegistrationEndpointDriver : IDriver
 {
     private readonly IIntegrationHost _integration;
+    private readonly CharactersDriverContext _characters;
 
-    public RegistrationEndpointDriver(IIntegrationHost integration)
+    public RegistrationEndpointDriver(IIntegrationHost integration, CharactersDriverContext characters)
     {
         _integration = integration;
+        _characters = characters;
     }
 
     public async Task<GetRegistrationsResponse> GetRegistrationsAsync(Guid characterId)
@@ -57,7 +60,7 @@ internal sealed class RegistrationEndpointDriver : IDriver
             ? string.Concat(types.Select(t => $"&type={Uri.EscapeDataString(t)}")).TrimStart('&')
             : string.Empty;
 
-        var characterId = _integration.GetCharacterIdentifier();
+        var characterId = _characters.CurrentCharacter.Id;
         var url = $"/api/characters/{characterId}/builder/selection-rules?{query}";
 
         var response = await api.GetAsync(url);
@@ -73,7 +76,7 @@ internal sealed class RegistrationEndpointDriver : IDriver
     {
         var api = _integration.CreateClient();
 
-        var characterId = _integration.GetCharacterIdentifier();
+        var characterId = _characters.CurrentCharacter.Id;
         var url = $"/api/characters/{characterId}/builder/selection-rules/{selectionRuleId}/options";
 
         var response = await api.GetAsync(url);
@@ -89,7 +92,7 @@ internal sealed class RegistrationEndpointDriver : IDriver
     {
         var api = _integration.CreateClient();
 
-        var characterId = _integration.GetCharacterIdentifier();
+        var characterId = _characters.CurrentCharacter.Id;
         var url = $"/api/characters/{characterId}/builder/selection-rules/{selectionRuleId}/register";
         var payload = new RegisterSelectionRuleRequest() { ElementId = elementId, ParentRegistration = parentRegistrationId };
 
@@ -108,7 +111,7 @@ internal sealed class RegistrationEndpointDriver : IDriver
     {
         var api = _integration.CreateClient();
 
-        var characterId = _integration.GetCharacterIdentifier();
+        var characterId = _characters.CurrentCharacter.Id;
         var url = $"/api/characters/{characterId}/builder/selection-rules/{selectionRuleId}/unregister";
         var payload = new UnregisterSelectionRuleRequest() { ElementId = elementId, ParentRegistration = parentRegistrationId };
 

@@ -51,13 +51,13 @@ public sealed class DomainEventProcessingService : BackgroundService
                 await Task.Delay(interval, stoppingToken);
             }
         }
+        // the app stopping (a restart, a deploy) ends the loop here: normal, so information rather than a warning
         catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
         {
-            _logger.LogWarning("domain processing operation canceled due to shutdown");
-
+            _logger.LogInformation("[Characters] domain processing operation canceled due to shutdown");
         }
 
-        _logger.LogWarning("stopping EventProcessing service...");
+        _logger.LogInformation("[Characters] stopping EventProcessing service...");
     }
 
     /// <summary>Publishes the next batch of unprocessed events; returns how long to wait before the next one.</summary>

@@ -1,5 +1,6 @@
 ﻿using AwesomeAssertions;
 using Starlights.Integration.Drivers.CharacterCreation.Endpoints;
+using Starlights.Integration.Drivers.Characters;
 using Starlights.Integration.Extensions;
 using Starlights.Modules.Characters.Endpoints.Characters.GetCharacterClasses;
 using Starlights.Modules.Characters.Endpoints.Generation.Registrations.GetRegistrations;
@@ -9,23 +10,25 @@ namespace Starlights.Integration.Drivers.CharacterCreation;
 internal sealed class CharacterManagementDriver : IDriver
 {
     private readonly IIntegrationHost _integration;
+    private readonly CharactersDriverContext _characters;
     private readonly CharacterManagementEndpointDriver _api;
-    public CharacterManagementDriver(IIntegrationHost integration, CharacterManagementEndpointDriver api)
+    public CharacterManagementDriver(IIntegrationHost integration, CharactersDriverContext characters, CharacterManagementEndpointDriver api)
     {
         _integration = integration;
+        _characters = characters;
         _api = api;
     }
 
     public async Task<List<CharacterClassDataModel>> GetCharacterClassesAsync()
     {
-        var characterId = _integration.GetCharacterIdentifier();
+        var characterId = _characters.CurrentCharacter.Id;
         var response = await _api.GetCharacterClasses(characterId);
         return response.Classes;
     }
 
     public async Task<CharacterClassDataModel> GetPrimaryClassAsync()
     {
-        var characterId = _integration.GetCharacterIdentifier();
+        var characterId = _characters.CurrentCharacter.Id;
 
         var response = await _api.GetCharacterClasses(characterId);
         response.Classes.Should().NotBeEmpty("Expected the character to have at least one class.");
@@ -46,20 +49,20 @@ internal sealed class CharacterManagementDriver : IDriver
 
     public async Task LevelUp(Guid classId, int newLevel)
     {
-        var characterId = _integration.GetCharacterIdentifier();
+        var characterId = _characters.CurrentCharacter.Id;
         await _api.UpdateClassLevel(characterId, classId, newLevel);
     }
 
     public async Task LevelUp(string className, int newLevel)
     {
         var model = await GetClassByName(className);
-        var characterId = _integration.GetCharacterIdentifier();
+        var characterId = _characters.CurrentCharacter.Id;
         await _api.UpdateClassLevel(characterId, model.CharacterClassId, newLevel);
     }
 
     public async Task<List<RegistrationDataModel>> GetFeatures()
     {
-        var characterId = _integration.GetCharacterIdentifier();
+        var characterId = _characters.CurrentCharacter.Id;
 
         var response = await _api.GetFeatures(characterId);
         response.Features.Should().NotBeEmpty();

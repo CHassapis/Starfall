@@ -1,22 +1,20 @@
 # Claude handoff
 
-Updated 2026-10-22 (calculation traces / import diagnostics session 52b845c7). Keep under ~80 lines; replace stale lines.
+Updated 2026-10-23 (warnings and errors session). Keep under ~80 lines; replace stale lines.
 
-## Task (open): calculation traces (stage 1), import diagnostics + homebrew preview (stage 2), stages 3–4 to do
-Stage 1: `feature/calculation-traces` (`~/starfall-calc-traces`, PR #29). Stage 2: `feature/import-diagnostics`
-(`~/starfall-import-diagnostics`, built on stage 1). Status, commits, checks and next steps:
-[CALCULATION_TRACES_CHECKPOINT.md](CALCULATION_TRACES_CHECKPOINT.md). Contracts: docs/api/README.md "Calculation
-traces", "Imports and homebrew"; reference characters: `src/frontend/apps/builder-app/reference-characters/README.md`.
+## Task (open): warnings and errors (`fix/warnings-and-errors`, `~/starfall-warnings`, from cf3eb56)
+Build 89 warnings → 0 (vulnerable Pkcs/MessagePack pinned, MSTest duplicates, EF1002, obsolete test helpers,
+test cancellation tokens), frontend chunk-size warning (PDF sheet route lazy, chunk groups), API log WRN/ERR
+(EF comparer + query splitting, HTTPS redirect, shutdown, removed registrations), failed-import cleanup SQL
+(`character_snapshot.character_id`), Aurora list picks (personality traits) on import. Details in the PR.
 
-## Previous task (merged #22–#27; web live b5492d6 since 2026-10-21 18:17): polish & release readiness
-D20 icosahedron, shared ornaments, Imperial/Metric units, PWA kit, README rewrite; `fix/ornament-cache` versions the
-emblem URL. Details in the PRs and git history.
-
-## Earlier task (merged; web live 1f47f91 since 2026-10-21 15:08): visual fidelity
-[VISUAL_FIDELITY_REPORT.md](VISUAL_FIDELITY_REPORT.md): one page frame, mockup homepage, dark Slate.
+## Previous task (merged #29–#32; live cf3eb56 since 2026-10-23 06:40): calculation traces, import reports +
+homebrew review, spell mechanics + own resources, PDF worker + favorite rolls. Checkpoint:
+[CALCULATION_TRACES_CHECKPOINT.md](CALCULATION_TRACES_CHECKPOINT.md); deploy evidence + kit:
+`~/.cache/starlights-test/deploy-cf3eb56/` (LEDGER.md, deploy.sh). Polish #22–#27 live since 2026-10-21.
 
 ## Earlier work
-Mk2 stabilization, v0.11.0 (2026-10-20, [MK2_VERIFICATION_REPORT.md](MK2_VERIFICATION_REPORT.md)); homebrew workshop
+Visual fidelity ([VISUAL_FIDELITY_REPORT.md](VISUAL_FIDELITY_REPORT.md), 2026-10-21); Mk2 stabilization, v0.11.0 (2026-10-20, [MK2_VERIFICATION_REPORT.md](MK2_VERIFICATION_REPORT.md)); homebrew workshop
 + encounter difficulty, API compatibility / custom attacks, v0.10.0: details in git history and
 [FINAL_HANDOFF.md](FINAL_HANDOFF.md).
 
@@ -28,12 +26,14 @@ Mk2 stabilization, v0.11.0 (2026-10-20, [MK2_VERIFICATION_REPORT.md](MK2_VERIFIC
 - Resistance order can differ from Aurora's; battle page violet chip contrast 3.3–3.9:1; Characters cards nest
   their export/delete buttons in the card's control (axe `nested-interactive`).
 - 9 npm advisories left after #16, all in build tooling, each needing a shadcn CLI or `@tailwindcss/typography`
-  major. NuGet: transitive System.Security.Cryptography.Pkcs 9.0.4 note still open.
+  major.
 - `--skip-content` install + manual `./admin.sh import` needs `/api/elements/initialize` first (the Content page /
   content update does it). Custom-monster CR calculator, homebrew Mystic Arcanum/third-casters: not built.
 - Character files exported before #18 can't move between servers; export again (#18 is live since 2026-10-20).
 
 ## Coordination (shared files touched)
+- Warnings: `main.tsx` (the printable sheet route `/characters/:id/sheet` is `lazy`, like `:id/play`),
+  `vite.config.ts` of builder-app (chunk groups, ES worker) and showcase, `lib/aurora-character-import.ts`.
 - Calculation traces: `pages/characters/sheet/interactive-sheet.tsx` (Codex's): "Why this value?" buttons
   (`components/why-value.tsx`) beside figures, a "Why these values" row under `Vitals` (Vitals itself unchanged),
   and the spellcasting's attack and DC above the Magic tab. `tools/frontend/fixtures.mjs`: answers
@@ -84,5 +84,5 @@ Mk2 stabilization, v0.11.0 (2026-10-20, [MK2_VERIFICATION_REPORT.md](MK2_VERIFIC
 Maintenance mode: bug fixes, one mission per branch, merged through pull requests once CI passes.
 
 ## Blockers
-None in the code. The session's auto-mode classifier refuses merges and production deploys; the owner runs them
-(prepared scripts with guards, as `go.sh` / `finish2.sh` were).
+None in the code. Merges and deploys need the owner's go-ahead in the session; `deploy-cf3eb56/deploy.sh` is the
+latest guarded deploy (finish2.sh method + restore-tested backup).

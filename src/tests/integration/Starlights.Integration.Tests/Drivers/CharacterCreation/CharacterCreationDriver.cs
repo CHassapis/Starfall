@@ -1,6 +1,7 @@
 ﻿using AwesomeAssertions;
 using Starlights.Integration.Constants;
 using Starlights.Integration.Drivers.CharacterCreation.Endpoints;
+using Starlights.Integration.Drivers.Characters;
 using Starlights.Integration.Eventing;
 using Starlights.Integration.Extensions;
 using Starlights.Modules.Characters.Domain.Abilities.Eventing;
@@ -15,6 +16,7 @@ namespace Starlights.Integration.Drivers.CharacterCreation;
 internal sealed class CharacterCreationDriver : IDriver
 {
     private readonly IIntegrationHost _integration;
+    private readonly CharactersDriverContext _characters;
     private readonly CharacterCreationEndpointDriver _api;
     private readonly CharacterCreationOptionsDriver _creationOptionsDriver;
     private readonly EventObserverCollection _events;
@@ -23,9 +25,11 @@ internal sealed class CharacterCreationDriver : IDriver
         IIntegrationHost integration,
         CharacterCreationEndpointDriver api,
         CharacterCreationOptionsDriver creationOptionsDriver,
-        EventObserverCollection events)
+        EventObserverCollection events,
+        CharactersDriverContext characters)
     {
         _integration = integration;
+        _characters = characters;
         _api = api;
         _creationOptionsDriver = creationOptionsDriver;
         _events = events;
@@ -53,7 +57,7 @@ internal sealed class CharacterCreationDriver : IDriver
 
         id.Should().NotBe(Guid.Empty, "Character creation should return a valid Id.");
 
-        _integration.SetCharacterIdentifier(id);
+        _characters.WithCharacter(id, "Integration Character");
 
         await Task.WhenAll(observations);
 

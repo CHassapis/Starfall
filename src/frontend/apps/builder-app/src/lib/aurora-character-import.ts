@@ -53,6 +53,14 @@ function idVariants(id: string): string[] {
   return variants;
 }
 
+/**
+ * The Aurora id the content import gave an item of a list select (AuroraImporter.ListKey + the item's id): a
+ * background's personality trait 6 is "list:ID_…_BACKGROUND_…:Personality-Trait:6".
+ */
+export function auroraListItemId(owner: string, listName: string, item: string): string {
+  return `list:${owner}:${listName.replace(/[^A-Za-z0-9]+/g, "-").replace(/^-+|-+$/g, "")}:${item}`;
+}
+
 function collectPicks(elements: Element): Pick[] {
   const picks: Pick[] = [];
   for (const node of Array.from(elements.querySelectorAll("element[registered]"))) {
@@ -69,7 +77,10 @@ function collectPicks(elements: Element): Pick[] {
       if (parent) break;
     }
     const level = Number(node.getAttribute("requiredLevel") ?? "1") || 1;
-    picks.push({ type, name, slot: Number(node.getAttribute("number") ?? "1") || 1, level, registered, parent });
+    // a list pick (a background's personality trait, ideal, bond, …) registers the item's number in its owner's list;
+    // the content import made each item an element "list:{owner}:{list name}:{item}" (AuroraImporter.ListKey)
+    const item = node.getAttribute("isList") === "true" && parent ? auroraListItemId(parent, name, registered) : registered;
+    picks.push({ type, name, slot: Number(node.getAttribute("number") ?? "1") || 1, level, registered: item, parent });
   }
   return picks;
 }
@@ -156,7 +167,7 @@ export async function importAuroraCharacter(
   }
 
   // class first (its level gates the rest), then the other top-level picks, then everything they unlock
-  let choices = await settledChoices(characterId);
+  const choices = await settledChoices(characterId);
   for (const type of ["Class", "Race", "Background", "Alignment", "Deity"]) {
     const pick = open.find((p) => p.parent === null && p.type === type);
     const slot = choices.find((c) => c.depth === 0 && c.section === TOP_LEVEL[type]);
@@ -166,7 +177,8 @@ export async function importAuroraCharacter(
       open.splice(open.indexOf(pick), 1);
     }
   }
-  choices = await settledChoices(characterId);
+  // what the top-level picks unlock settles before the classes are read
+  await settledChoices(characterId);
 
   const classes = await apiClient.get<{ classes: { characterClassId: string; level: number; isPrimary: boolean }[] }>(`/api/characters/${characterId}/classes`);
   const primary = classes.classes.find((c) => c.isPrimary) ?? classes.classes[0];

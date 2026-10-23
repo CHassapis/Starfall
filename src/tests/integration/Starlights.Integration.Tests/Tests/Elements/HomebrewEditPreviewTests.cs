@@ -192,14 +192,14 @@ public sealed class HomebrewEditPreviewTests : IntegrationTestBase
             var magic = await admin.PutAsJsonAsync($"/api/characters/{characterId}/magic", new CharacterMagic { Prepared = new() { ["Wizard"] = [spell] } }, _integration.CancellationToken);
             magic.StatusCode.Should().Be(HttpStatusCode.OK);
         }
-        var file = await File.ReadAllBytesAsync(SpellsFile);
+        var file = await File.ReadAllBytesAsync(SpellsFile, _integration.CancellationToken);
 
         var preview = await PreviewAsync("spells", saved with { Level = 2, Lists = ["Wizard", "Sorcerer"] });
 
         preview.Changes.Should().Equal(new HomebrewFieldChange("level", "1", "2"), new HomebrewFieldChange("lists", "Wizard", "Wizard, Sorcerer"));
         preview.Elements.Should().Equal(new HomebrewElementChange(saved.Id!, "Test Sparkle", HomebrewElementChangeKind.Changed));
         preview.Characters.Should().ContainSingle().Which.Should().BeEquivalentTo(new { CharacterId = characterId, Uses = new[] { saved.Id }, Loses = Array.Empty<string>() });
-        (await File.ReadAllBytesAsync(SpellsFile)).Should().Equal(file, "a preview saves nothing");
+        (await File.ReadAllBytesAsync(SpellsFile, _integration.CancellationToken)).Should().Equal(file, "a preview saves nothing");
         (await SpellsAsync()).Single().Level.Should().Be(1);
     }
 
@@ -210,12 +210,12 @@ public sealed class HomebrewEditPreviewTests : IntegrationTestBase
         var preview = await PreviewAsync("spells", Spell());
         preview.Revision.Should().BeNull();
         var concurrent = await SavedAsync("spells", Spell(level: 3));
-        var file = await File.ReadAllBytesAsync(SpellsFile);
+        var file = await File.ReadAllBytesAsync(SpellsFile, _integration.CancellationToken);
 
         var response = await SaveAsync("spells", Spell() with { ExpectedRevision = string.Empty });
 
         response.StatusCode.Should().Be(HttpStatusCode.Conflict);
-        (await File.ReadAllBytesAsync(SpellsFile)).Should().Equal(file);
+        (await File.ReadAllBytesAsync(SpellsFile, _integration.CancellationToken)).Should().Equal(file);
         (await SpellsAsync()).Single().Revision.Should().Be(concurrent.Revision);
     }
 
@@ -234,7 +234,7 @@ public sealed class HomebrewEditPreviewTests : IntegrationTestBase
         var first = await SavedAsync("spells", Spell());
         // saved again elsewhere, without a revision: as before, it simply saves
         var second = await SavedAsync("spells", first with { Level = 3, Revision = null });
-        var file = await File.ReadAllBytesAsync(SpellsFile);
+        var file = await File.ReadAllBytesAsync(SpellsFile, _integration.CancellationToken);
 
         // reviewed in a form opened on the first revision: the review says so, and compares with what is saved now
         var reviewed = await PreviewAsync("spells", first with { Level = 2 });
@@ -249,7 +249,7 @@ public sealed class HomebrewEditPreviewTests : IntegrationTestBase
         preview.Revision.Should().Be(second.Revision).And.NotBe(first.Revision);
         preview.Diagnostics.Should().ContainSingle().Which.Should().BeEquivalentTo(new { Severity = ImportDiagnosticSeverity.Error, Code = ImportDiagnosticCode.StaleRevision, ElementId = first.Id });
         preview.Changes.Should().Equal(new HomebrewFieldChange("level", "3", "2"));
-        (await File.ReadAllBytesAsync(SpellsFile)).Should().Equal(file, "nothing was saved");
+        (await File.ReadAllBytesAsync(SpellsFile, _integration.CancellationToken)).Should().Equal(file, "nothing was saved");
 
         (await SavedAsync("spells", first with { Level = 2, ExpectedRevision = second.Revision })).Level.Should().Be(2, "with the current revision it saves");
     }

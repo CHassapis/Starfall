@@ -127,7 +127,7 @@ public class AbilityScoresStepDefinitions
 
     private record AbilityScoreRow
     {
-        public string Ability { get; set; }
+        public string Ability { get; set; } = string.Empty;
         public int BaseScore { get; set; }
     }
 

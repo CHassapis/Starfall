@@ -28,6 +28,8 @@ namespace Starlights.Modules.Characters.Tests.Registrations;
 [TestClass]
 public sealed class RegistrationOrderTests
 {
+    public TestContext TestContext { get; set; } = default!;
+
     private readonly Mock<IPersistence> _persistence = new();
     private readonly Mock<IElementsModuleQueries> _elements = new();
     private readonly Mock<IRegistrationRepository> _registrations = new();
@@ -98,7 +100,7 @@ public sealed class RegistrationOrderTests
     {
         var characterId = CharacterId.New();
         var abilities = Registration.Create(characterId, new(Guid.NewGuid()), "Abilities", "Rule");
-        await Task.Delay(5); // version 7 ids order by the millisecond
+        await Task.Delay(5, TestContext.CancellationToken); // version 7 ids order by the millisecond
         var skills = Registration.Create(characterId, new(Guid.NewGuid()), "Skills", "Rule");
         _registrations.Setup(r => r.GetRegistrationsAsync(characterId)).ReturnsAsync(() => new List<Registration> { skills, abilities });
         var handled = new List<Guid>();

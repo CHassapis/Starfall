@@ -33,6 +33,12 @@ export default defineConfig(({ mode }) => {
         "@": path.resolve(__dirname, "./src"),
       },
     },
+    // the libraries (and the workspace's ui-framework) in chunks of their own, under the 500 kB size warning
+    build: {
+      rolldownOptions: {
+        output: { codeSplitting: { groups: [{ name: "vendor", test: /node_modules[\\/]|packages[\\/]ui-framework[\\/]/, maxSize: 400_000 }] } },
+      },
+    },
     server: {
       port: parseInt(env.PORT || "55054"),
       open: true,

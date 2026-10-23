@@ -49,12 +49,20 @@
 		<PackageVersion Include="Microsoft.EntityFrameworkCore.SqlServer" Version="$(EntityFrameworkCoreVersion)" />
 		<PackageVersion Include="Microsoft.EntityFrameworkCore.Tools" Version="$(EntityFrameworkCoreVersion)" />
 	</ItemGroup>
+	<ItemGroup Label="Patched transitive dependencies">
+		<!-- pinned (CentralPackageTransitivePinningEnabled) past known vulnerabilities in what other packages bring in:
+		     Pkcs GHSA-846f-f764-76mx (high) + GHSA-2fmv-rv2c-59x7 (9.0.4 via the SQL Server client, 10.0.8 in the AppHost);
+		     MessagePack GHSA-qhrr-8q5h-9q3h (2.5.302, AppHost only) -->
+		<PackageVersion Include="System.Security.Cryptography.Pkcs" Version="10.0.13" />
+		<PackageVersion Include="MessagePack" Version="2.5.303" />
+	</ItemGroup>
 	<ItemGroup Label="Test Projects">
 		<PackageVersion Include="Moq" Version="4.20.72" />
 		<PackageVersion Include="AwesomeAssertions" Version="9.4.0" />
 		<PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="$(MicrosoftExtensionsVersion)" />
-		<PackageVersion Include="MSTest.TestFramework" Version="4.3.2" />
-		<PackageVersion Include="MSTest.TestAdapter" Version="4.3.2" />
+		<!-- for the harness libraries; projects on MSTest.Sdk get these two from the SDK (declaring them again = NU1506) -->
+		<PackageVersion Include="MSTest.TestFramework" Version="4.3.2" Condition="'$(UsingMSTestSdk)' != 'true'" />
+		<PackageVersion Include="MSTest.TestAdapter" Version="4.3.2" Condition="'$(UsingMSTestSdk)' != 'true'" />
 		<PackageVersion Include="Reqnroll.MsTest" Version="3.3.4" />
 	</ItemGroup>
 	<ItemGroup Label="Source Generator Projects" Condition="$(MSBuildProjectName.EndsWith('SourceGenerators'))">

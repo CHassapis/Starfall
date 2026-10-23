@@ -200,7 +200,7 @@ public sealed class HomebrewSqlServerTests : IntegrationTestBase
     public async Task ReplacingAHomebrewFile_ThatFails_LeavesDatabaseAndFileAsTheyWere(Failure failure)
     {
         (await Upload("a.xml", Append("Patched A"))).Should().Be(HttpStatusCode.OK);
-        var file = await File.ReadAllBytesAsync(Path.Combine(_homebrew, "a.xml"));
+        var file = await File.ReadAllBytesAsync(Path.Combine(_homebrew, "a.xml"), _integration.CancellationToken);
         var elements = await Snapshot("elements");
         var characters = await Snapshot("characters");
 
@@ -210,7 +210,7 @@ public sealed class HomebrewSqlServerTests : IntegrationTestBase
 
         (await Snapshot("elements")).Should().Equal(elements);
         (await Snapshot("characters")).Should().Equal(characters);
-        (await File.ReadAllBytesAsync(Path.Combine(_homebrew, "a.xml"))).Should().Equal(file);
+        (await File.ReadAllBytesAsync(Path.Combine(_homebrew, "a.xml"), _integration.CancellationToken)).Should().Equal(file);
         (await Supports("ID_MK2_SKILL")).Should().Contain("Patched A").And.NotContain("Patched A2");
     }
 
@@ -242,7 +242,7 @@ public sealed class HomebrewSqlServerTests : IntegrationTestBase
               <append id="ID_MK2_SKILL"><supports>Patched Mixed</supports></append>
             </elements>
             """)).Should().Be(HttpStatusCode.OK);
-        var file = await File.ReadAllBytesAsync(Path.Combine(_homebrew, "mixed.xml"));
+        var file = await File.ReadAllBytesAsync(Path.Combine(_homebrew, "mixed.xml"), _integration.CancellationToken);
         var elements = await Snapshot("elements");
 
         _failures.Arm(failure);
@@ -250,7 +250,7 @@ public sealed class HomebrewSqlServerTests : IntegrationTestBase
         _failures.Triggered.Should().BeTrue();
 
         (await Snapshot("elements")).Should().Equal(elements);
-        (await File.ReadAllBytesAsync(Path.Combine(_homebrew, "mixed.xml"))).Should().Equal(file);
+        (await File.ReadAllBytesAsync(Path.Combine(_homebrew, "mixed.xml"), _integration.CancellationToken)).Should().Equal(file);
         (await ElementIds()).Should().ContainKey("ID_MK2_HOMEBREW_FEAT");
     }
 

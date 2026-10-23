@@ -30,6 +30,15 @@ public sealed class ProcessingEventHandler : IDomainEventHandler<RegistrationCre
 
         try
         {
+            // a choice picked again before this event came up (an Aurora import does this quickly, so can a player)
+            // deletes the registration it made a moment ago: nothing is left to process, which is not an error
+            if (await _persistence.GetRepository<IRegistrationRepository>().GetRegistrationAsync(new(raisedEvent.RegistrationId)) is null)
+            {
+                _logger.LogInformation("registration '{RegistrationId}' ({ElementName}) was removed before it was processed; nothing to do",
+                    raisedEvent.RegistrationId, raisedEvent.AssociatedElementName);
+                return;
+            }
+
             await _registrationProcessor.ProcessRegistration(new(raisedEvent.RegistrationId));
 
             // gaining an element that other rules' requirements mention (e.g. a 2024 background's ability score
