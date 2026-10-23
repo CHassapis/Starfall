@@ -28,7 +28,7 @@ public sealed record ImportAuroraRequest
 /// <c>POST /api/elements/import-aurora {"index": "core/players-handbook-2024.index"}</c>.
 /// Safe to re-run: without <c>replace</c> it only adds elements that are not there yet.
 /// </summary>
-public class ImportAuroraEndpoint : Endpoint<ImportAuroraRequest>
+public class ImportAuroraEndpoint : Endpoint<ImportAuroraRequest, AuroraImportResult>
 {
     private readonly ILogger<ImportAuroraEndpoint> _logger;
     private readonly IAuroraImporter _importer;

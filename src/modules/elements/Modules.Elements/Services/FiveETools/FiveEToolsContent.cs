@@ -1,6 +1,7 @@
 using System.Text.Json.Nodes;
 using System.Xml.Linq;
 using Microsoft.Extensions.Logging;
+using Starlights.Modules.Elements.Integration;
 
 namespace Starlights.Modules.Elements.Services.FiveETools;
 
@@ -25,13 +26,16 @@ internal sealed partial class FiveEToolsContent
     private readonly Dictionary<string, List<(string Id, string Source, bool Modern)>> _generatedByName = new(StringComparer.Ordinal);
     private readonly Dictionary<string, int> _counts = new(StringComparer.Ordinal);
     private readonly Dictionary<string, string> _sourceNames;
+    private readonly List<ImportDiagnostic>? _diagnostics;
 
-    public FiveEToolsContent(FiveEToolsJson json, FiveEToolsAuroraIndex aurora, IReadOnlyDictionary<string, (string Name, DateTime? Published)> books, ILogger logger)
+    public FiveEToolsContent(FiveEToolsJson json, FiveEToolsAuroraIndex aurora, IReadOnlyDictionary<string, (string Name, DateTime? Published)> books, ILogger logger,
+        List<ImportDiagnostic>? diagnostics = null)
     {
         _json = json;
         _aurora = aurora;
         _books = new Dictionary<string, (string, DateTime?)>(books, StringComparer.OrdinalIgnoreCase);
         _logger = logger;
+        _diagnostics = diagnostics;
         _sourceNames = aurora.Sources.GroupBy(NormalizeBook).ToDictionary(g => g.Key, g => g.First(), StringComparer.Ordinal);
     }
 
@@ -47,25 +51,74 @@ internal sealed partial class FiveEToolsContent
         Species();
         Classes();
         Subclasses();
+        ReportLeftOut();
 
         _logger.LogInformation("generated from 5etools what Aurora lacks: {Counts}",
             string.Join(", ", _counts.OrderBy(c => c.Key, StringComparer.Ordinal).Select(c => $"{c.Value} {c.Key}")));
         return new XDocument(new XElement("elements", _generated));
     }
 
+    /// <summary>Something the data refers to and does not have, so part of an entry (or all of it) is left out.</summary>
+    private void Report(ImportDiagnosticCode code, string message, string? elementId, string elementName, string detail) =>
+        _diagnostics?.Add(new ImportDiagnostic(ImportDiagnosticSeverity.Warning, code, ImportDiagnosticImporter.FiveETools, message)
+        {
+            File = FiveEToolsData.Prefix + "content.xml",
+            ElementId = elementId,
+            ElementName = elementName,
+            Detail = detail,
+        });
+
     // ---- which entries count ----
 
-    /// <summary>Unearthed Arcana and Plane Shift (left out of the Aurora import too), and what the data marks as not for players.</summary>
-    private bool Skip(JsonObject entry)
+    /// <summary>
+    /// Unearthed Arcana and Plane Shift (left out of the Aurora import too), what a later book reprints, and what the
+    /// data marks as not for players; counted by reason (see <see cref="Leave"/>).
+    /// </summary>
+    private bool Skip(JsonObject entry, string family)
     {
         var source = FiveEToolsJson.Str(entry, "source") ?? "";
-        if (source.StartsWith("UA", StringComparison.OrdinalIgnoreCase) || source.StartsWith("PS", StringComparison.Ordinal)
-            || BookName(source).StartsWith("Plane Shift", StringComparison.OrdinalIgnoreCase))
+        var reason = source.StartsWith("UA", StringComparison.OrdinalIgnoreCase) || source.StartsWith("PS", StringComparison.Ordinal)
+            || BookName(source).StartsWith("Plane Shift", StringComparison.OrdinalIgnoreCase) ? UnearthedArcana
+            : entry["reprintedAs"] is not null || FiveEToolsJson.Bool(entry, "isReprinted") ? Reprinted
+            : FiveEToolsJson.Bool(entry, "isSidekick") || entry["traitTags"] is JsonArray tags && tags.Any(t => t?.ToString() == "NPC Race") ? NotForPlayers
+            : null;
+        if (reason is not null)
         {
-            return true;
+            Leave(family, entry, reason);
         }
-        return entry["reprintedAs"] is not null || FiveEToolsJson.Bool(entry, "isSidekick") || FiveEToolsJson.Bool(entry, "isReprinted")
-            || entry["traitTags"] is JsonArray tags && tags.Any(t => t?.ToString() == "NPC Race");
+        return reason is not null;
+    }
+
+    private const string UnearthedArcana = "unearthed-arcana", Reprinted = "reprinted", NotForPlayers = "not-for-players", AuroraHasIt = "aurora-has-it";
+
+    private static readonly Dictionary<string, string> WhyLeft = new(StringComparer.Ordinal)
+    {
+        [UnearthedArcana] = "Unearthed Arcana or Plane Shift, which Starfall leaves out like the Aurora import",
+        [Reprinted] = "reprinted in a later book, whose printing is used instead",
+        [NotForPlayers] = "not for player characters (sidekicks, NPC species)",
+        [AuroraHasIt] = "already in the Aurora content, whose version is used",
+    };
+
+    // why entries were left out, each once however often it is looked at (subraces are, twice): "family|name|source" → reason
+    private readonly Dictionary<string, string> _left = new(StringComparer.Ordinal);
+
+    private void Leave(string family, JsonObject entry, string reason) =>
+        _left.TryAdd($"{family}|{FiveEToolsJson.Str(entry, "name")}|{FiveEToolsJson.Str(entry, "source")}", reason);
+
+    /// <summary>One diagnostic for each reason entries were left out, with how many.</summary>
+    private void ReportLeftOut()
+    {
+        foreach (var reason in _left.GroupBy(l => l.Value, StringComparer.Ordinal).OrderBy(g => g.Key, StringComparer.Ordinal))
+        {
+            var count = reason.Count();
+            _diagnostics?.Add(new ImportDiagnostic(ImportDiagnosticSeverity.Info, ImportDiagnosticCode.EntriesSkipped, ImportDiagnosticImporter.FiveETools,
+                $"{count} 5etools {(count == 1 ? "entry" : "entries")} left out: {WhyLeft[reason.Key]}.")
+            {
+                File = FiveEToolsData.Prefix + "content.xml",
+                Detail = reason.Key,
+                Count = count,
+            });
+        }
     }
 
     /// <summary>
@@ -73,6 +126,16 @@ internal sealed partial class FiveEToolsContent
     /// another entry with a few edits, 5etools' way of writing variants) has the entry it copies.
     /// </summary>
     private bool AuroraHas(string family, JsonObject entry, params string[] otherNames)
+    {
+        if (!AuroraHasEntry(family, entry, otherNames))
+        {
+            return false;
+        }
+        Leave(family, entry, AuroraHasIt);
+        return true;
+    }
+
+    private bool AuroraHasEntry(string family, JsonObject entry, string[] otherNames)
     {
         var name = FiveEToolsJson.Str(entry, "name") ?? "";
         if (_aurora.Has(family, [name, .. otherNames]) || _aurora.HasSimilar(family, name, SourceName(FiveEToolsJson.Str(entry, "source") ?? "")))

@@ -35,6 +35,12 @@ public record AuroraImportResult(
     IReadOnlyDictionary<string, int> ImportedByType)
 {
     public IReadOnlyList<string> Warnings { get; init; } = [];
+
+    /// <summary>What this import ran into, arranged (see <see cref="ImportDiagnostic.Arrange"/>).</summary>
+    public IReadOnlyList<ImportDiagnostic> Diagnostics { get; init; } = [];
+
+    /// <summary>The elements it made, in full, in part or as text only, and the entries it skipped (see <see cref="ImportEntryCounts"/>).</summary>
+    public ImportEntryCounts Entries { get; init; } = ImportEntryCounts.None;
 }
 
 public static class AuroraImporterIndex

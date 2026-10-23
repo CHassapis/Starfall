@@ -1,5 +1,3 @@
-using System.Security.Cryptography;
-using System.Text;
 using System.Text.RegularExpressions;
 using System.Transactions;
 using System.Xml;
@@ -57,8 +55,6 @@ internal sealed class AuroraImporter : IAuroraImporter
 
     // namespace for the deterministic (UUIDv5) element ids derived from Aurora ids, so grants
     // across files resolve to the same element and re-running an import does not duplicate anything
-    private static readonly Guid IdNamespace = new("8a4c4f1e-2b7d-4d52-9d0e-6f3b2a9c7e11");
-
     // written on every element's stored XML: an update re-creates an element whose XML changed, so raising this when
     // the importer makes something new of the same XML (2: appends and every element's prerequisites) re-creates them
     // all once, with no --replace needed
@@ -85,7 +81,7 @@ internal sealed class AuroraImporter : IAuroraImporter
         using var _ = ElementsInstrumentation.StartActivity();
 
         var root = Path.GetFullPath(_options.ContentPath);
-        var (byId, byFile, warnings) = BuildCatalog(root);
+        var (byId, byFile, warnings, catalogDiagnostics) = BuildCatalog(root);
         var repository = _persistence.GetRepository<IElementsRepository>();
         var homebrewImport = string.Equals(indexPath, AuroraImporterOptions.HomebrewIndex, StringComparison.OrdinalIgnoreCase);
         var storedXml = homebrewImport && (update || replace) ? await repository.GetAuroraXmlAsync() : null;
@@ -93,21 +89,18 @@ internal sealed class AuroraImporter : IAuroraImporter
         // "homebrew" imports every file of the homebrew folder, "5etools" what is generated from the 5etools data;
         // anything else is an .index of the content repository
         var files = new List<string>();
-        if (string.Equals(indexPath, AuroraImporterOptions.HomebrewIndex, StringComparison.OrdinalIgnoreCase))
+        var diagnostics = new List<ImportDiagnostic>();
+        var folder = indexPath.ToLowerInvariant() switch
         {
-            files.AddRange(byFile.Keys.Where(f => f.StartsWith(HomebrewPrefix, StringComparison.Ordinal)));
-        }
-        else if (string.Equals(indexPath, AuroraImporterOptions.FiveEToolsIndex, StringComparison.OrdinalIgnoreCase))
+            AuroraImporterOptions.HomebrewIndex => HomebrewPrefix,
+            AuroraImporterOptions.FiveEToolsIndex => FiveEToolsData.Prefix,
+            AuroraImporterOptions.PullRequestsIndex => PullRequestsPrefix,
+            AuroraImporterOptions.BuiltInIndex => BuiltIn.BuiltInContent.Prefix,
+            _ => null,
+        };
+        if (folder is not null)
         {
-            files.AddRange(byFile.Keys.Where(f => f.StartsWith(FiveEToolsData.Prefix, StringComparison.Ordinal)));
-        }
-        else if (string.Equals(indexPath, AuroraImporterOptions.PullRequestsIndex, StringComparison.OrdinalIgnoreCase))
-        {
-            files.AddRange(byFile.Keys.Where(f => f.StartsWith(PullRequestsPrefix, StringComparison.Ordinal)));
-        }
-        else if (string.Equals(indexPath, AuroraImporterOptions.BuiltInIndex, StringComparison.OrdinalIgnoreCase))
-        {
-            files.AddRange(byFile.Keys.Where(f => f.StartsWith(BuiltIn.BuiltInContent.Prefix, StringComparison.Ordinal)));
+            files.AddRange(byFile.Keys.Where(f => f.StartsWith(folder, StringComparison.Ordinal)));
         }
         else
         {
@@ -116,8 +109,14 @@ internal sealed class AuroraImporter : IAuroraImporter
             {
                 throw new FileNotFoundException($"The index '{indexPath}' was not found in the content repository.");
             }
-            CollectIndexFiles(root, indexFile, files, []);
+            CollectIndexFiles(root, indexFile, files, [], diagnostics);
         }
+        // what reading every file ran into, as far as it concerns the files this import is about: a broken file in the
+        // content repository is not news on a homebrew upload
+        var listed = files.ToHashSet(StringComparer.Ordinal);
+        bool InScope(string file) => folder is null ? listed.Contains(file) : file.StartsWith(folder, StringComparison.Ordinal);
+        // a repeated id concerns both files: the one left out (File) and the one used (Detail)
+        diagnostics.AddRange(catalogDiagnostics.Where(d => d.File is null || InScope(d.File) || d.Code == ImportDiagnosticCode.DuplicateId && d.Detail is { } used && InScope(used)));
 
         // the requested elements, then (transitively) everything they grant from anywhere in the repository,
         // plus the options for choices that nothing in the import can satisfy (e.g. gaming sets for the Soldier)
@@ -227,6 +226,20 @@ internal sealed class AuroraImporter : IAuroraImporter
         int alreadyImported = 0, skippedConditional = 0, skippedUnresolved = 0;
         ILookup<(string, string), string>? sameName = null;
         var importedByType = new SortedDictionary<string, int>();
+        var made = new List<(string Id, bool TextOnly)>();
+
+        // a requirement term no character can meet (an id that is not in the content, a term of no known kind)
+        void Unsupported(AuroraElement aurora, string? requirements)
+        {
+            foreach (var term in RequirementTerms.Unknown(requirements))
+            {
+                diagnostics.Add(new ImportDiagnostic(ImportDiagnosticSeverity.Warning, ImportDiagnosticCode.RequirementUnsupported, ImportDiagnostic.ImporterOf(aurora.File),
+                    AuroraId.IsMatch(term)
+                        ? $"{aurora.Name}'s requirements name {term}, which is not in the content: it counts as something no character has."
+                        : $"{aurora.Name}'s requirements use {term}, which Starfall cannot check: it counts as never true.")
+                { File = aurora.File, ElementId = aurora.Id, ElementName = aurora.Name, Detail = term });
+            }
+        }
 
         foreach (var aurora in toImport.Values)
         {
@@ -287,6 +300,7 @@ internal sealed class AuroraImporter : IAuroraImporter
                 ownRequirements = AnyEdition(ownRequirements, byId, sameName ??= SameName(byId));
             }
             var check = Convert(ownRequirements, byId);
+            Unsupported(aurora, check);
             if (!string.IsNullOrEmpty(prerequisite) || check is not null)
             {
                 Attach("prerequisites", id =>
@@ -300,6 +314,7 @@ internal sealed class AuroraImporter : IAuroraImporter
             foreach (var rule in aurora.Rules)
             {
                 var requirements = RequirementsOf(rule, byId);
+                Unsupported(aurora, requirements);
 
                 var level = Math.Max(0, ParseInt(rule.Attribute("level")) ?? 0);
 
@@ -310,6 +325,9 @@ internal sealed class AuroraImporter : IAuroraImporter
                         if (grantId is null || !(toImport.ContainsKey(grantId) || existing.Contains(ToElementId(grantId).Value)))
                         {
                             skippedUnresolved++;
+                            diagnostics.Add(new ImportDiagnostic(ImportDiagnosticSeverity.Warning, ImportDiagnosticCode.GrantUnresolved, ImportDiagnostic.ImporterOf(aurora.File),
+                                grantId is null ? $"{aurora.Name} has a grant without an id; it was left out." : $"{aurora.Name} grants {grantId}, which is not in the content; that grant was left out.")
+                            { File = aurora.File, ElementId = aurora.Id, ElementName = aurora.Name, Detail = grantId });
                             break;
                         }
                         Attach($"grant:{grantId}:{level}", id => new IncludeRuleComponent(id, ToElementId(grantId), level)).UpdateRequirements(requirements);
@@ -347,6 +365,19 @@ internal sealed class AuroraImporter : IAuroraImporter
             repository.Add(element);
             existing.Add(elementId.Value);
             importedByType[type] = importedByType.GetValueOrDefault(type) + 1;
+
+            // a feature, feat or trait with nothing to apply: no rules (one whose rules were left out is partial), no limited
+            // uses or action on the sheet, no spellcasting
+            var sheet = aurora.Xml.Element("sheet");
+            var textOnly = FeatureTypes.Contains(aurora.Type) && !aurora.Rules.Any() && aurora.Xml.Element("spellcasting") is null
+                && string.IsNullOrWhiteSpace((string?)sheet?.Attribute("usage")) && string.IsNullOrWhiteSpace((string?)sheet?.Attribute("action"));
+            if (textOnly)
+            {
+                diagnostics.Add(new ImportDiagnostic(ImportDiagnosticSeverity.Info, ImportDiagnosticCode.TextOnly, ImportDiagnostic.ImporterOf(aurora.File),
+                    $"{aurora.Name} has no rules: Starfall shows its description, but applies nothing from it.")
+                { File = aurora.File, ElementId = aurora.Id, ElementName = aurora.Name });
+            }
+            made.Add((aurora.Id, textOnly));
         }
 
         await _persistence.SaveChangesAsync();
@@ -358,7 +389,12 @@ internal sealed class AuroraImporter : IAuroraImporter
         _logger.LogInformation("imported aurora index '{Index}': {Imported} elements ({Replaced} replaced, {Dependencies} pulled in as grant dependencies), {Existing} already present, {Conditional} conditional rules and {Unresolved} unresolved grants skipped",
             indexPath, imported, replaced, dependencies, alreadyImported, skippedConditional, skippedUnresolved);
 
-        return new AuroraImportResult(files.Count, imported, replaced, dependencies, alreadyImported, skippedConditional, skippedUnresolved, importedByType) { Warnings = warnings };
+        return new AuroraImportResult(files.Count, imported, replaced, dependencies, alreadyImported, skippedConditional, skippedUnresolved, importedByType)
+        {
+            Warnings = warnings,
+            Diagnostics = ImportDiagnostic.Arrange(diagnostics),
+            Entries = ImportEntryCounts.Of(made, diagnostics),
+        };
     }
 
     public async Task<int> RemoveAsync(string pathPrefix, CancellationToken cancellationToken = default)
@@ -389,8 +425,9 @@ internal sealed class AuroraImporter : IAuroraImporter
     /// Every element of the content repository and of the homebrew folder (under "homebrew/"), so grants and
     /// choices resolve across both.
     /// </summary>
-    private (Dictionary<string, AuroraElement> ById, Dictionary<string, List<AuroraElement>> ByFile, List<string> Warnings) BuildCatalog(string root)
+    private (Dictionary<string, AuroraElement> ById, Dictionary<string, List<AuroraElement>> ByFile, List<string> Warnings, List<ImportDiagnostic> Diagnostics) BuildCatalog(string root)
     {
+        var diagnostics = new List<ImportDiagnostic>();
         var byId = new Dictionary<string, AuroraElement>(StringComparer.Ordinal);
         var byFile = new Dictionary<string, List<AuroraElement>>(StringComparer.Ordinal);
         var duplicates = 0;
@@ -416,6 +453,10 @@ internal sealed class AuroraImporter : IAuroraImporter
                 var type = (string?)xml.Attribute("type");
                 if (string.IsNullOrWhiteSpace(id) || string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(type))
                 {
+                    var missing = string.Join(" or ", new[] { ("id", id), ("name", name), ("type", type) }.Where(a => string.IsNullOrWhiteSpace(a.Item2)).Select(a => a.Item1));
+                    diagnostics.Add(new ImportDiagnostic(ImportDiagnosticSeverity.Warning, ImportDiagnosticCode.ElementIncomplete, ImportDiagnostic.ImporterOf(file),
+                        $"An element in {file} has no {missing}, so it was skipped.")
+                    { File = file, ElementId = string.IsNullOrWhiteSpace(id) ? null : id, ElementName = string.IsNullOrWhiteSpace(name) ? null : name, Detail = missing });
                     continue;
                 }
 
@@ -425,10 +466,9 @@ internal sealed class AuroraImporter : IAuroraImporter
                 if (byId.TryGetValue(id, out var other))
                 {
                     duplicates++;
-                    if (Precedence(file) > Precedence(other.File))
-                    {
-                        byId[id] = element;
-                    }
+                    var (used, left) = Precedence(file) > Precedence(other.File) ? (element, other) : (other, element);
+                    byId[id] = used;
+                    diagnostics.Add(Duplicate(used, left));
                 }
                 else
                 {
@@ -475,6 +515,8 @@ internal sealed class AuroraImporter : IAuroraImporter
             catch (XmlException ex)
             {
                 _logger.LogWarning("skipping unreadable aurora file '{File}': {Error}", file, ex.Message);
+                diagnostics.Add(new ImportDiagnostic(ImportDiagnosticSeverity.Warning, ImportDiagnosticCode.UnreadableFile, ImportDiagnostic.ImporterOf(file),
+                    $"{file} is not valid XML and was skipped: {ex.Message}") { File = file, Detail = ex.Message });
                 continue;
             }
 
@@ -518,7 +560,7 @@ internal sealed class AuroraImporter : IAuroraImporter
 
         // what the 5etools data has and all of the above lacks (a book Aurora Legacy has not added yet), translated
         if (_fiveETools.Available
-            && _fiveETools.ContentAsAurora(byId.Values.Select(e => new FiveETools.AuroraCatalogElement(e.Id, e.Name, e.Type, e.Source, e.Supports, e.Xml))) is { } content)
+            && _fiveETools.ContentAsAurora(byId.Values.Select(e => new FiveETools.AuroraCatalogElement(e.Id, e.Name, e.Type, e.Source, e.Supports, e.Xml)), diagnostics) is { } content)
         {
             AddDocument(FiveEToolsData.Prefix + "content.xml", content);
         }
@@ -532,12 +574,26 @@ internal sealed class AuroraImporter : IAuroraImporter
 
         _logger.LogInformation("aurora catalog: {Elements} elements in {Files} files ({Duplicates} duplicate ids ignored, {Appended} appends applied, {Unmatched} appends for elements not loaded)",
             byId.Count, byFile.Count, duplicates, appended, unmatched);
-        var warnings = documents.Where(d => d.File.StartsWith(HomebrewPrefix, StringComparison.Ordinal))
+        var missingTargets = documents.Where(d => d.File.StartsWith(HomebrewPrefix, StringComparison.Ordinal))
             .SelectMany(d => HomebrewUploadXml.AppendTargets(d.Document).Where(id => !byId.TryGetValue(id, out var target) || target.Xml.Attribute(HomebrewAppendMarker) is null)
-                .Select(id => $"{d.File}: append target {id} was not found in the loaded Aurora source files. Install its source content, then upload this patch again."))
+                .Select(id => (d.File, Id: id)))
             .ToList();
-        return (byId, byFile, warnings);
+        var warnings = missingTargets
+            .Select(m => $"{m.File}: append target {m.Id} was not found in the loaded Aurora source files. Install its source content, then upload this patch again.")
+            .ToList();
+        diagnostics.AddRange(missingTargets.Select(m => new ImportDiagnostic(ImportDiagnosticSeverity.Warning, ImportDiagnosticCode.AppendTargetMissing, ImportDiagnosticImporter.Homebrew,
+            $"The append to {m.Id} was not applied: {m.Id} is not in the loaded content. Install the content it belongs to, then upload this file again.") { File = m.File, ElementId = m.Id }));
+        return (byId, byFile, warnings, diagnostics);
     }
+
+    /// <summary>Two files define the id: <paramref name="used"/>'s copy counts (see Precedence), <paramref name="left"/>'s is left out.</summary>
+    private static ImportDiagnostic Duplicate(AuroraElement used, AuroraElement left) =>
+        new(Precedence(used.File) > Precedence(left.File) ? ImportDiagnosticSeverity.Info : ImportDiagnosticSeverity.Warning, ImportDiagnosticCode.DuplicateId,
+            ImportDiagnostic.ImporterOf(used.File),
+            used.File == left.File
+                ? $"{used.Name} ({used.Id}) is defined twice in {used.File}; the first is used and the other left out."
+                : $"{used.Name} ({used.Id}) is defined in both {left.File} and {used.File}; the copy in {used.File} is used and the other left out.")
+        { File = left.File, ElementId = used.Id, ElementName = used.Name, Detail = used.File };
 
     /// <summary>
     /// Which copy of an id counts when files repeat it: homebrew (the user's own) over an open pull request (the newest
@@ -632,7 +688,7 @@ internal sealed class AuroraImporter : IAuroraImporter
     /// <summary>
     /// Walks an .index file and the .index files it lists, collecting the element files (relative to the root).
     /// </summary>
-    private void CollectIndexFiles(string root, string indexFile, List<string> files, HashSet<string> visited)
+    private void CollectIndexFiles(string root, string indexFile, List<string> files, HashSet<string> visited, List<ImportDiagnostic> diagnostics)
     {
         if (!visited.Add(indexFile) || _options.IsExcluded(Path.GetRelativePath(root, indexFile).Replace('\\', '/')))
         {
@@ -652,12 +708,15 @@ internal sealed class AuroraImporter : IAuroraImporter
             if (path is null)
             {
                 _logger.LogWarning("index '{Index}' lists '{Name}' which is not in the content repository", Path.GetRelativePath(root, indexFile), name);
+                var index = Path.GetRelativePath(root, indexFile).Replace('\\', '/');
+                diagnostics.Add(new ImportDiagnostic(ImportDiagnosticSeverity.Warning, ImportDiagnosticCode.IndexEntryMissing, ImportDiagnosticImporter.Aurora,
+                    $"{index} lists {name}, which is not in the content repository; it was left out.") { File = index, Detail = name });
                 continue;
             }
 
             if (path.EndsWith(".index", StringComparison.OrdinalIgnoreCase))
             {
-                CollectIndexFiles(root, path, files, visited);
+                CollectIndexFiles(root, path, files, visited, diagnostics);
             }
             else
             {
@@ -706,6 +765,9 @@ internal sealed class AuroraImporter : IAuroraImporter
     }
 
     private static readonly Regex AuroraId = new(@"ID_[A-Za-z0-9_]+", RegexOptions.Compiled);
+
+    // the types whose point is what they do for a character: one with only a description is reported as text only
+    private static readonly HashSet<string> FeatureTypes = new(["Class Feature", "Archetype Feature", "Racial Trait", "Feat", "Feat Feature", "Background Feature"], StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
     /// The rule's requirements for the character processor, with the Aurora ids of imported elements replaced by
@@ -825,14 +887,7 @@ internal sealed class AuroraImporter : IAuroraImporter
 
     internal static ElementId ToElementId(string auroraId) => new(ToGuid(auroraId));
 
-    private static Guid ToGuid(string name)
-    {
-        byte[] input = [.. IdNamespace.ToByteArray(bigEndian: true), .. Encoding.UTF8.GetBytes(name)];
-        var hash = SHA1.HashData(input);
-        hash[6] = (byte)((hash[6] & 0x0F) | 0x50); // version 5
-        hash[8] = (byte)((hash[8] & 0x3F) | 0x80); // RFC 4122 variant
-        return new Guid(hash.AsSpan(0, 16), bigEndian: true);
-    }
+    private static Guid ToGuid(string name) => AuroraIds.ToGuid(name);
 
     private static readonly string[] AbilityNames = ["Strength", "Dexterity", "Constitution", "Intelligence", "Wisdom", "Charisma"];
 

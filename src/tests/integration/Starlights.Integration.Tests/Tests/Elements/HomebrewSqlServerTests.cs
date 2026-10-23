@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json.Nodes;
 using System.Transactions;
 using System.Xml.Linq;
 using AwesomeAssertions;
@@ -14,6 +15,8 @@ using Starlights.Modules.Elements.Data;
 using Starlights.Modules.Elements.Data.EntityFramework;
 using Starlights.Modules.Elements.Domain;
 using Starlights.Modules.Elements.Domain.Components;
+using Starlights.Modules.Elements.Integration;
+using Starlights.Platform.Components.Data.EntityFramework;
 using Starlights.Platform.Data;
 
 namespace Starlights.Integration.Tests.Elements;
@@ -270,6 +273,50 @@ public sealed class HomebrewSqlServerTests : IntegrationTestBase
         // and without the failure the same replace import goes through, keeping the ids
         (await Import("mk2.index", replace: true)).Should().Be(HttpStatusCode.OK);
         (await ElementIds()).Should().Equal(ids);
+    }
+
+    [TestMethod]
+    public async Task WhoUsesAnElement_IsFoundByTheirRegistrations_AndAPreviewChangesNoRow()
+    {
+        var characterId = await _integration.GetDriver<CharacterCreationDriver>().CreateCharacterAsync();
+        using var admin = _integration.CreateAdminClient();
+        var registrations = await admin.GetFromJsonAsync<JsonObject>($"/api/characters/{characterId}/registrations", _integration.CancellationToken);
+        var picked = Guid.Parse(registrations!["registrations"]![0]!["associatedElementId"]!.GetValue<string>());
+
+        IReadOnlyList<ElementUser> users;
+        using (var scope = _integration.Services.CreateScope())
+        {
+            users = await scope.ServiceProvider.GetRequiredService<IElementUsage>().GetUsersAsync([picked, Guid.NewGuid()], _integration.CancellationToken);
+        }
+
+        users.Should().Contain(u => u.CharacterId == characterId, "the character registered it");
+        users.Should().OnlyContain(u => u.ElementIds.SequenceEqual(new[] { picked }), "only the element asked about that they use");
+
+        // the new character's registrations are worked out in the background: wait for that, or it changes rows mid-test
+        await SettleCharactersAsync();
+        var characters = await Snapshot("characters");
+        var elements = await Snapshot("elements");
+        var preview = await admin.PostAsJsonAsync("/api/elements/homebrew/spells/preview",
+            new { Name = "Mk2 Spark", Level = 1, School = "Evocation", Lists = new[] { "Wizard" }, Description = "Made up." }, _integration.CancellationToken);
+
+        preview.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await Snapshot("characters")).Should().Equal(characters, "a preview reads only");
+        (await Snapshot("elements")).Should().Equal(elements, "a preview reads only");
+        File.Exists(Path.Combine(_homebrew, "starlights-spells.xml")).Should().BeFalse();
+    }
+
+    /// <summary>Waits until the characters' outbox has nothing left to process, twice in a row.</summary>
+    private async Task SettleCharactersAsync()
+    {
+        var quiet = 0;
+        for (var i = 0; i < 600 && quiet < 2; i++)
+        {
+            using var scope = _integration.Services.CreateScope();
+            var waiting = await scope.ServiceProvider.GetRequiredService<CharactersContext>().Set<EventMessage>().AnyAsync(m => m.ProcessedOn == null);
+            quiet = waiting ? 0 : quiet + 1;
+            await Task.Delay(quiet == 0 ? 50 : 100);
+        }
+        quiet.Should().Be(2, "the character's processing settles");
     }
 
     // ---- the API

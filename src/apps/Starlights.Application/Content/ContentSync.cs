@@ -15,7 +15,14 @@ namespace Starlights.Application.Content;
 public sealed record ContentSettings(string AuroraLink, string FiveEToolsLink, string? AuroraCommit = null, string? FiveEToolsCommit = null, DateTimeOffset? UpdatedAt = null);
 
 /// <summary>What the content job is doing or last did.</summary>
-public sealed record ContentJobStatus(bool Running, string? Step, IReadOnlyList<string> Log, DateTimeOffset? StartedAt, DateTimeOffset? FinishedAt, bool? Succeeded);
+public sealed record ContentJobStatus(bool Running, string? Step, IReadOnlyList<string> Log, DateTimeOffset? StartedAt, DateTimeOffset? FinishedAt, bool? Succeeded)
+{
+    /// <summary>What the run's imports ran into (files skipped, grants left out), arranged as each import arranges its own.</summary>
+    public IReadOnlyList<ImportDiagnostic> Diagnostics { get; init; } = [];
+
+    /// <summary>The run's imports' elements in full, in part or as text only, and what they skipped, added up.</summary>
+    public ImportEntryCounts Entries { get; init; } = ImportEntryCounts.None;
+}
 
 /// <summary>One content source as this server has it: the commit or release in use, when it last changed and was checked.</summary>
 public sealed record ContentSourceStatus(string Name, string Link, string? Commit, string? Version, string? VersionDate, DateTimeOffset? ChangedAt, DateTimeOffset? CheckedAt);
@@ -67,6 +74,8 @@ public sealed partial class ContentSync
     private readonly ILogger<ContentSync> _logger;
     private readonly object _gate = new();
     private readonly List<string> _log = [];
+    private readonly List<ImportDiagnostic> _diagnostics = [];
+    private ImportEntryCounts _entries = ImportEntryCounts.None;
     private bool _running;
     private string? _step;
     private DateTimeOffset? _started, _finished;
@@ -141,7 +150,7 @@ public sealed partial class ContentSync
     {
         lock (_gate)
         {
-            return new ContentJobStatus(_running, _step, [.. _log], _started, _finished, _succeeded);
+            return new ContentJobStatus(_running, _step, [.. _log], _started, _finished, _succeeded) { Diagnostics = [.. _diagnostics], Entries = _entries };
         }
     }
 
@@ -335,6 +344,8 @@ public sealed partial class ContentSync
             }
             _running = true;
             _log.Clear();
+            _diagnostics.Clear();
+            _entries = ImportEntryCounts.None;
             _started = DateTimeOffset.UtcNow;
             _finished = null;
             _succeeded = null;
@@ -441,6 +452,11 @@ public sealed partial class ContentSync
             var result = await scope.ServiceProvider.GetRequiredService<IAuroraImporter>().ImportAsync(index, replace: false, update: true);
             imported += result.ElementsImported + result.ElementsReplaced;
             Write($"{result.ElementsImported:N0} new, {result.ElementsReplaced:N0} updated");
+            lock (_gate)
+            {
+                _diagnostics.AddRange(result.Diagnostics);
+                _entries += result.Entries;
+            }
         }
 
         if (fiveEChanged || !File.Exists(Path.Combine(LorePath, "current.json")))

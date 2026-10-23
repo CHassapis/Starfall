@@ -1,6 +1,7 @@
 import { apiClient } from "@/lib/api-client";
 import type { BuilderChoice } from "@/lib/api/builder";
 import { shrinkImage } from "@/lib/image";
+import { arrangeDiagnostics, missingPickDiagnostic, unmatchedPickDiagnostic, type ImportDiagnostic } from "@/lib/import-diagnostics";
 import { auroraAttackList, type AuroraAttack, type CustomAttack } from "@/lib/rules/items";
 
 /**
@@ -19,6 +20,8 @@ export interface AuroraImportReport {
   missing: string[];
   /** picks whose choice did not come up in the Starfall build */
   unmatched: string[];
+  /** the same, and equipment not in the imported content, in the import diagnostics' shape */
+  diagnostics: ImportDiagnostic[];
 }
 
 interface Pick {
@@ -133,10 +136,12 @@ export async function importAuroraCharacter(
   const picks = collectPicks(elements);
   const ids = await lookupIds(picks, doc);
 
-  const report: AuroraImportReport = { characterId, name, playerInFile: text(build, ":scope > input > player-name"), picked: 0, missing: [], unmatched: [] };
+  const report: AuroraImportReport = { characterId, name, playerInFile: text(build, ":scope > input > player-name"), picked: 0, missing: [], unmatched: [], diagnostics: [] };
+  const missingPicks: Pick[] = [];
   const open = picks.filter((p) => {
     if (!ids[p.registered]) {
       report.missing.push(`${p.name}: ${p.registered}`);
+      missingPicks.push(p);
       return false;
     }
     return p.parent !== null || p.type in TOP_LEVEL;
@@ -174,7 +179,8 @@ export async function importAuroraCharacter(
   const proxies = await addFeatProxies(characterId, doc, ids);
   open.push(...proxies);
   report.picked += await fillChoices(characterId, open, ids, { onlyEmpty: false, label: name, onProgress });
-  report.unmatched = await unmatchedPicks(characterId, open, ids);
+  const unmatched = await unmatchedPicks(characterId, open, ids);
+  report.unmatched = unmatched.map(unmatchedLabel);
 
   // backstory, personality and appearance, under the Story tab's field names
   const story: Record<string, string> = {};
@@ -221,6 +227,7 @@ export async function importAuroraCharacter(
     if (ability && ABILITIES.includes(ability) && !ids[pick.registered]) {
       internalIncreases[ability] = (internalIncreases[ability] ?? 0) + 1;
       report.missing = report.missing.filter((m) => !m.endsWith(pick.registered));
+      missingPicks.splice(0, missingPicks.length, ...missingPicks.filter((m) => m.registered !== pick.registered));
     }
   }
 
@@ -240,7 +247,8 @@ export async function importAuroraCharacter(
   }
 
   onProgress?.(`${name}: equipment…`);
-  await importAuroraEquipment(characterId, doc);
+  const equipment = await importAuroraEquipment(characterId, doc);
+  report.diagnostics = arrangeDiagnostics([...missingPicks.map(missingPickDiagnostic), ...equipment.diagnostics, ...unmatched.map(unmatchedPickDiagnostic)]);
 
   return report;
 }
@@ -354,10 +362,12 @@ async function fillChoices(
 }
 
 /** The file's picks that found no choice, leaving out what the character has another way (newer content grants it). */
-async function unmatchedPicks(characterId: string, open: Pick[], ids: Record<string, string>): Promise<string[]> {
+async function unmatchedPicks(characterId: string, open: Pick[], ids: Record<string, string>): Promise<Pick[]> {
   const has = await registeredElements(characterId);
-  return open.filter((p) => p.parent !== null && !has.has(ids[p.registered])).map((p) => `${p.name} (${p.registered})`);
+  return open.filter((p) => p.parent !== null && !has.has(ids[p.registered]));
 }
+
+const unmatchedLabel = (p: Pick) => `${p.name} (${p.registered})`;
 
 async function registeredElements(characterId: string): Promise<Set<string>> {
   const registered = await apiClient.get<{ registrations: { associatedElementId: string; children?: unknown[] }[] }>(`/api/characters/${characterId}/registrations`);
@@ -414,7 +424,7 @@ const COINS: [string, string][] = [
  * item ("Weapon, +1" on a Spear) becomes that magic item made from the base. Only into an empty inventory, so
  * running it again adds nothing twice. Returns how many items were added and the ones not in the content.
  */
-export async function importAuroraEquipment(characterId: string, doc: Document): Promise<{ added: number; missing: string[] }> {
+export async function importAuroraEquipment(characterId: string, doc: Document): Promise<{ added: number; missing: string[]; diagnostics: ImportDiagnostic[] }> {
   const current = await apiClient.get<{
     items: { id: string; attack?: number | null }[];
     coins: Record<string, number>;
@@ -451,7 +461,7 @@ export async function importAuroraEquipment(characterId: string, doc: Document):
         customAttacks,
       });
     }
-    return { added: 0, missing: [] };
+    return { added: 0, missing: [], diagnostics: [] };
   }
   const attackPlaces = auroraAttackList(auroraAttacks, new Set()).places;
 
@@ -464,12 +474,14 @@ export async function importAuroraEquipment(characterId: string, doc: Document):
     : { elements: {} as Record<string, string> };
 
   const missing: string[] = [];
+  const diagnostics: ImportDiagnostic[] = [];
   const items = nodes.flatMap((node) => {
     const own = ids[node.getAttribute("id") ?? ""];
     const adorner = node.querySelector(":scope > items > adorner");
     const magic = adorner ? ids[adorner.getAttribute("id") ?? ""] : undefined;
     if (!own || (adorner && !magic)) {
       missing.push(`${node.getAttribute("name")}: ${adorner?.getAttribute("id") ?? node.getAttribute("id")}`);
+      diagnostics.push(missingPickDiagnostic({ name: node.getAttribute("name") ?? "", type: "Item", registered: adorner?.getAttribute("id") ?? node.getAttribute("id") ?? "" }));
       return [];
     }
     const equipped = node.querySelector(":scope > equipped");
@@ -500,9 +512,9 @@ export async function importAuroraEquipment(characterId: string, doc: Document):
 
   // attacks of items that did not come in (not in the content) are kept as custom attacks, figures as Aurora wrote them
   const { customAttacks } = auroraAttackList(auroraAttacks, new Set(items.map((i) => i.id)), current.customAttacks ?? [], current.removedAttackIds ?? []);
-  if (items.length === 0 && Object.keys(coins).length === 0 && !treasure && customAttacks.length === 0) return { added: 0, missing };
+  if (items.length === 0 && Object.keys(coins).length === 0 && !treasure && customAttacks.length === 0) return { added: 0, missing, diagnostics };
   await apiClient.put(`/api/characters/${characterId}/inventory`, { ...current, items, coins, treasure: treasure || current.treasure || null, customAttacks });
-  return { added: items.length, missing };
+  return { added: items.length, missing, diagnostics };
 }
 
 export interface AuroraUpdateReport {
@@ -511,6 +523,7 @@ export interface AuroraUpdateReport {
   prepared: number;
   missing: string[];
   unmatched: string[];
+  diagnostics: ImportDiagnostic[];
 }
 
 /**
@@ -526,7 +539,8 @@ export async function updateFromAurora(characterId: string, xmlText: string, onP
 
   const picks = collectPicks(elements);
   const ids = await lookupIds(picks, doc);
-  const missing = picks.filter((p) => !ids[p.registered]).map((p) => `${p.name}: ${p.registered}`);
+  const missingPicks = picks.filter((p) => !ids[p.registered]);
+  const missing = missingPicks.map((p) => `${p.name}: ${p.registered}`);
   const open = picks.filter((p) => ids[p.registered] && p.parent !== null);
 
   onProgress?.("Deity and hit points…");
@@ -545,7 +559,15 @@ export async function updateFromAurora(characterId: string, xmlText: string, onP
   onProgress?.("Prepared spells…");
   const prepared = await importAuroraPreparedSpells(characterId, doc);
 
-  return { picked, items: equipment.added, prepared, missing: [...missing, ...equipment.missing], unmatched: await unmatchedPicks(characterId, open, ids) };
+  const unmatched = await unmatchedPicks(characterId, open, ids);
+  return {
+    picked,
+    items: equipment.added,
+    prepared,
+    missing: [...missing, ...equipment.missing],
+    unmatched: unmatched.map(unmatchedLabel),
+    diagnostics: arrangeDiagnostics([...missingPicks.map(missingPickDiagnostic), ...equipment.diagnostics, ...unmatched.map(unmatchedPickDiagnostic)]),
+  };
 }
 
 /**

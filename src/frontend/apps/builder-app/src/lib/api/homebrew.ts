@@ -2,8 +2,10 @@
  * The group's homebrew made on the Homebrew page: magic items (imported as Aurora items, so the builder treats them
  * like book items) and monsters (stat blocks for campaigns' encounters). Reading is open; saving needs the admin.
  */
+import { ApiError } from "@starlights/api-client";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api-client";
+import type { HomebrewEditPreview } from "@/lib/contracts/homebrew-preview";
 import { homebrewSources, type SourceBook } from "@/lib/api/sources";
 import type { HomebrewMonster } from "@/lib/rules/homebrew";
 
@@ -52,6 +54,10 @@ export interface HomebrewSpell {
   lists: string[];
   description: string;
   higherLevels?: string | null;
+  /** the record as saved, when read; a save that sends it back as expectedRevision is refused (409) if it changed since */
+  revision?: string | null;
+  /** on a save: the revision the edit started from (a preview's) */
+  expectedRevision?: string | null;
 }
 
 export interface HomebrewSubclass {
@@ -63,6 +69,10 @@ export interface HomebrewSubclass {
   className: string;
   description: string;
   features: HomebrewFeature[];
+  /** the record as saved, when read; a save that sends it back as expectedRevision is refused (409) if it changed since */
+  revision?: string | null;
+  /** on a save: the revision the edit started from (a preview's) */
+  expectedRevision?: string | null;
 }
 
 export interface HomebrewClass {
@@ -91,6 +101,10 @@ export interface HomebrewClass {
   spellLists: string[];
   cantrips: number;
   spellListName?: string | null;
+  /** the record as saved, when read; a save that sends it back as expectedRevision is refused (409) if it changed since */
+  revision?: string | null;
+  /** on a save: the revision the edit started from (a preview's) */
+  expectedRevision?: string | null;
 }
 
 /** A class a homebrew subclass can join: its name, book and the supports of its subclass choice. */
@@ -150,10 +164,44 @@ export async function withNewBooksOff(save: () => Promise<unknown>) {
   }
 }
 
+export type HomebrewKind = "spells" | "subclasses" | "classes";
+
+/** What saving a spell, subclass or class would do, without saving (admin only). */
+export function previewHomebrew<T>(kind: HomebrewKind, body: T): Promise<HomebrewEditPreview> {
+  return apiClient.post<T, HomebrewEditPreview>(`/api/elements/homebrew/${kind}/preview`, body);
+}
+
+/** A save based on a preview whose record changed (or went away) since: nothing was saved; here is a fresh preview. */
+export class StaleHomebrewError extends Error {
+  readonly preview: HomebrewEditPreview;
+
+  constructor(preview: HomebrewEditPreview) {
+    super(preview.diagnostics.find((d) => d.code === "stale-revision")?.message ?? "It changed after you opened it, so it was not saved.");
+    this.name = "StaleHomebrewError";
+    this.preview = preview;
+  }
+}
+
+/** The fresh preview a refused save answers with (409), when that is what the error is. */
+export function stalePreviewOf(error: unknown): HomebrewEditPreview | null {
+  if (!(error instanceof ApiError) || error.status !== 409) return null;
+  try {
+    const preview = JSON.parse(error.body) as HomebrewEditPreview;
+    return Array.isArray(preview?.diagnostics) ? preview : null;
+  } catch {
+    return null;
+  }
+}
+
 /** Saves a spell, subclass or class; a book it brings in starts switched off for every character. */
-async function saveNew<T>(kind: string, body: T): Promise<T> {
+async function saveNew<T>(kind: HomebrewKind, body: T): Promise<T> {
   let saved: T | undefined;
-  await withNewBooksOff(async () => (saved = await apiClient.put<T, T>(`/api/elements/homebrew/${kind}`, body)));
+  try {
+    await withNewBooksOff(async () => (saved = await apiClient.put<T, T>(`/api/elements/homebrew/${kind}`, body)));
+  } catch (error) {
+    const preview = stalePreviewOf(error);
+    throw preview ? new StaleHomebrewError(preview) : error;
+  }
   return saved!;
 }
 

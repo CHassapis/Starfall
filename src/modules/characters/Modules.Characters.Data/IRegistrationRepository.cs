@@ -33,6 +33,12 @@ public interface IRegistrationRepository : IRepository
     Task<List<Registration>> GetRegistrationsByAssociationsAsync(CharacterId id, ElementId associatedElementId);
 
     /// <summary>
+    /// Every character with a registration of any of the elements, with the element: who picked them, or was granted
+    /// them, across all characters. Reads only (nothing is tracked).
+    /// </summary>
+    Task<List<(CharacterId Character, ElementId Element)>> GetAssociationsAsync(IReadOnlyCollection<ElementId> associatedElementIds);
+
+    /// <summary>
     /// Deletes all registrations for a specific character.
     /// </summary>
     Task<bool> DeleteRegistrationsAsync(CharacterId id);

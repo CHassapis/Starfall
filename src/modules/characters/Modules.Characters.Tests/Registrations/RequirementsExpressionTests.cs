@@ -1,5 +1,6 @@
 using AwesomeAssertions;
 using Starlights.Modules.Characters.Services.Processing;
+using Starlights.Modules.Elements.Integration;
 
 namespace Starlights.Modules.Characters.Tests.Registrations;
 
@@ -88,5 +89,25 @@ public class RequirementsExpressionTests
         Eval("[innate speed:fly:1]").Should().BeTrue();
         Eval("[Dex:13],[level:5]").Should().BeTrue();
         Eval("[rune shaper:usage:2]").Should().BeFalse();
+    }
+
+    [TestMethod]
+    [DataRow("11111111-1111-1111-1111-111111111111", RequirementTermKind.Element)]
+    [DataRow("[level:5]", RequirementTermKind.Value)]
+    [DataRow("[str:13]", RequirementTermKind.Value)]
+    [DataRow("[innate speed:fly:1]", RequirementTermKind.Value)]
+    [DataRow("[type:spell]", RequirementTermKind.Type)]
+    [DataRow("[equipped:armor:none]", RequirementTermKind.Equipped)]
+    [DataRow("ID_NOT_IMPORTED", RequirementTermKind.Unknown)]
+    [DataRow("[odd thing]", RequirementTermKind.Unknown)]
+    [DataRow("[type]", RequirementTermKind.Unknown)]
+    public void TheImporterAndTheEvaluator_AgreeOnWhatNoCharacterCanMeet(string term, RequirementTermKind kind)
+    {
+        // a character that has every element, every value and every piece of equipment meets every term but the unknown
+        var met = RequirementsExpression.Evaluate(term, _ => true, _ => 99, _ => true);
+
+        RequirementTerms.Classify(term).Should().Be(kind);
+        met.Should().Be(kind != RequirementTermKind.Unknown);
+        RequirementTerms.Unknown($"!{term},[level:1]").Should().Equal(kind == RequirementTermKind.Unknown ? new[] { term } : Array.Empty<string>());
     }
 }

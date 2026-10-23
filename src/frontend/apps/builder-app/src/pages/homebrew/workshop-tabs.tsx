@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import { RichText } from "@/components/rich-text";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import {
@@ -25,6 +25,7 @@ import {
 import { ordinal } from "@/lib/rules/magic";
 import { isAdmin } from "@/lib/player";
 import { cn } from "@/lib/utils";
+import { ReviewFooter } from "./edit-preview";
 import { area, select } from "./form-styles";
 import { Field } from "./homebrew-tabs";
 
@@ -133,26 +134,11 @@ function RowActions({ name, kind, id, warn, onEdit }: { name: string; kind: Kind
   );
 }
 
-function SaveFooter({ busy, ready, onClose, onSave }: { busy: boolean; ready: boolean; onClose: () => void; onSave: () => void }) {
-  return (
-    <DialogFooter>
-      <Button variant="outline" onClick={onClose}>
-        Cancel
-      </Button>
-      <Button disabled={busy || !ready} onClick={onSave}>
-        {busy && <Spinner />} Save
-      </Button>
-    </DialogFooter>
-  );
-}
-
-const saved = (name: string, close: () => void) => ({
-  onSuccess: () => {
-    toast.success(`${name} saved`);
-    close();
-  },
-  onError: (e: Error) => toast.error("Could not save it", { description: e.message }),
-});
+// after a save: the review footer shows what went wrong, if anything did
+const saved = (name: string, close: () => void) => () => {
+  toast.success(`${name} saved`);
+  close();
+};
 
 // ---- spells ----
 
@@ -199,12 +185,12 @@ export function HomebrewSpells({ startNew }: { startNew?: boolean }) {
           </article>
         ))}
       </div>
-      {editing && <SpellDialog spell={editing} lists={lists} busy={saveSpell.isPending} onClose={() => setEditing(null)} onSave={(s) => saveSpell.mutate(s, saved(s.name, () => setEditing(null)))} />}
+      {editing && <SpellDialog spell={editing} lists={lists} busy={saveSpell.isPending} onClose={() => setEditing(null)} onSave={(s) => saveSpell.mutateAsync(s).then(saved(s.name, () => setEditing(null)))} />}
     </div>
   );
 }
 
-function SpellDialog({ spell, lists, busy, onClose, onSave }: { spell: HomebrewSpell; lists: string[]; busy: boolean; onClose: () => void; onSave: (s: HomebrewSpell) => void }) {
+function SpellDialog({ spell, lists, busy, onClose, onSave }: { spell: HomebrewSpell; lists: string[]; busy: boolean; onClose: () => void; onSave: (s: HomebrewSpell) => Promise<unknown> }) {
   const u = useUnits();
   const [f, setF] = useState<HomebrewSpell>(spell);
   const set = (patch: Partial<HomebrewSpell>) => setF((x) => ({ ...x, ...patch }));
@@ -266,7 +252,7 @@ function SpellDialog({ spell, lists, busy, onClose, onSave }: { spell: HomebrewS
             <textarea rows={2} className={area} value={f.higherLevels ?? ""} onChange={(e) => set({ higherLevels: e.target.value || null })} maxLength={5000} />
           </Field>
         </div>
-        <SaveFooter busy={busy} ready={!!f.name.trim()} onClose={onClose} onSave={() => onSave(f)} />
+        <ReviewFooter kind="spells" model={f} busy={busy} ready={!!f.name.trim()} onClose={onClose} onSave={onSave} />
       </DialogContent>
     </Dialog>
   );
@@ -312,7 +298,7 @@ export function HomebrewSubclasses({ startNew }: { startNew?: boolean }) {
       </div>
       {editing && (
         <Dialog open onOpenChange={(o) => !o && setEditing(null)}>
-          <SubclassDialog subclass={editing} targets={targets.data ?? []} busy={saveSubclass.isPending} onClose={() => setEditing(null)} onSave={(s) => saveSubclass.mutate(s, saved(s.name, () => setEditing(null)))} />
+          <SubclassDialog subclass={editing} targets={targets.data ?? []} busy={saveSubclass.isPending} onClose={() => setEditing(null)} onSave={(s) => saveSubclass.mutateAsync(s).then(saved(s.name, () => setEditing(null)))} />
         </Dialog>
       )}
     </div>
@@ -330,7 +316,7 @@ function SubclassDialog({
   targets: { className: string; source?: string | null; supports: string }[];
   busy: boolean;
   onClose: () => void;
-  onSave: (s: HomebrewSubclass) => void;
+  onSave: (s: HomebrewSubclass) => Promise<unknown>;
 }) {
   const [f, setF] = useState<HomebrewSubclass>(subclass);
   const set = (patch: Partial<HomebrewSubclass>) => setF((x) => ({ ...x, ...patch }));
@@ -370,7 +356,7 @@ function SubclassDialog({
         </Field>
         <Features value={f.features} onChange={(features) => set({ features })} />
       </div>
-      <SaveFooter busy={busy} ready={!!f.name.trim() && !!f.classSupports && f.features.every((x) => x.name.trim())} onClose={onClose} onSave={() => onSave(f)} />
+      <ReviewFooter kind="subclasses" model={f} busy={busy} ready={!!f.name.trim() && !!f.classSupports && f.features.every((x) => x.name.trim())} onClose={onClose} onSave={onSave} />
     </DialogContent>
   );
 }
@@ -420,12 +406,12 @@ export function HomebrewClasses({ startNew }: { startNew?: boolean }) {
           </article>
         ))}
       </div>
-      {editing && <ClassDialog cls={editing} busy={saveClass.isPending} onClose={() => setEditing(null)} onSave={(c) => saveClass.mutate(c, saved(c.name, () => setEditing(null)))} />}
+      {editing && <ClassDialog cls={editing} busy={saveClass.isPending} onClose={() => setEditing(null)} onSave={(c) => saveClass.mutateAsync(c).then(saved(c.name, () => setEditing(null)))} />}
     </div>
   );
 }
 
-function ClassDialog({ cls, busy, onClose, onSave }: { cls: HomebrewClass; busy: boolean; onClose: () => void; onSave: (c: HomebrewClass) => void }) {
+function ClassDialog({ cls, busy, onClose, onSave }: { cls: HomebrewClass; busy: boolean; onClose: () => void; onSave: (c: HomebrewClass) => Promise<unknown> }) {
   const [f, setF] = useState<HomebrewClass>(cls);
   const set = (patch: Partial<HomebrewClass>) => setF((x) => ({ ...x, ...patch }));
   const [asiText, setAsiText] = useState(cls.asiLevels.join(", "));
@@ -528,11 +514,13 @@ function ClassDialog({ cls, busy, onClose, onSave }: { cls: HomebrewClass; busy:
           )}
           <Features value={f.features} onChange={(features) => set({ features })} />
         </div>
-        <SaveFooter
+        <ReviewFooter
+          kind="classes"
+          model={f}
           busy={busy}
           ready={nameOk && f.features.every((x) => x.name.trim()) && (f.casting === "None" || f.spellLists.length > 0 || !!cls.id)}
           onClose={onClose}
-          onSave={() => onSave(f)}
+          onSave={onSave}
         />
       </DialogContent>
     </Dialog>

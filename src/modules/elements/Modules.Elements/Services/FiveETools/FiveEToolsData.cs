@@ -116,15 +116,16 @@ internal sealed class FiveEToolsData : IFiveEToolsLore
 
     /// <summary>
     /// The spells, feats, class options, backgrounds, species, subclasses and classes 5etools has and the Aurora
-    /// catalog lacks, as an Aurora element file (see <see cref="FiveEToolsContent"/>); null when switched off.
+    /// catalog lacks, as an Aurora element file (see <see cref="FiveEToolsContent"/>); null when switched off. What it
+    /// had to leave out (a feature the data refers to and does not have) goes into <paramref name="diagnostics"/>.
     /// </summary>
-    public XDocument? ContentAsAurora(IEnumerable<AuroraCatalogElement> aurora)
+    public XDocument? ContentAsAurora(IEnumerable<AuroraCatalogElement> aurora, List<ImportDiagnostic>? diagnostics = null)
     {
         if (!_options.Generate || !Available)
         {
             return null;
         }
-        var content = new FiveEToolsContent(new FiveEToolsJson(_options.DataPath), new FiveEToolsAuroraIndex(aurora), Books(), _logger);
+        var content = new FiveEToolsContent(new FiveEToolsJson(_options.DataPath), new FiveEToolsAuroraIndex(aurora), Books(), _logger, diagnostics);
         return content.Generate();
     }
 

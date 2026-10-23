@@ -96,6 +96,22 @@ internal class RegistrationRepository : RepositoryBase<Registration>, IRegistrat
         return registrations;
     }
 
+    public async Task<List<(CharacterId Character, ElementId Element)>> GetAssociationsAsync(IReadOnlyCollection<ElementId> associatedElementIds)
+    {
+        if (associatedElementIds.Count == 0)
+        {
+            return [];
+        }
+        var ids = associatedElementIds.Distinct().ToList();
+        var rows = await Entities
+            .AsNoTracking()
+            .Where(r => ids.Contains(r.AssociatedElementId))
+            .Select(r => new { r.CharacterId, r.AssociatedElementId })
+            .Distinct()
+            .ToListAsync();
+        return rows.Select(r => (r.CharacterId, r.AssociatedElementId)).ToList();
+    }
+
     public async Task<List<Registration>> GetRegistrationsByAssociationsAsync(CharacterId id, ElementId associatedElementId)
     {
         var registrations = await Entities

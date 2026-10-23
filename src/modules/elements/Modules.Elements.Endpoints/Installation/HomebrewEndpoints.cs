@@ -78,7 +78,21 @@ public sealed record UploadHomebrewRequest
     public string Content { get; init; } = string.Empty;
 }
 
-public sealed class UploadHomebrewEndpoint : Endpoint<UploadHomebrewRequest>
+/// <summary>What uploading a homebrew file imported, with what the import ran into (the text warnings and, alike, as diagnostics).</summary>
+public sealed record UploadHomebrewResponse(string File, int ElementsImported, int ElementsReplaced, IReadOnlyList<string> Warnings, IReadOnlyList<ImportDiagnostic> Diagnostics)
+{
+    /// <summary>The import's elements in full, in part or as text only, and what it skipped.</summary>
+    public ImportEntryCounts Entries { get; init; } = ImportEntryCounts.None;
+}
+
+/// <summary>What removing a homebrew file removed, and what importing the rest again ran into.</summary>
+public sealed record DeleteHomebrewResponse(int Removed, IReadOnlyList<string> Warnings, IReadOnlyList<ImportDiagnostic> Diagnostics)
+{
+    /// <summary>What importing the rest again made and skipped.</summary>
+    public ImportEntryCounts Entries { get; init; } = ImportEntryCounts.None;
+}
+
+public sealed class UploadHomebrewEndpoint : Endpoint<UploadHomebrewRequest, UploadHomebrewResponse>
 {
     private readonly IAuroraImporter _importer;
 
@@ -137,7 +151,7 @@ public sealed class UploadHomebrewEndpoint : Endpoint<UploadHomebrewRequest>
         {
             var result = await HomebrewFileChange.ApplyAsync(Path.Combine(folder, name), document,
                 () => _importer.ImportAsync(AuroraImporterIndex.Homebrew, replace: false, update: true, ct));
-            await Send.OkAsync(new { File = name, result.ElementsImported, result.ElementsReplaced, result.Warnings }, ct);
+            await Send.OkAsync(new UploadHomebrewResponse(name, result.ElementsImported, result.ElementsReplaced, result.Warnings, result.Diagnostics) { Entries = result.Entries }, ct);
         }
         finally
         {
@@ -146,7 +160,7 @@ public sealed class UploadHomebrewEndpoint : Endpoint<UploadHomebrewRequest>
     }
 }
 
-public sealed class DeleteHomebrewEndpoint : EndpointWithoutRequest
+public sealed class DeleteHomebrewEndpoint : EndpointWithoutRequest<DeleteHomebrewResponse>
 {
     private readonly IAuroraImporter _importer;
 
@@ -180,7 +194,7 @@ public sealed class DeleteHomebrewEndpoint : EndpointWithoutRequest
                 var removed = await _importer.RemoveAsync("homebrew/" + name, ct);
                 // Removal and rebuilding remaining patches commit together.
                 var imported = await _importer.ImportAsync(AuroraImporterIndex.Homebrew, replace: false, update: true, ct);
-                return new { Removed = removed, imported.Warnings };
+                return new DeleteHomebrewResponse(removed, imported.Warnings, imported.Diagnostics) { Entries = imported.Entries };
             });
             await Send.OkAsync(result, ct);
         }

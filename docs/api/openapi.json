@@ -166,8 +166,15 @@
           "required": true
         },
         "responses": {
-          "204": {
-            "description": "No Content"
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UploadHomebrewResponse"
+                }
+              }
+            }
           }
         }
       }
@@ -179,8 +186,15 @@
         ],
         "operationId": "StarlightsModulesElementsEndpointsInstallationDeleteHomebrewEndpoint",
         "responses": {
-          "204": {
-            "description": "No Content"
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteHomebrewResponse"
+                }
+              }
+            }
           }
         }
       }
@@ -220,6 +234,16 @@
           "required": true
         },
         "responses": {
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HomebrewEditPreview"
+                }
+              }
+            }
+          },
           "200": {
             "description": "OK",
             "content": {
@@ -268,6 +292,16 @@
           "required": true
         },
         "responses": {
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HomebrewEditPreview"
+                }
+              }
+            }
+          },
           "200": {
             "description": "OK",
             "content": {
@@ -336,12 +370,112 @@
           "required": true
         },
         "responses": {
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HomebrewEditPreview"
+                }
+              }
+            }
+          },
           "200": {
             "description": "OK",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HomebrewClassModel"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/elements/homebrew/spells/preview": {
+      "post": {
+        "tags": [
+          "Elements"
+        ],
+        "operationId": "StarlightsModulesElementsEndpointsInstallationPreviewHomebrewSpellEndpoint",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HomebrewSpellModel"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HomebrewEditPreview"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/elements/homebrew/subclasses/preview": {
+      "post": {
+        "tags": [
+          "Elements"
+        ],
+        "operationId": "StarlightsModulesElementsEndpointsInstallationPreviewHomebrewSubclassEndpoint",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HomebrewSubclassModel"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HomebrewEditPreview"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/elements/homebrew/classes/preview": {
+      "post": {
+        "tags": [
+          "Elements"
+        ],
+        "operationId": "StarlightsModulesElementsEndpointsInstallationPreviewHomebrewClassEndpoint",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HomebrewClassModel"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HomebrewEditPreview"
                 }
               }
             }
@@ -379,8 +513,15 @@
           "required": true
         },
         "responses": {
-          "204": {
-            "description": "No Content"
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuroraImportResult"
+                }
+              }
+            }
           }
         }
       }
@@ -4443,6 +4584,103 @@
           }
         }
       },
+      "AuroraImportResult": {
+        "required": [
+          "filesRead",
+          "elementsImported",
+          "elementsReplaced",
+          "dependenciesImported",
+          "alreadyImported",
+          "skippedConditionalRules",
+          "skippedUnresolvedGrants",
+          "importedByType"
+        ],
+        "type": "object",
+        "properties": {
+          "filesRead": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "elementsImported": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "elementsReplaced": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "dependenciesImported": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "alreadyImported": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "skippedConditionalRules": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "skippedUnresolvedGrants": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "importedByType": {
+            "type": "object",
+            "additionalProperties": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "diagnostics": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ImportDiagnostic"
+            }
+          },
+          "entries": {
+            "$ref": "#/components/schemas/ImportEntryCounts"
+          }
+        }
+      },
       "AuroraLookupRequest": {
         "type": "object",
         "properties": {
@@ -6510,6 +6748,15 @@
               "null",
               "boolean"
             ]
+          },
+          "diagnostics": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ImportDiagnostic"
+            }
+          },
+          "entries": {
+            "$ref": "#/components/schemas/ImportEntryCounts"
           }
         }
       },
@@ -7746,6 +7993,39 @@
           }
         }
       },
+      "DeleteHomebrewResponse": {
+        "required": [
+          "removed",
+          "warnings",
+          "diagnostics"
+        ],
+        "type": "object",
+        "properties": {
+          "removed": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "diagnostics": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ImportDiagnostic"
+            }
+          },
+          "entries": {
+            "$ref": "#/components/schemas/ImportEntryCounts"
+          }
+        }
+      },
       "DeleteIncludeRuleRequest": {
         "required": [
           "elementId",
@@ -8974,6 +9254,49 @@
           }
         }
       },
+      "HomebrewAffectedCharacter": {
+        "required": [
+          "characterId",
+          "name",
+          "playerName",
+          "uses",
+          "loses"
+        ],
+        "type": "object",
+        "properties": {
+          "characterId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "playerName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "uses": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "loses": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "invalidated": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HomebrewInvalidatedPick"
+            }
+          }
+        }
+      },
       "HomebrewClassesResponse": {
         "required": [
           "classes"
@@ -9129,8 +9452,100 @@
               "null",
               "string"
             ]
+          },
+          "revision": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "expectedRevision": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
+      },
+      "HomebrewEditPreview": {
+        "required": [
+          "kind",
+          "id",
+          "isNew",
+          "revision",
+          "changes",
+          "elements",
+          "characters",
+          "diagnostics"
+        ],
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "isNew": {
+            "type": "boolean"
+          },
+          "revision": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "changes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HomebrewFieldChange"
+            }
+          },
+          "elements": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HomebrewElementChange"
+            }
+          },
+          "characters": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HomebrewAffectedCharacter"
+            }
+          },
+          "diagnostics": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ImportDiagnostic"
+            }
+          }
+        }
+      },
+      "HomebrewElementChange": {
+        "required": [
+          "elementId",
+          "name",
+          "change"
+        ],
+        "type": "object",
+        "properties": {
+          "elementId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "change": {
+            "$ref": "#/components/schemas/HomebrewElementChangeKind"
+          }
+        }
+      },
+      "HomebrewElementChangeKind": {
+        "enum": [
+          "added",
+          "changed",
+          "removed"
+        ]
       },
       "HomebrewElementModel": {
         "required": [
@@ -9179,6 +9594,31 @@
           }
         }
       },
+      "HomebrewFieldChange": {
+        "required": [
+          "field",
+          "before",
+          "after"
+        ],
+        "type": "object",
+        "properties": {
+          "field": {
+            "type": "string"
+          },
+          "before": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "after": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "HomebrewFileModel": {
         "required": [
           "file",
@@ -9203,6 +9643,25 @@
             "items": {
               "type": "string"
             }
+          }
+        }
+      },
+      "HomebrewInvalidatedPick": {
+        "required": [
+          "elementId",
+          "name",
+          "reason"
+        ],
+        "type": "object",
+        "properties": {
+          "elementId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
           }
         }
       },
@@ -9381,6 +9840,18 @@
               "null",
               "string"
             ]
+          },
+          "revision": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "expectedRevision": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -9444,6 +9915,18 @@
             "items": {
               "$ref": "#/components/schemas/HomebrewFeatureModel"
             }
+          },
+          "revision": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "expectedRevision": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -9458,6 +9941,149 @@
           },
           "update": {
             "type": "boolean"
+          }
+        }
+      },
+      "ImportDiagnostic": {
+        "required": [
+          "severity",
+          "code",
+          "importer",
+          "message"
+        ],
+        "type": "object",
+        "properties": {
+          "severity": {
+            "$ref": "#/components/schemas/ImportDiagnosticSeverity"
+          },
+          "code": {
+            "$ref": "#/components/schemas/ImportDiagnosticCode"
+          },
+          "importer": {
+            "$ref": "#/components/schemas/ImportDiagnosticImporter"
+          },
+          "message": {
+            "type": "string"
+          },
+          "file": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "elementId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "elementName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "detail": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "omitted": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "count": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "ImportDiagnosticCode": {
+        "enum": [
+          "unreadable-file",
+          "index-entry-missing",
+          "append-target-missing",
+          "grant-unresolved",
+          "class-feature-missing",
+          "subclass-class-missing",
+          "element-missing",
+          "choice-unmatched",
+          "invalid-value",
+          "replaces-existing",
+          "stale-revision",
+          "duplicate-id",
+          "element-incomplete",
+          "requirement-unsupported",
+          "text-only",
+          "entries-skipped"
+        ]
+      },
+      "ImportDiagnosticImporter": {
+        "enum": [
+          "aurora",
+          "5etools",
+          "homebrew",
+          "aurora-character"
+        ]
+      },
+      "ImportDiagnosticSeverity": {
+        "enum": [
+          "error",
+          "warning",
+          "info"
+        ]
+      },
+      "ImportEntryCounts": {
+        "required": [
+          "complete",
+          "partial",
+          "textOnly",
+          "skipped"
+        ],
+        "type": "object",
+        "properties": {
+          "complete": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "partial": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "textOnly": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "skipped": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
           }
         }
       },
@@ -12753,6 +13379,52 @@
           },
           "content": {
             "type": "string"
+          }
+        }
+      },
+      "UploadHomebrewResponse": {
+        "required": [
+          "file",
+          "elementsImported",
+          "elementsReplaced",
+          "warnings",
+          "diagnostics"
+        ],
+        "type": "object",
+        "properties": {
+          "file": {
+            "type": "string"
+          },
+          "elementsImported": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "elementsReplaced": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "diagnostics": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ImportDiagnostic"
+            }
+          },
+          "entries": {
+            "$ref": "#/components/schemas/ImportEntryCounts"
           }
         }
       },

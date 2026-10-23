@@ -36,6 +36,11 @@ public sealed record HomebrewSpellModel
     /// <summary>What it does: plain text, paragraphs separated by blank lines.</summary>
     public string Description { get; init; } = string.Empty;
     public string? HigherLevels { get; init; }
+    /// <summary>Set when read: the record as saved. A save that sends it back as <see cref="ExpectedRevision"/> is refused if the record changed since.</summary>
+    public string? Revision { get; init; }
+
+    /// <summary>On a save: the revision the edit started from (a preview's); a record changed or removed since is refused (409).</summary>
+    public string? ExpectedRevision { get; init; }
 }
 
 /// <summary>A homebrew subclass: which class's subclass choice it answers, and its features.</summary>
@@ -50,6 +55,11 @@ public sealed record HomebrewSubclassModel
     public string ClassName { get; init; } = string.Empty;
     public string Description { get; init; } = string.Empty;
     public List<HomebrewFeatureModel> Features { get; init; } = [];
+    /// <summary>Set when read: the record as saved. A save that sends it back as <see cref="ExpectedRevision"/> is refused if the record changed since.</summary>
+    public string? Revision { get; init; }
+
+    /// <summary>On a save: the revision the edit started from (a preview's); a record changed or removed since is refused (409).</summary>
+    public string? ExpectedRevision { get; init; }
 }
 
 /// <summary>A homebrew class.</summary>
@@ -90,6 +100,11 @@ public sealed record HomebrewClassModel
     public int Cantrips { get; init; } = 3;
     /// <summary>Its spell list's name; set when the class is made and kept when it is renamed.</summary>
     public string? SpellListName { get; init; }
+    /// <summary>Set when read: the record as saved. A save that sends it back as <see cref="ExpectedRevision"/> is refused if the record changed since.</summary>
+    public string? Revision { get; init; }
+
+    /// <summary>On a save: the revision the edit started from (a preview's); a record changed or removed since is refused (409).</summary>
+    public string? ExpectedRevision { get; init; }
 }
 
 /// <summary>A class whose subclass choice a homebrew subclass can join.</summary>
@@ -359,13 +374,16 @@ public static partial class HomebrewWorkshopXml
     /// <summary>The name a class's statistics use ("Blood Hunter" → "blood-hunter"), as the spell options read them.</summary>
     public static string StatName(string className) => className.Trim().ToLowerInvariant().Replace(' ', '-');
 
+    /// <summary>What the class's subclass choice asks for: the subclasses whose "supports" is this ("Test Warden Subclass" by default).</summary>
+    public static string SubclassKey(HomebrewClassModel m) => string.IsNullOrWhiteSpace(m.SubclassSupports) ? $"{m.Name.Trim()} Subclass" : m.SubclassSupports.Trim();
+
     public static List<XElement> ClassToXml(HomebrewClassModel m, string id)
     {
         var source = Source(m.Source);
         var name = m.Name.Trim();
         var multiclassId = id.Replace("_CLASS_", "_MULTICLASS_", StringComparison.Ordinal);
         var notMulticlass = new XAttribute("requirements", $"!{multiclassId}");
-        var subclassSupports = string.IsNullOrWhiteSpace(m.SubclassSupports) ? $"{name} Subclass" : m.SubclassSupports.Trim();
+        var subclassSupports = SubclassKey(m);
         var listName = string.IsNullOrWhiteSpace(m.SpellListName) ? name : m.SpellListName.Trim();
 
         var rules = new XElement("rules");

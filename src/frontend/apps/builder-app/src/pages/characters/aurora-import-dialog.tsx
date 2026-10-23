@@ -2,6 +2,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { CheckIcon, FileUpIcon, TriangleAlertIcon } from "lucide-react";
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import { ImportDiagnostics } from "@/components/import-diagnostics";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Spinner } from "@/components/ui/spinner";
@@ -95,18 +96,7 @@ export function AuroraImportDialog({ player }: { player: string }) {
                 {f.report && (
                   <div className="mt-1 space-y-1 text-xs text-muted-foreground">
                     <p>{f.report.picked} choices filled in.</p>
-                    {f.report.missing.length > 0 && (
-                      <details>
-                        <summary>{f.report.missing.length} not in the imported content (homebrew?)</summary>
-                        <ul className="mt-1 list-disc pl-5">{f.report.missing.map((m) => <li key={m}>{m}</li>)}</ul>
-                      </details>
-                    )}
-                    {f.report.unmatched.length > 0 && (
-                      <details>
-                        <summary>{f.report.unmatched.length} choices that did not come up here</summary>
-                        <ul className="mt-1 list-disc pl-5">{f.report.unmatched.map((m) => <li key={m}>{m}</li>)}</ul>
-                      </details>
-                    )}
+                    <ImportDiagnostics diagnostics={f.report.diagnostics} compact />
                   </div>
                 )}
               </li>
@@ -195,18 +185,7 @@ export function AuroraUpdateDialog({ characterId }: { characterId: string }) {
             <p className="text-muted-foreground">
               {r.picked} choices filled in, {r.items} items added, {r.prepared} prepared spells added.
             </p>
-            {r.missing.length > 0 && (
-              <details className="text-xs text-muted-foreground">
-                <summary>{r.missing.length} not in the imported content</summary>
-                <ul className="mt-1 list-disc pl-5">{r.missing.map((m) => <li key={m}>{m}</li>)}</ul>
-              </details>
-            )}
-            {r.unmatched.length > 0 && (
-              <details className="text-xs text-muted-foreground">
-                <summary>{r.unmatched.length} choices that did not come up here</summary>
-                <ul className="mt-1 list-disc pl-5">{r.unmatched.map((m) => <li key={m}>{m}</li>)}</ul>
-              </details>
-            )}
+            <ImportDiagnostics diagnostics={r.diagnostics} compact />
           </div>
         )}
         <div className="flex justify-end">
