@@ -5,8 +5,10 @@ Updated 2026-10-23 (warnings and errors session). Keep under ~80 lines; replace 
 ## Task (open): warnings and errors (`fix/warnings-and-errors`, `~/starfall-warnings`, from cf3eb56)
 Build 89 warnings → 0 (vulnerable Pkcs/MessagePack pinned, MSTest duplicates, EF1002, obsolete test helpers,
 test cancellation tokens), frontend chunk-size warning (PDF sheet route lazy, chunk groups), API log WRN/ERR
-(EF comparer + query splitting, HTTPS redirect, shutdown, removed registrations), failed-import cleanup SQL
-(`character_snapshot.character_id`), Aurora list picks (personality traits) on import. Details in the PR.
+(EF comparer + query splitting, HTTPS redirect, shutdown, removed registrations, "pending registrations" → debug),
+failed-import cleanup SQL (`character_snapshot.character_id`), Aurora list picks (personality traits) on import.
+Details in the PR. Chunk groups take whole packages, never `maxSize`: size splits made import cycles between chunks
+and the app rendered blank ("bt is not a function") while vitest, eslint and the image build passed.
 
 ## Previous task (merged #29–#32; live cf3eb56 since 2026-10-23 06:40): calculation traces, import reports +
 homebrew review, spell mechanics + own resources, PDF worker + favorite rolls. Checkpoint:
@@ -33,7 +35,8 @@ Visual fidelity ([VISUAL_FIDELITY_REPORT.md](VISUAL_FIDELITY_REPORT.md), 2026-10
 
 ## Coordination (shared files touched)
 - Warnings: `main.tsx` (the printable sheet route `/characters/:id/sheet` is `lazy`, like `:id/play`),
-  `vite.config.ts` of builder-app (chunk groups, ES worker) and showcase, `lib/aurora-character-import.ts`.
+  `vite.config.ts` of builder-app (whole-package chunk groups, ES worker) and showcase,
+  `lib/aurora-character-import.ts`.
 - Calculation traces: `pages/characters/sheet/interactive-sheet.tsx` (Codex's): "Why this value?" buttons
   (`components/why-value.tsx`) beside figures, a "Why these values" row under `Vitals` (Vitals itself unchanged),
   and the spellcasting's attack and DC above the Magic tab. `tools/frontend/fixtures.mjs`: answers
@@ -58,16 +61,8 @@ Visual fidelity ([VISUAL_FIDELITY_REPORT.md](VISUAL_FIDELITY_REPORT.md), 2026-10
   `pages/battle/favorite-rolls.tsx`; the compendium's dice toast is now `components/lore/dice-toast.ts`. Tools:
   `fixtures.mjs` has `fixture({ large: true })` (the default is unchanged); `sheet-performance.mjs`,
   `sheet-pdf-worker.mjs`, `favorite-rolls.mjs` (new).
-- Visual fidelity: `styles/themes.css` (all three palettes; Slate dark), `lib/themes.ts` (`isDarkTheme`),
-  `theme-provider.tsx`, `ui/sonner.tsx`, `index.html` (pre-paint theme), `default-layout.tsx` (header text/padding),
-  `App.tsx`, `ornaments.tsx`, `ornament.css`, landing, `lore-home.tsx` banner, `campaigns-page.tsx` cards,
-  `tools/frontend/ornaments.mjs` + `homepage-branding.mjs` (new contracts).
-- Polish: `default-layout.tsx` (nav emblem, phone menu Install), `mode-toggle.tsx` (units, install), `main.tsx`
-  (providers), `ornament.css`, `themes.css`, `index.html`, many pages (`3xl:` widths, `useUnits`), `deploy/nginx.conf`,
-  README.md; the `Choose theme` label became `Choose theme and units` in five `tools/frontend` checks.
-- Earlier (Mk2): `pages/landing/Index.tsx` hero, `styles/ornament.css`, `components/ornaments.tsx`, `App.tsx`,
-  `lib/api/sheet.ts`, `lib/rules/proficiencies.ts`, `lib/rules/items.ts`, `lib/aurora-character-import.ts`.
-
+- Visual fidelity, polish and Mk2 (merged 2026-10-20/21): themes, ornaments, layout, landing and `tools/frontend`
+  contracts; per-file details in those PRs and VISUAL_FIDELITY_REPORT.md.
 ## How to verify things here (reusable)
 - Disposable install of a worktree: `~/.cache/starlights-test/mk2/e2e-setup.sh REPO DB API_PORT WEB_PORT`
   (SQL container `starfall-mk2-sql` on network `starfall-mk2-test`, removed 2026-10-20; recreate both first:
